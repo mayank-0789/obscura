@@ -1,159 +1,153 @@
-# Turborepo starter
+# Payrail
 
-This Turborepo starter is maintained by the Turborepo core team.
+> **The payment rail for AI agents.** Fund with UPI or card via Dodo Payments. Agents spend stablecoins autonomously on Solana via the X402 protocol.
 
-## Using this example
+Built for the **Colosseum Solana Frontier Hackathon 2026** + **Superteam India × Dodo Payments** side track.
 
-Run the following command:
+🌐 [payrail.sh](https://payrail.sh) · Solana × Dodo Payments
 
-```sh
-npx create-turbo@latest
+---
+
+## The problem
+
+AI agents can't cleanly pay for things today. They can't swipe credit cards, and while Solana's [X402 protocol](https://solana.com/docs/payments/agentic-payments) now lets them pay per-call in stablecoins, there's no simple way for a regular user — especially in India — to get money into an agent's wallet without first owning crypto.
+
+## What Payrail does
+
+Users top up their agent with UPI or card through Dodo Payments. Funds arrive as USDG stablecoins in the agent's Solana wallet within seconds. The agent uses our drop-in client SDK to transparently handle X402 payment handshakes every time it hits a paid API or MCP server. API providers use our merchant SDK to accept per-call payments in one line of server middleware.
+
+---
+
+## The three roles
+
+Payrail has three distinct roles:
+
+| Role | Description | Uses our web app? | Integrates with |
+|---|---|---|---|
+| 👤 **User** | Human developer who funds and runs AI agents | Yes — signup, dashboard, top-up | `@payrail/sdk` (drops into their agent code) |
+| 🤖 **Agent** | Autonomous program that spends stablecoins per call | No — it's code, uses API keys | Our backend's `/api/x402/sign` |
+| 🏪 **Merchant** | Human running a paid API/MCP server | Yes — separate merchant signup | `@payrail/merchant-sdk` (wraps their routes) |
+
+## Product flow
+
+1. User signs up → creates an agent → tops up with UPI via Dodo Payments
+2. Dodo webhook fires → our backend transfers USDG from treasury → agent's dedicated Solana wallet
+3. User drops `@payrail/sdk` into their agent's code
+4. Agent hits paid APIs → SDK handles the X402 payment dance automatically (sign on Solana, retry with `X-Payment` header)
+5. Merchants running `@payrail/merchant-sdk` middleware earn USDG per call, with optional fiat cash-out via Dodo payouts
+
+---
+
+## Tech stack
+
+| Layer | Choice |
+|---|---|
+| Monorepo | [Turborepo](https://turbo.build) + [pnpm workspaces](https://pnpm.io/workspaces) |
+| Frontend + Backend | [Next.js 16](https://nextjs.org) (App Router) — route handlers power the backend |
+| Language | TypeScript (strict) |
+| Styling | [Tailwind CSS v4](https://tailwindcss.com) + [shadcn/ui](https://ui.shadcn.com) |
+| Database | [Neon](https://neon.tech) (serverless Postgres) + [Drizzle ORM](https://orm.drizzle.team) |
+| Auth + Wallets | [Privy](https://privy.io) — embedded wallets (per-agent isolation) |
+| Fiat payments | [Dodo Payments](https://dodopayments.com) — Merchant of Record, webhooks, subscriptions |
+| Solana RPC | [Helius](https://helius.dev) |
+| Stablecoin | [USDG](https://paxos.com/usdg/) (Paxos, regulated) |
+| X402 facilitator | [PayAI](https://payai.network) (wrapped) |
+| Runtime validation | [Zod](https://zod.dev) |
+| Deploy | [Vercel](https://vercel.com) |
+
+---
+
+## Monorepo layout
+
+```
+payrail/
+├── apps/
+│   ├── web/                             # main product (user UI + merchant UI + API routes)
+│   ├── demo-merchant-news/              # demo merchant #1 — paid news API, deployed externally
+│   └── demo-merchant-weather/           # demo merchant #2 — paid weather API, deployed externally
+├── packages/
+│   ├── types/                           # @payrail/types — shared TS types
+│   ├── db/                              # @payrail/db — Drizzle schema + client
+│   ├── solana/                          # @payrail/solana — Solana helpers + constants
+│   ├── sdk/                             # @payrail/sdk — client SDK (drop into agent code)
+│   ├── merchant-sdk/                    # @payrail/merchant-sdk — server middleware
+│   ├── eslint-config/                   # shared ESLint config
+│   └── typescript-config/               # shared TypeScript config
+├── scripts/                             # one-off scripts: treasury seeding, local testing
+├── turbo.json                           # turbo task graph
+├── pnpm-workspace.yaml                  # workspace definition
+└── package.json                         # root (name: "payrail")
 ```
 
-## What's inside?
+### Which code lives where (DRY rule)
 
-This Turborepo includes the following packages/apps:
+> **A package exists only if 2+ consumers use it. Single-consumer code stays local to its app.**
 
-### Apps and Packages
+Shared (in `packages/`):
+- `types` — used by web, sdk, merchant-sdk, scripts (4 consumers)
+- `db` — used by web + scripts (2 consumers)
+- `solana` — used by web + merchant-sdk + scripts (3 consumers)
+- `sdk` / `merchant-sdk` — standalone, published externally
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+Local (in `apps/web/lib/`):
+- `dodo/` — only web uses Dodo
+- `privy/` — only web uses Privy server SDK
+- `policy/` — spend-cap enforcement (app-specific)
+- `ratelimit/` — rate limiting for public endpoints
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+---
 
-### Utilities
+## Getting started
 
-This Turborepo has some additional tools already setup for you:
+> ⚠️ Work in progress — this repo is actively being built for the hackathon.
 
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+```bash
+# 1. install deps
+pnpm install
 
-### Build
+# 2. configure env (coming soon)
+cp .env.example .env.local
 
-To build all apps and packages, run the following command:
+# 3. push schema to Neon (coming soon)
+pnpm db:push
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo build
+# 4. run everything in parallel
+pnpm dev
 ```
 
-Without global `turbo`, use your package manager:
+Open http://localhost:3000.
 
-```sh
-cd my-turborepo
-npx turbo build
-pnpm dlx turbo build
-pnpm exec turbo build
+## Scripts
+
+| Script | Purpose |
+|---|---|
+| `pnpm dev` | Run all apps in parallel (via turbo) |
+| `pnpm build` | Build all packages (respects dependency graph) |
+| `pnpm check-types` | TypeScript check across all packages |
+| `pnpm lint` | Lint all packages |
+| `pnpm format` | Format with Prettier |
+
+Filter a single app/package:
+
+```bash
+pnpm dev --filter=web
+pnpm build --filter=@payrail/sdk
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+---
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+## Hackathon deadlines
 
-```sh
-turbo build --filter=docs
-```
+- **Build deadline (internal):** May 7, 2026
+- **Colosseum Frontier hard deadline:** May 11, 2026
+- **Winner announcement:** May 26, 2026
 
-Without global `turbo`:
+## Status
 
-```sh
-npx turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
+🚧 Scaffold in place (Turborepo + empty folder structure). Next up: detailed HLD review, then wire up Privy + Dodo + Drizzle + Solana in that order.
 
-### Develop
+---
 
-To develop all apps and packages, run the following command:
+## License
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo dev
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo dev
-pnpm exec turbo dev
-pnpm exec turbo dev
-```
-
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo dev --filter=web
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo login
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo login
-pnpm exec turbo login
-pnpm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo link
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo link
-pnpm exec turbo link
-pnpm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+MIT — see [LICENSE](./LICENSE).

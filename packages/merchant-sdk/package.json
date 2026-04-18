@@ -1,0 +1,8 @@
+{
+  "name": "@payrail/merchant-sdk",
+  "version": "0.0.0",
+  "description": "Server middleware for API providers to accept agent payments in USDG on Solana.",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts"
+}

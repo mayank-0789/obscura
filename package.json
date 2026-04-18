@@ -1,5 +1,5 @@
 {
-  "name": "agentpays-tmp",
+  "name": "payrail",
   "private": true,
   "scripts": {
     "build": "turbo run build",
@@ -13,7 +13,7 @@
     "turbo": "^2.9.6",
     "typescript": "5.9.2"
   },
-  "packageManager": "pnpm@9.0.0",
+  "packageManager": "pnpm@10.28.2",
   "engines": {
     "node": ">=18"
   }
