@@ -4,11 +4,21 @@ import { privy } from "@/lib/privy-server";
 import { db, users, type User } from "@/lib/db";
 import { apiError } from "@/lib/api";
 
+export type AuthErrorCode =
+  | "missing_token"
+  | "invalid_token"
+  | "user_not_synced";
+
+const AUTH_ERROR_MESSAGES: Record<AuthErrorCode, string> = {
+  missing_token: "Authorization header is missing or empty.",
+  invalid_token: "Auth token failed verification.",
+  user_not_synced: "User row not found for the authenticated Privy id.",
+};
+
 export class AuthError extends Error {
-  constructor(
-    public readonly code: "missing_token" | "invalid_token" | "user_not_synced",
-  ) {
-    super(code);
+  constructor(public readonly code: AuthErrorCode) {
+    super(AUTH_ERROR_MESSAGES[code]);
+    this.name = "AuthError";
   }
 }
 

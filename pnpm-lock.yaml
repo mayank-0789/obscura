@@ -166,6 +166,9 @@ importers:
       sonner:
         specifier: ^2.0.7
         version: 2.0.7(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+      standardwebhooks:
+        specifier: ^1.0.0
+        version: 1.0.0
       tailwind-merge:
         specifier: ^3.5.0
         version: 3.5.0

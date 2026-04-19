@@ -1,7 +1,7 @@
 {
   "$schema": "https://turborepo.dev/schema.json",
   "ui": "tui",
-  "globalEnv": ["NODE_ENV", "VERCEL_ENV"],
+  "globalEnv": ["NODE_ENV", "VERCEL_ENV", "SKIP_ENV_VALIDATION"],
   "globalPassThroughEnv": ["PATH", "HOME"],
   "tasks": {
     "build": {
@@ -16,6 +16,15 @@
         "PRIVY_AUTHORIZATION_KEY_ID",
         "UPSTASH_REDIS_REST_URL",
         "UPSTASH_REDIS_REST_TOKEN",
+        "DODO_PAYMENTS_API_KEY",
+        "DODO_WEBHOOK_KEY",
+        "DODO_TOPUP_PRODUCT_ID",
+        "DODO_ENVIRONMENT",
+        "HELIUS_RPC_URL",
+        "TREASURY_SECRET_KEY",
+        "TREASURY_PUBLIC_KEY",
+        "STABLECOIN_MINT",
+        "STABLECOIN_DECIMALS",
         "NEXT_PUBLIC_APP_URL",
         "NEXT_PUBLIC_PRIVY_APP_ID",
         "NEXT_PUBLIC_SOLANA_CLUSTER"

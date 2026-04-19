@@ -18,10 +18,20 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
+  // Each listed path is protected at the edge by a cookie-presence check.
+  //
+  // /topup is guarded so unauthenticated users can't start a checkout session.
+  // /topup/done is deliberately NOT listed — it's the return target of a
+  // redirect from Dodo's domain, and browsers do not always carry our session
+  // cookies on that cross-site top-level navigation (SameSite=Strict / browser
+  // privacy heuristics). Gating it at the edge would bounce genuine signed-in
+  // users off their own confirmation page. The page itself defers to
+  // useTopupStatus → /api/topup/status/[paymentId], which enforces auth via
+  // authGuard — so /topup/done rendering without a session is harmless.
   matcher: [
     "/dashboard/:path*",
     "/agents/:path*",
-    "/topup/:path*",
+    "/topup",
     "/merchants/dashboard/:path*",
     "/merchants/apis/:path*",
     "/merchants/earnings/:path*",

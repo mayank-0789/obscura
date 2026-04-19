@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { Nav } from "../../../components/marketing/nav";
 import { Footer } from "../../../components/marketing/footer";
-import { SectionLabel } from "../../../components/marketing/section-label";
+import { FAQ, type QA } from "../../../components/marketing/landing/faq";
+import { MerchantCodeEditor } from "../../../components/marketing/landing/merchant-code-editor";
+import { EarningsCard } from "../../../components/marketing/landing/earnings-card";
 
 export default function MerchantLandingPage() {
   return (
@@ -10,9 +12,9 @@ export default function MerchantLandingPage() {
       <Hero />
       <Stats />
       <HowItWorks />
-      <CodeExample />
-      <Revenue />
-      <MerchantFAQ />
+      <Quickstart />
+      <Economics />
+      <FAQSection />
       <FinalCTA />
       <Footer />
     </div>
@@ -25,237 +27,153 @@ export default function MerchantLandingPage() {
 
 function Hero() {
   return (
-    <section className="relative overflow-hidden border-b border-zinc-800/60">
+    <section className="bg-noise relative overflow-hidden">
       <div
-        className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:48px_48px] [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_85%)]"
         aria-hidden="true"
+        className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:72px_72px] [mask-image:radial-gradient(ellipse_85%_65%_at_75%_0%,black_10%,transparent_75%)]"
       />
       <div
-        className="pointer-events-none absolute left-1/2 top-[-280px] h-[560px] w-[960px] -translate-x-1/2 rounded-full bg-emerald-500/10 blur-3xl"
         aria-hidden="true"
+        className="pointer-events-none absolute -left-40 -top-40 h-[560px] w-[560px] rounded-full bg-emerald-500/10 blur-[140px]"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -right-40 top-80 h-[380px] w-[380px] rounded-full bg-emerald-500/5 blur-[120px]"
       />
 
-      <div className="relative mx-auto grid max-w-6xl gap-14 px-6 py-28 md:grid-cols-5 md:gap-10 md:py-36">
-        <div className="md:col-span-3">
-          <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-            For API providers
-          </div>
+      <div className="relative mx-auto grid max-w-[1400px] grid-cols-12 gap-x-8 gap-y-16 px-6 pb-28 pt-24 lg:px-10 lg:pb-36 lg:pt-32">
+        <div className="col-span-12 md:col-span-8">
+          <p className="rule-with-pip mb-10 font-mono text-[11px] uppercase tracking-[0.3em] text-zinc-400">
+            <span>For API providers</span>
+          </p>
 
-          <h1 className="text-balance text-5xl font-semibold leading-[1.02] tracking-tight md:text-7xl">
-            Get paid when AI agents{" "}
-            <span className="bg-gradient-to-r from-emerald-300 to-emerald-500 bg-clip-text text-transparent">
-              call your API.
+          <h1 className="font-display text-balance text-[56px] font-light leading-[0.94] tracking-[-0.03em] text-zinc-50 md:text-[96px] lg:text-[118px]">
+            <span className="reveal block" style={{ animationDelay: "0.05s" }}>
+              Get paid when
+            </span>
+            <span className="reveal block" style={{ animationDelay: "0.15s" }}>
+              agents{" "}
+              <span className="italic text-emerald-gradient">
+                call your API.
+              </span>
             </span>
           </h1>
 
-          <p className="mt-7 max-w-xl text-lg leading-7 text-zinc-400">
-            Wrap any paid route in one line of middleware. Earn USDG per call on
-            Solana. Cash out to your bank account via Dodo Payments.
+          <p
+            className="reveal mt-12 max-w-[60ch] text-[18px] leading-[1.65] text-zinc-300 md:text-[20px] md:leading-[1.6]"
+            style={{ animationDelay: "0.35s" }}
+          >
+            Drop one line of middleware into your server. Earn{" "}
+            <span className="text-zinc-100">USDC on Solana</span> per request.
+            Cash out to your bank via Dodo — no subscription pages, no
+            chargebacks.
           </p>
 
-          <div className="mt-10 flex flex-wrap items-center gap-3">
+          <div
+            className="reveal mt-10 flex flex-col gap-3 sm:flex-row"
+            style={{ animationDelay: "0.5s" }}
+          >
             <Link
               href="/merchants/dashboard"
-              className="group inline-flex items-center gap-2 rounded-md bg-emerald-400 px-5 py-3 text-sm font-semibold text-black shadow-lg shadow-emerald-500/20 transition hover:bg-emerald-300"
+              className="group inline-flex items-center justify-between gap-3 border border-emerald-400 bg-emerald-400 px-6 py-4 text-sm font-semibold text-black transition hover:bg-emerald-300"
             >
-              Create merchant account
+              <span>Create merchant account</span>
               <span
-                className="transition group-hover:translate-x-0.5"
                 aria-hidden="true"
+                className="transition-transform group-hover:translate-x-1"
               >
                 →
               </span>
             </Link>
             <Link
               href="/docs/merchants/quickstart"
-              className="inline-flex items-center rounded-md border border-zinc-700 bg-zinc-900/60 px-5 py-3 text-sm font-semibold text-zinc-100 transition hover:border-zinc-600 hover:bg-zinc-800/80"
+              className="group inline-flex items-center justify-between gap-3 border border-zinc-700 bg-transparent px-6 py-4 text-sm font-medium text-zinc-300 transition hover:border-zinc-500 hover:text-zinc-100"
             >
-              Read the docs
+              <span>Read the docs</span>
+              <span
+                aria-hidden="true"
+                className="text-zinc-500 transition-transform group-hover:translate-x-1"
+              >
+                ↗
+              </span>
             </Link>
           </div>
 
-          <p className="mt-6 flex items-center gap-2 text-sm text-zinc-500">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              className="h-4 w-4 text-emerald-400"
-              aria-hidden="true"
-            >
-              <path
-                d="M5 13l4 4L19 7"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            One line of middleware · USDG on Solana · Cash out via Dodo
-          </p>
-        </div>
-
-        <div className="md:col-span-2">
-          <EarningsPreview />
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function EarningsPreview() {
-  return (
-    <div className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950 shadow-2xl">
-      <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-900/60 px-4 py-3">
-        <span className="font-mono text-xs text-zinc-500">
-          merchant · earnings
-        </span>
-        <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-emerald-400">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
-          live
-        </div>
-      </div>
-      <div className="p-5">
-        <div className="mb-4">
-          <div className="font-mono text-xs text-zinc-500">Today</div>
-          <div className="mt-1 flex items-baseline gap-2">
-            <span className="text-3xl font-semibold tracking-tight text-zinc-100">
-              $4.78
-            </span>
-            <span className="text-sm text-zinc-500">USDG · 239 calls</span>
+          <div
+            className="reveal mt-16 grid max-w-2xl grid-cols-3 gap-6 border-t border-zinc-800/80 pt-6"
+            style={{ animationDelay: "0.65s" }}
+          >
+            <Stat label="Integration" value="1 line" />
+            <Stat label="Min. charge" value="$0.001" />
+            <Stat label="Platform fee (beta)" value="0%" />
           </div>
         </div>
-        <div className="space-y-1 font-mono text-[12px] leading-6 text-zinc-400">
-          <Row time="23:14" path="/article/123" amount="$0.02" />
-          <Row time="23:14" path="/article/205" amount="$0.02" />
-          <Row time="23:14" path="/search?q=ai" amount="$0.01" />
-          <Row time="23:13" path="/article/089" amount="$0.02" />
-          <Row time="23:13" path="/trending" amount="$0.005" />
-        </div>
-        <div className="mt-5 rounded-md border border-zinc-800 bg-zinc-900/40 p-3 text-xs text-zinc-400">
-          <span className="text-zinc-500">Cash out:</span>{" "}
-          <span className="text-zinc-200">$47.93</span>{" "}
-          <span className="text-zinc-500">→ bank (via Dodo)</span>
-        </div>
-      </div>
-    </div>
-  );
-}
 
-function Row({
-  time,
-  path,
-  amount,
-}: {
-  time: string;
-  path: string;
-  amount: string;
-}) {
-  return (
-    <div className="flex items-center gap-3">
-      <span className="w-10 text-zinc-600">{time}</span>
-      <span className="flex-1 truncate text-zinc-300">{path}</span>
-      <span className="text-emerald-400">{amount}</span>
-    </div>
-  );
-}
+        <aside
+          className="reveal col-span-12 md:col-span-4"
+          style={{ animationDelay: "0.25s" }}
+        >
+          <div className="md:sticky md:top-28">
+            <EarningsCard />
+            <p className="mt-4 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-600">
+              Synthetic example. Live dashboard wakes up on sign-up.
+            </p>
 
-/* ========================================================================
-   STATS
-   ======================================================================== */
-
-function Stats() {
-  const stats = [
-    { value: "1 line", label: "Middleware integration" },
-    { value: "$0.001+", label: "Minimum charge" },
-    { value: "USDG", label: "Settlement currency" },
-    { value: "Dodo", label: "Cash out to bank" },
-  ];
-  return (
-    <section className="border-b border-zinc-800/60 py-20">
-      <div className="mx-auto max-w-6xl px-6">
-        <div className="grid gap-px overflow-hidden rounded-xl border border-zinc-800 bg-zinc-800 md:grid-cols-4">
-          {stats.map((s) => (
-            <div
-              key={s.label}
-              className="bg-[#0a0a0a] p-8 transition hover:bg-zinc-950"
-            >
-              <div className="font-mono text-3xl font-semibold tracking-tight text-emerald-400 md:text-4xl">
-                {s.value}
-              </div>
-              <div className="mt-3 text-sm font-medium text-zinc-100">
-                {s.label}
-              </div>
+            <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-zinc-800 pt-5 font-mono text-[10px] uppercase tracking-[0.3em] text-zinc-500">
+              <span className="flex items-center gap-2 text-emerald-400">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+                Live
+              </span>
+              <span className="text-zinc-800">/</span>
+              <span>Solana</span>
+              <span className="text-zinc-800">×</span>
+              <span>Dodo</span>
+              <span className="text-zinc-800">×</span>
+              <span>x402</span>
             </div>
-          ))}
-        </div>
+          </div>
+        </aside>
       </div>
     </section>
   );
 }
 
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-500">
+        {label}
+      </div>
+      <div className="mt-2 font-display text-2xl font-light text-zinc-100">
+        {value}
+      </div>
+    </div>
+  );
+}
+
 /* ========================================================================
-   HOW IT WORKS
+   STATS — figures row
    ======================================================================== */
 
-function HowItWorks() {
-  const steps = [
-    {
-      num: "01",
-      title: "Register your API",
-      desc: "Sign up, register the endpoint you want to monetize, and choose a price per call.",
-      icon: "📝",
-    },
-    {
-      num: "02",
-      title: "Wrap with middleware",
-      desc: "One line in your Express / Fastify / Hono app. Agents hitting the route now pay per call via X402.",
-      icon: "🧩",
-    },
-    {
-      num: "03",
-      title: "Earn & cash out",
-      desc: "USDG accumulates in your payout wallet. Cash out anytime to your bank account via Dodo Payments.",
-      icon: "💸",
-    },
-  ];
+const figures = [
+  { value: "1 line", label: "To integrate. Express, Fastify, Hono supported." },
+  { value: "$0.001", label: "Smallest viable charge. Solana fees ≈ zero." },
+  { value: "USDC", label: "Settled on-chain, per request, verifiable." },
+  { value: "T+0", label: "Cash out via Dodo payouts — bank in hours, not days." },
+];
 
+function Stats() {
   return (
-    <section className="border-b border-zinc-800/60 py-28">
-      <div className="mx-auto max-w-6xl px-6">
-        <div className="mb-16 max-w-2xl">
-          <SectionLabel>How merchants earn</SectionLabel>
-          <h2 className="mt-4 text-balance text-4xl font-semibold leading-tight tracking-tight md:text-5xl">
-            Three steps to agent revenue.
-          </h2>
-          <p className="mt-5 text-lg leading-7 text-zinc-400">
-            No subscription pages, no card forms, no chargebacks. Just
-            pay-per-call, settled on-chain.
-          </p>
-        </div>
-
-        <div className="relative grid gap-6 md:grid-cols-3">
-          <div
-            className="pointer-events-none absolute left-[16%] right-[16%] top-[42px] hidden h-px bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent md:block"
-            aria-hidden="true"
-          />
-          {steps.map((step) => (
-            <div
-              key={step.num}
-              className="relative rounded-xl border border-zinc-800 bg-zinc-950/60 p-8 transition hover:border-zinc-700 hover:bg-zinc-950"
-            >
-              <div className="mb-6 flex items-center justify-between">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900 text-xl">
-                  {step.icon}
-                </div>
-                <div className="font-mono text-xs tracking-widest text-emerald-400">
-                  — {step.num}
-                </div>
+    <section className="border-b border-zinc-800/60 bg-[#08080a] py-24">
+      <div className="mx-auto max-w-[1400px] px-6 lg:px-10">
+        <div className="grid grid-cols-1 divide-y divide-zinc-800 border-y border-zinc-800 md:grid-cols-4 md:divide-x md:divide-y-0">
+          {figures.map((f) => (
+            <div key={f.value} className="p-8">
+              <div className="font-display text-[48px] font-light leading-none tracking-[-0.02em] text-emerald-gradient md:text-[58px]">
+                {f.value}
               </div>
-              <h3 className="text-xl font-semibold tracking-tight">
-                {step.title}
-              </h3>
-              <p className="mt-3 text-sm leading-6 text-zinc-400">
-                {step.desc}
+              <p className="mt-4 text-[13px] leading-[1.55] text-zinc-400">
+                {f.label}
               </p>
             </div>
           ))}
@@ -266,136 +184,152 @@ function HowItWorks() {
 }
 
 /* ========================================================================
-   CODE EXAMPLE
+   HOW IT WORKS — three actor-style cards
    ======================================================================== */
 
-function CodeExample() {
+function HowItWorks() {
   return (
-    <section className="border-b border-zinc-800/60 py-28">
-      <div className="mx-auto max-w-6xl px-6">
-        <div className="grid gap-12 md:grid-cols-2 md:items-center">
-          <div>
-            <SectionLabel>Integration</SectionLabel>
-            <h2 className="mt-4 text-balance text-4xl font-semibold leading-tight tracking-tight md:text-5xl">
-              Add payments in{" "}
-              <span className="text-emerald-400">one line.</span>
-            </h2>
-            <p className="mt-5 text-lg leading-7 text-zinc-400">
-              Works with Express, Fastify, Hono, and any Node.js HTTP
-              framework. Python and Go coming soon.
+    <section className="border-b border-zinc-800/60 bg-[#0a0a0a] py-28 lg:py-36">
+      <div className="mx-auto max-w-[1400px] px-6 lg:px-10">
+        <div className="mb-16 max-w-2xl">
+          <p className="rule-with-pip font-mono text-[11px] uppercase tracking-[0.3em] text-zinc-400">
+            <span>Section I — How merchants earn</span>
+          </p>
+          <h2 className="mt-8 font-display text-balance text-[44px] font-light leading-[1.02] tracking-[-0.02em] text-zinc-50 md:text-[60px]">
+            Register. Wrap.{" "}
+            <span className="italic text-emerald-gradient">Earn.</span>
+          </h2>
+          <p className="mt-6 max-w-xl text-[15px] leading-[1.7] text-zinc-400">
+            No subscription pages. No card forms. No chargebacks. Just
+            pay-per-call, settled on-chain, cashable in rupees.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+          <StepCard
+            kicker="01 · Register"
+            title="Connect your endpoints."
+            body="Sign up, register the routes you want to monetize, and set a price per call. Dynamic pricing supported — scale with response size or compute cost."
+            meta="One-time setup · ~2 min"
+          />
+          <StepCard
+            kicker="02 · Wrap"
+            title="Drop in the middleware."
+            body="One line in your Express, Fastify, or Hono app. Agents hitting the route now pay per call via x402 before your handler runs."
+            meta="One line · Python + Go next"
+          />
+          <StepCard
+            kicker="03 · Earn"
+            title="Watch USDC accrue."
+            body="Payments land in your Solana payout wallet on every request. Cash out to your bank via Dodo — INR and USD, GST-compliant invoicing included."
+            meta="Per request · Settles on-chain"
+          />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function StepCard({
+  kicker,
+  title,
+  body,
+  meta,
+}: {
+  kicker: string;
+  title: string;
+  body: string;
+  meta: string;
+}) {
+  return (
+    <article className="flex h-full flex-col border border-zinc-800 bg-[#0c0c0e] p-7 md:p-8">
+      <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-emerald-400">
+        {kicker}
+      </p>
+      <h3 className="mt-8 font-display text-[28px] font-light leading-[1.15] tracking-tight text-zinc-50 md:text-[30px]">
+        {title}
+      </h3>
+      <p className="mt-4 text-[14.5px] leading-[1.65] text-zinc-400">{body}</p>
+      <div className="mt-auto flex items-center gap-4 border-t border-zinc-800/80 pt-5">
+        <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-600">
+          When
+        </span>
+        <span className="font-mono text-[11.5px] text-zinc-300">{meta}</span>
+      </div>
+    </article>
+  );
+}
+
+/* ========================================================================
+   QUICKSTART — code editor
+   ======================================================================== */
+
+function Quickstart() {
+  return (
+    <section className="relative overflow-hidden border-b border-zinc-800/60 bg-[#0a0a0a] py-28 lg:py-36">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -right-40 top-1/3 h-[320px] w-[320px] rounded-full bg-emerald-500/6 blur-[120px]"
+      />
+      <div className="relative mx-auto max-w-[1400px] px-6 lg:px-10">
+        <div className="grid grid-cols-12 gap-x-6 gap-y-12">
+          <div className="col-span-12 md:col-span-5 lg:col-span-4">
+            <p className="rule-with-pip font-mono text-[11px] uppercase tracking-[0.3em] text-zinc-400">
+              <span>Section II — Integration</span>
             </p>
-            <ul className="mt-8 space-y-3 text-sm text-zinc-400">
-              <Bullet>Handles HTTP 402 + payment terms automatically</Bullet>
-              <Bullet>Verifies on-chain via PayAI facilitator</Bullet>
-              <Bullet>Charge per endpoint, per method, or per response</Bullet>
-              <Bullet>Replay-safe via nonces + on-chain verification</Bullet>
+            <h2 className="mt-8 font-display text-[40px] font-light leading-[1.02] tracking-[-0.02em] text-zinc-50 md:text-[54px]">
+              Payments in{" "}
+              <span className="italic text-emerald-gradient">one line.</span>
+            </h2>
+            <p className="mt-6 text-[15px] leading-[1.7] text-zinc-400">
+              Works with Express, Fastify, and Hono out of the box. Python and
+              Go middlewares ship next.
+            </p>
+
+            <ul className="mt-10 space-y-4 text-[14px] text-zinc-300">
+              <BulletLine>
+                <strong className="text-zinc-100">402 handled for you.</strong>{" "}
+                Middleware returns payment terms, verifies{" "}
+                <code className="font-mono text-zinc-400">X-Payment</code>,
+                runs your handler.
+              </BulletLine>
+              <BulletLine>
+                <strong className="text-zinc-100">On-chain verification.</strong>{" "}
+                PayAI facilitator checks the signature before we serve a byte.
+              </BulletLine>
+              <BulletLine>
+                <strong className="text-zinc-100">
+                  Nonces prevent replay.
+                </strong>{" "}
+                No one pays twice. No one pays zero.
+              </BulletLine>
+              <BulletLine>
+                <strong className="text-zinc-100">Per-endpoint pricing.</strong>{" "}
+                Static, dynamic, or computed. Yours to decide.
+              </BulletLine>
             </ul>
-            <div className="mt-10 flex flex-wrap gap-3">
-              <Link
-                href="/merchants/dashboard"
-                className="inline-flex items-center gap-2 rounded-md bg-emerald-400 px-4 py-2.5 text-sm font-semibold text-black shadow-lg shadow-emerald-500/20 hover:bg-emerald-300"
-              >
-                Create merchant account →
-              </Link>
+
+            <div className="mt-10 flex flex-wrap gap-3 font-mono text-[11px] uppercase tracking-[0.22em] text-zinc-500">
               <Link
                 href="/docs/merchants/quickstart"
-                className="inline-flex items-center gap-2 rounded-md border border-zinc-700 bg-zinc-900/60 px-4 py-2.5 text-sm font-medium text-zinc-100 hover:bg-zinc-800/80"
+                className="inline-flex items-center gap-2 border-b border-zinc-700 pb-0.5 transition hover:border-emerald-400 hover:text-emerald-400"
               >
-                Full quickstart
+                Read the quickstart
+                <span aria-hidden>→</span>
+              </Link>
+              <span className="text-zinc-700">/</span>
+              <Link
+                href="https://github.com"
+                className="inline-flex items-center gap-2 border-b border-zinc-700 pb-0.5 transition hover:border-emerald-400 hover:text-emerald-400"
+              >
+                View on GitHub
+                <span aria-hidden>↗</span>
               </Link>
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-900/60 px-4 py-3">
-              <span className="font-mono text-xs text-zinc-500">server.ts</span>
-              <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
-                express
-              </span>
-            </div>
-            <pre className="overflow-x-auto p-6 font-mono text-[13px] leading-6 text-zinc-300">
-              <code>
-                <span className="text-zinc-500">
-                  {"// npm install @payrail/merchant-sdk"}
-                </span>
-                {"\n\n"}
-                <span className="text-pink-400">import</span>{" "}
-                <span className="text-zinc-200">express</span>{" "}
-                <span className="text-pink-400">from</span>{" "}
-                <span className="text-emerald-300">{"'express'"}</span>
-                <span className="text-zinc-500">;</span>
-                {"\n"}
-                <span className="text-pink-400">import</span>{" "}
-                <span className="text-zinc-200">{"{ payrail }"}</span>{" "}
-                <span className="text-pink-400">from</span>{" "}
-                <span className="text-emerald-300">
-                  {"'@payrail/merchant-sdk'"}
-                </span>
-                <span className="text-zinc-500">;</span>
-                {"\n\n"}
-                <span className="text-pink-400">const</span>{" "}
-                <span className="text-zinc-200">app</span>{" "}
-                <span className="text-pink-400">=</span>{" "}
-                <span className="text-sky-300">express</span>
-                <span className="text-zinc-400">()</span>
-                <span className="text-zinc-500">;</span>
-                {"\n"}
-                <span className="text-pink-400">const</span>{" "}
-                <span className="text-zinc-200">pay</span>{" "}
-                <span className="text-pink-400">=</span>{" "}
-                <span className="text-sky-300">payrail</span>
-                <span className="text-zinc-400">(</span>
-                {"{ "}
-                <span className="text-zinc-200">apiKey</span>
-                <span className="text-zinc-500">:</span>{" "}
-                <span className="text-zinc-200">process</span>
-                <span className="text-zinc-500">.</span>
-                <span className="text-zinc-200">env</span>
-                <span className="text-zinc-500">.</span>
-                <span className="text-zinc-200">PAYRAIL_KEY</span>
-                {" }"}
-                <span className="text-zinc-400">)</span>
-                <span className="text-zinc-500">;</span>
-                {"\n\n"}
-                <span className="text-zinc-200">app</span>
-                <span className="text-zinc-500">.</span>
-                <span className="text-sky-300">get</span>
-                <span className="text-zinc-400">(</span>
-                <span className="text-emerald-300">{"'/article/:id'"}</span>
-                <span className="text-zinc-500">,</span>
-                {"\n"}
-                {"  "}
-                <span className="text-zinc-200">pay</span>
-                <span className="text-zinc-500">.</span>
-                <span className="text-sky-300">charge</span>
-                <span className="text-zinc-400">(</span>
-                {"{ "}
-                <span className="text-zinc-200">amount</span>
-                <span className="text-zinc-500">:</span>{" "}
-                <span className="text-emerald-300">{"'0.02'"}</span>
-                {" }"}
-                <span className="text-zinc-400">)</span>
-                <span className="text-zinc-500">,</span>
-                {"\n"}
-                {"  "}
-                <span className="text-zinc-400">(</span>
-                <span className="text-zinc-200">req</span>
-                <span className="text-zinc-500">,</span>{" "}
-                <span className="text-zinc-200">res</span>
-                <span className="text-zinc-400">)</span>{" "}
-                <span className="text-pink-400">{"=>"}</span>{" "}
-                <span className="text-zinc-200">res</span>
-                <span className="text-zinc-500">.</span>
-                <span className="text-sky-300">json</span>
-                <span className="text-zinc-400">(</span>
-                <span className="text-zinc-200">article</span>
-                <span className="text-zinc-400">)</span>
-                <span className="text-zinc-500">,</span>
-                {"\n"}
-                <span className="text-zinc-400">)</span>
-                <span className="text-zinc-500">;</span>
-              </code>
-            </pre>
+          <div className="col-span-12 md:col-span-7 lg:col-span-8">
+            <MerchantCodeEditor />
           </div>
         </div>
       </div>
@@ -403,76 +337,74 @@ function CodeExample() {
   );
 }
 
-function Bullet({ children }: { children: React.ReactNode }) {
+function BulletLine({ children }: { children: React.ReactNode }) {
   return (
-    <li className="flex items-start gap-2.5">
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400"
+    <li className="flex gap-3 leading-[1.6]">
+      <span
         aria-hidden="true"
-      >
-        <path
-          d="M5 13l4 4L19 7"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-      <span>{children}</span>
+        className="mt-[10px] inline-block h-px w-4 shrink-0 bg-emerald-400"
+      />
+      <span className="text-zinc-400">{children}</span>
     </li>
   );
 }
 
 /* ========================================================================
-   REVENUE EXAMPLE
+   ECONOMICS — why pay-per-call finally works
    ======================================================================== */
 
-function Revenue() {
+function Economics() {
   return (
-    <section className="border-b border-zinc-800/60 py-28">
-      <div className="mx-auto max-w-6xl px-6">
-        <div className="mb-12 max-w-2xl">
-          <SectionLabel>The economics</SectionLabel>
-          <h2 className="mt-4 text-balance text-4xl font-semibold leading-tight tracking-tight md:text-5xl">
-            Pay-per-call economics, finally.
+    <section className="border-b border-zinc-800/60 bg-[#08080a] py-28 lg:py-36">
+      <div className="mx-auto max-w-[1400px] px-6 lg:px-10">
+        <div className="mb-16 max-w-2xl">
+          <p className="rule-with-pip font-mono text-[11px] uppercase tracking-[0.3em] text-zinc-400">
+            <span>Section III — The economics</span>
+          </p>
+          <h2 className="mt-8 font-display text-balance text-[44px] font-light leading-[1.02] tracking-[-0.02em] text-zinc-50 md:text-[60px]">
+            Micropayments, finally,{" "}
+            <span className="italic text-emerald-gradient">profitable.</span>
           </h2>
-          <p className="mt-5 text-lg leading-7 text-zinc-400">
-            Stripe's per-transaction fees make micropayments impossible. X402
-            on Solana makes them trivial.
+          <p className="mt-6 max-w-xl text-[15px] leading-[1.7] text-zinc-400">
+            Card processors charge a floor of $0.30 per transaction. That
+            kills pay-per-call at any realistic price. Solana fees are
+            ~$0.0001. You keep the rest.
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-0 md:grid-cols-2">
           <ScenarioCard
-            title="What Stripe charges for $0.02"
-            body="4% + $0.30 = $0.308. You lose money on every call."
-            bad
+            tone="legacy"
+            tag="Legacy — Stripe"
+            headline="You lose money per call."
+            stat="$0.02 charged → $0.308 in fees"
+            detail="4% + $0.30 means the floor is $0.31 before you break even. Micropayments don't work here."
           />
           <ScenarioCard
-            title="What Payrail charges for $0.02"
-            body="~$0.0001 Solana fee + 0% platform fee during beta. 99.5% hits your wallet."
+            tone="payrail"
+            tag="Payrail — Solana + x402"
+            headline="99.5% lands in your wallet."
+            stat="$0.02 charged → $0.0001 in fees"
+            detail="Solana settlement + 0% platform fee during beta. The merchant SDK is open-source; the facilitator is swappable."
           />
         </div>
 
-        <div className="mt-10 rounded-xl border border-zinc-800 bg-zinc-950/60 p-8">
-          <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-emerald-400">
-            Example
+        <div className="mt-10 border border-zinc-800 bg-[#0c0c0e] p-8 md:p-10">
+          <div className="rule-with-pip mb-6 font-mono text-[10px] uppercase tracking-[0.28em] text-emerald-400">
+            <span>A realistic scenario</span>
           </div>
-          <p className="text-lg leading-7 text-zinc-300">
-            An agent hits your weather API 5,000 times a day at $0.01/call.
-            That's{" "}
-            <span className="font-semibold text-emerald-400">$50/day</span>,{" "}
-            <span className="font-semibold text-emerald-400">
-              $1,500/month
-            </span>
-            .
+          <p className="max-w-4xl font-display text-[24px] font-light leading-[1.45] tracking-tight text-zinc-100 md:text-[32px]">
+            An agent hits your weather API{" "}
+            <span className="text-emerald-gradient">5,000 times a day</span> at
+            $0.01 a call. On Payrail that&apos;s{" "}
+            <span className="text-emerald-gradient">$50/day</span> —{" "}
+            <span className="text-emerald-gradient">$1,500/month</span> — in
+            your wallet.
           </p>
-          <p className="mt-2 text-sm text-zinc-500">
-            With Stripe, that same traffic yields{" "}
-            <span className="text-zinc-400">-$1,500/month</span> — you'd lose
-            money.
+          <p className="mt-4 max-w-3xl text-[14px] leading-[1.7] text-zinc-400">
+            With Stripe, the same traffic yields{" "}
+            <span className="text-zinc-300">minus $1,500 a month</span>. You
+            would pay to serve those calls.
           </p>
         </div>
       </div>
@@ -481,104 +413,95 @@ function Revenue() {
 }
 
 function ScenarioCard({
-  title,
-  body,
-  bad,
+  tone,
+  tag,
+  headline,
+  stat,
+  detail,
 }: {
-  title: string;
-  body: string;
-  bad?: boolean;
+  tone: "legacy" | "payrail";
+  tag: string;
+  headline: string;
+  stat: string;
+  detail: string;
 }) {
+  const accentText =
+    tone === "payrail" ? "text-emerald-400" : "text-rose-400";
+  const borderSide =
+    tone === "payrail"
+      ? "border-l md:border-l-0 md:border-r"
+      : "border-l md:border-l";
   return (
-    <div
-      className={`rounded-xl border p-8 ${
-        bad
-          ? "border-red-900/40 bg-red-950/20"
-          : "border-emerald-900/40 bg-emerald-950/10"
-      }`}
+    <article
+      className={`flex flex-col border border-zinc-800 ${borderSide} bg-[#0c0c0e] p-8 md:p-10`}
     >
-      <div
-        className={`font-mono text-xs uppercase tracking-[0.2em] ${
-          bad ? "text-red-400" : "text-emerald-400"
-        }`}
+      <p
+        className={`font-mono text-[10px] uppercase tracking-[0.28em] ${accentText}`}
       >
-        {bad ? "Legacy" : "Payrail"}
+        {tag}
+      </p>
+      <h3 className="mt-6 font-display text-[28px] font-light leading-[1.15] tracking-tight text-zinc-50 md:text-[34px]">
+        {headline}
+      </h3>
+      <div
+        className={`mt-8 font-mono text-[13px] leading-[1.6] ${accentText}`}
+      >
+        {stat}
       </div>
-      <h3 className="mt-3 text-xl font-semibold tracking-tight">{title}</h3>
-      <p className="mt-3 text-sm leading-6 text-zinc-300">{body}</p>
-    </div>
+      <p className="mt-3 text-[14px] leading-[1.65] text-zinc-400">{detail}</p>
+    </article>
   );
 }
 
 /* ========================================================================
-   MERCHANT FAQ
+   FAQ
    ======================================================================== */
 
-function MerchantFAQ() {
-  const faqs = [
-    {
-      q: "What if an agent doesn't pay?",
-      a: "They don't get a response. Our middleware returns HTTP 402 until the X-Payment header is present and verified on-chain. You never serve unpaid requests.",
-    },
-    {
-      q: "How do I cash out to my bank?",
-      a: "Your USDG accumulates in your Solana payout wallet. Cash-out is powered by Dodo Payments' payout API — INR and USD supported, with tax-compliant invoicing out of the box.",
-    },
-    {
-      q: "What about refunds and chargebacks?",
-      a: "Because payments are per-call and settled on-chain, chargebacks as you know them don't exist. Disputes are rare (agents are deterministic) and handled via Dodo's MoR coverage on cash-out.",
-    },
-    {
-      q: "Can I set different prices per endpoint?",
-      a: "Yes. Each route can have its own `pay.charge({ amount: '...' })`. Prices can be dynamic (e.g., scale with response size or compute cost).",
-    },
-    {
-      q: "Do I need to know Solana?",
-      a: "No. The middleware abstracts everything. You just see USDG balance rising in your payout wallet. Cash-out converts it to fiat. Entirely opaque to the Solana layer if you want.",
-    },
-    {
-      q: "Is X402 locked to Payrail?",
-      a: "No — X402 is an open protocol. Our middleware is a thin, optional convenience. You can self-host, switch facilitators, or move off Payrail without changing the protocol on your API.",
-    },
-  ];
+const merchantFaqs: QA[] = [
+  {
+    q: "What if an agent doesn't pay?",
+    a: "They don't get a response. The middleware returns HTTP 402 with payment terms and only runs your handler after the X-Payment header is verified on-chain. You never serve unpaid requests.",
+  },
+  {
+    q: "How do I cash out to a bank?",
+    a: "USDC accrues in your Solana payout wallet. Cash-out routes through Dodo's payout API — INR and USD supported, GST-compliant invoicing, MoR coverage, typical settlement within hours.",
+  },
+  {
+    q: "What about refunds and chargebacks?",
+    a: "Payments are per-call and settled on-chain, so chargebacks in the card sense don't exist. Agents are deterministic, disputes are rare, and Dodo provides MoR coverage on the cash-out leg.",
+  },
+  {
+    q: "Can I price different endpoints differently?",
+    a: "Yes. Each route has its own pay.charge({ amount }). Prices can be static, dynamic (scaled with response size / compute), or computed on the fly inside the handler.",
+  },
+  {
+    q: "Do I need to know Solana?",
+    a: "No. The middleware abstracts it entirely. You watch a USDC balance rise in your payout wallet and click cash-out when you want rupees. The Solana layer is opaque if you want it to be.",
+  },
+  {
+    q: "Is x402 locked to Payrail?",
+    a: "No. x402 is an open protocol. Our middleware is a thin convenience layer — swappable facilitator, self-hostable, and removable without changing the protocol your API already speaks.",
+  },
+];
 
+function FAQSection() {
   return (
-    <section className="border-b border-zinc-800/60 py-28">
-      <div className="mx-auto max-w-3xl px-6">
-        <div className="mb-12 text-center">
-          <SectionLabel>Merchant FAQ</SectionLabel>
-          <h2 className="mt-4 text-balance text-4xl font-semibold leading-tight tracking-tight md:text-5xl">
-            Questions from API builders.
-          </h2>
+    <section className="border-b border-zinc-800/60 bg-[#0a0a0a] py-28 lg:py-36">
+      <div className="mx-auto max-w-[1400px] px-6 lg:px-10">
+        <div className="mb-12 grid grid-cols-12 items-end gap-8">
+          <div className="col-span-12 md:col-span-4">
+            <p className="rule-with-pip font-mono text-[11px] uppercase tracking-[0.3em] text-zinc-400">
+              <span>Section IV — FAQ</span>
+            </p>
+          </div>
+          <div className="col-span-12 md:col-span-8">
+            <h2 className="font-display text-[40px] font-light leading-[1.02] tracking-[-0.02em] text-zinc-50 md:text-[60px]">
+              Questions, from{" "}
+              <span className="italic text-zinc-500">API builders.</span>
+            </h2>
+          </div>
         </div>
-        <div className="space-y-3">
-          {faqs.map((f) => (
-            <details
-              key={f.q}
-              className="group rounded-lg border border-zinc-800 bg-zinc-950/60 open:border-zinc-700"
-            >
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-6 py-5 text-sm font-medium text-zinc-100 transition hover:text-white">
-                <span>{f.q}</span>
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  className="h-4 w-4 shrink-0 text-zinc-500 transition group-open:rotate-45"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M12 5v14M5 12h14"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </summary>
-              <div className="border-t border-zinc-800 px-6 py-5 text-sm leading-6 text-zinc-400">
-                {f.a}
-              </div>
-            </details>
-          ))}
-        </div>
+        <FAQ items={merchantFaqs} />
       </div>
     </section>
   );
@@ -590,40 +513,58 @@ function MerchantFAQ() {
 
 function FinalCTA() {
   return (
-    <section className="border-b border-zinc-800/60 py-28">
-      <div className="mx-auto max-w-4xl px-6">
-        <div className="group relative overflow-hidden rounded-2xl border border-zinc-800 bg-gradient-to-br from-zinc-950 to-zinc-950/20 p-12 text-center transition hover:border-emerald-400/40">
-          <div
-            className="pointer-events-none absolute -right-20 -top-20 h-52 w-52 rounded-full bg-emerald-500/10 blur-3xl transition group-hover:bg-emerald-500/20"
-            aria-hidden="true"
-          />
-          <div
-            className="pointer-events-none absolute -left-20 -bottom-20 h-52 w-52 rounded-full bg-emerald-500/10 blur-3xl transition group-hover:bg-emerald-500/20"
-            aria-hidden="true"
-          />
-          <SectionLabel>Start earning</SectionLabel>
-          <h3 className="mt-4 text-balance text-4xl font-semibold tracking-tight md:text-5xl">
-            Your API, monetized in 5 minutes.
-          </h3>
-          <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-zinc-400">
-            Create an account. Register your endpoint. Drop in the middleware.
-            Watch USDG roll in.
-          </p>
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Link
-              href="/merchants/dashboard"
-              className="inline-flex items-center gap-2 rounded-md bg-emerald-400 px-5 py-3 text-sm font-semibold text-black shadow-lg shadow-emerald-500/20 hover:bg-emerald-300"
+    <section className="relative overflow-hidden bg-[#0a0a0a] py-32 lg:py-40">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute left-1/2 top-1/2 h-[600px] w-[1000px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-500/10 blur-[160px]"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:72px_72px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,black_0%,transparent_70%)]"
+      />
+
+      <div className="relative mx-auto max-w-[1200px] px-6 text-center lg:px-10">
+        <p className="rule-with-pip mx-auto inline-flex font-mono text-[11px] uppercase tracking-[0.3em] text-zinc-400">
+          <span>Issue End · Start earning</span>
+        </p>
+        <h2 className="mt-10 font-display text-balance text-[54px] font-light leading-[0.98] tracking-[-0.025em] text-zinc-50 md:text-[104px]">
+          Monetize your API{" "}
+          <span className="italic text-emerald-gradient">this weekend.</span>
+        </h2>
+        <p className="mx-auto mt-8 max-w-xl text-[16px] leading-[1.7] text-zinc-400">
+          Free during beta. One middleware line. USDC in your wallet before
+          your next standup.
+        </p>
+        <div className="mt-12 flex flex-wrap justify-center gap-3">
+          <Link
+            href="/merchants/dashboard"
+            className="group inline-flex items-center justify-between gap-3 border border-emerald-400 bg-emerald-400 px-7 py-4 text-sm font-semibold text-black transition hover:bg-emerald-300"
+          >
+            <span>Create merchant account</span>
+            <span
+              aria-hidden="true"
+              className="transition-transform group-hover:translate-x-1"
             >
-              Create merchant account →
-            </Link>
-            <Link
-              href="/docs/merchants/quickstart"
-              className="inline-flex items-center rounded-md border border-zinc-700 bg-zinc-900/60 px-5 py-3 text-sm font-semibold text-zinc-100 hover:border-zinc-600 hover:bg-zinc-800/80"
+              →
+            </span>
+          </Link>
+          <Link
+            href="/docs/merchants/quickstart"
+            className="group inline-flex items-center justify-between gap-3 border border-zinc-700 px-7 py-4 text-sm font-medium text-zinc-300 transition hover:border-zinc-500 hover:text-zinc-100"
+          >
+            <span>Read the docs</span>
+            <span
+              aria-hidden="true"
+              className="text-zinc-500 transition-transform group-hover:translate-x-1"
             >
-              Read the docs
-            </Link>
-          </div>
+              ↗
+            </span>
+          </Link>
         </div>
+
+        <p className="mt-16 font-mono text-[10px] uppercase tracking-[0.26em] text-zinc-600">
+          Built at Colosseum Frontier 2026 · Solana × Dodo · Shipped from India
+        </p>
       </div>
     </section>
   );

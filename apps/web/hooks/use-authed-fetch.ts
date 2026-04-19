@@ -24,7 +24,10 @@ export function useAuthedFetch() {
 
   return useCallback(
     async (path: string, init?: RequestInit): Promise<Response> => {
-      const token = await getAccessToken();
+      // Catch SDK-side rejections (Privy token refresh failure, network flake)
+      // and treat them the same as "no token" — triggers a clean signout
+      // instead of bubbling an unhandled rejection into the React tree.
+      const token = await getAccessToken().catch(() => null);
       if (!token) {
         void signOut();
         throw new UnauthorizedError();

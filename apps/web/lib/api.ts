@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 type ErrorCode =
   | "missing_token"
   | "invalid_token"
+  | "invalid_signature"
   | "user_not_synced"
   | "not_found"
   | "bad_request"
@@ -13,6 +14,7 @@ type ErrorCode =
 const STATUS: Record<ErrorCode, number> = {
   missing_token: 401,
   invalid_token: 401,
+  invalid_signature: 401,
   user_not_synced: 404,
   not_found: 404,
   bad_request: 400,

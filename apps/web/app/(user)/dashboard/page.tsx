@@ -1,11 +1,10 @@
-import { DashboardContent } from "@/components/dashboard/dashboard-content";
-import { Nav } from "@/components/marketing/nav";
+import { Suspense } from "react";
+import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 
 export default function DashboardPage() {
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-zinc-100 antialiased">
-      <Nav variant="user" />
-      <DashboardContent />
-    </div>
+    <Suspense fallback={null}>
+      <DashboardShell />
+    </Suspense>
   );
 }

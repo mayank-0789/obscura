@@ -2,10 +2,16 @@
 //
 // Base units:
 //   - INR paise (100 paise = ₹1)
-//   - USDG micros (1_000_000 micros = $1; 6 decimals)
+//   - Stablecoin micros (1_000_000 micros = $1; 6 decimals for both USDC and USDG)
 //
 // Everything goes through these helpers so rounding, locale, and unit math
 // live in one place.
+
+// Display ticker for whatever STABLECOIN_MINT currently points at. Update
+// alongside the mint when swapping USDC ↔ USDG. The function name
+// `formatUsdg` is a historical artifact — it formats 6-decimal micros
+// regardless of brand.
+export const STABLECOIN_TICKER = "USDC";
 
 export function formatInr(paise: string | bigint): string {
   const rupees = toBigInt(paise) / 100n;

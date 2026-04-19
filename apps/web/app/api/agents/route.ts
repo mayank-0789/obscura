@@ -58,8 +58,12 @@ export async function POST(req: Request) {
   if (!allowed) return apiError("rate_limited");
 
   // Count check before the Privy call — we don't want to create a wallet only
-  // to reject the insert. Race is benign: two parallel creates may both pass
-  // the count, resulting in at most LIMIT+1 — not a correctness issue.
+  // to reject the insert. The read-then-insert is racy: two parallel creates
+  // may both pass the check and land, briefly exceeding the cap. The
+  // practical overshoot is bounded by the rate limit (5 creates/hour/user)
+  // and the cap is generous (50), so worst case is ~6 extra. Acceptable for
+  // v1; if this ever starts mattering, migrate to an atomic UPDATE-RETURNING
+  // on a users.agent_count column or a dedicated agent_quota table.
   const [{ value: agentCount } = { value: 0 }] = await db
     .select({ value: count() })
     .from(agents)

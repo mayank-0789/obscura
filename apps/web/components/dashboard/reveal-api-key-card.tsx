@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 type Props = {
@@ -9,11 +9,20 @@ type Props = {
   onDismiss: () => void;
 };
 
-// Shows the plaintext agent API key once. The key is not recoverable after
-// dismissal — only the hash is stored server-side — so the UI makes that
-// very explicit.
+// Plaintext API key shown once. Server stores only a hash; leaving without
+// copying means rotating from the agent page. The beforeunload handler warns
+// on navigation/refresh while this card is visible.
 export function RevealApiKeyCard({ agentName, apiKey, onDismiss }: Props) {
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, []);
 
   const handleCopy = async () => {
     try {
@@ -26,31 +35,45 @@ export function RevealApiKeyCard({ agentName, apiKey, onDismiss }: Props) {
   };
 
   return (
-    <section className="rounded-xl border border-emerald-800/50 bg-emerald-950/20 p-6">
-      <div className="font-mono text-xs uppercase tracking-[0.2em] text-emerald-400">
-        API key for {agentName}
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-3 rounded-lg border border-emerald-400/40 bg-emerald-400/5 px-4 py-3">
+      <div className="flex items-center gap-2">
+        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+        <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-emerald-300">
+          Save this key
+        </span>
       </div>
-      <p className="mt-2 text-sm text-zinc-300">
-        Copy this now. It is shown only once — we store a hash, not the key
-        itself. If you lose it, rotate it from the agent page.
-      </p>
-      <div className="mt-4 flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-950/80 px-3 py-2 font-mono text-sm">
-        <span className="flex-1 truncate text-zinc-200">{apiKey}</span>
+
+      <div className="flex min-w-0 flex-1 items-center gap-2 text-[12.5px] text-zinc-300">
+        <span className="text-zinc-500">
+          API key for <span className="text-zinc-200">{agentName}</span> —
+          shown once.
+        </span>
+      </div>
+
+      <div className="flex min-w-0 items-center gap-2 rounded-md border border-zinc-800 bg-zinc-950 pl-3">
+        <code className="min-w-0 truncate font-mono text-[12.5px] text-zinc-100">
+          {apiKey}
+        </code>
         <button
           type="button"
           onClick={handleCopy}
-          className="rounded border border-zinc-700 bg-zinc-900 px-3 py-1 text-xs text-zinc-100 transition hover:bg-zinc-800"
+          className={`rounded-r-md px-3 py-1.5 font-mono text-[11px] font-medium transition ${
+            copied
+              ? "bg-emerald-400 text-black"
+              : "bg-zinc-900 text-zinc-200 hover:bg-zinc-800"
+          }`}
         >
-          {copied ? "Copied" : "Copy"}
+          {copied ? "Copied ✓" : "Copy"}
         </button>
       </div>
+
       <button
         type="button"
         onClick={onDismiss}
-        className="mt-4 text-xs text-zinc-400 transition hover:text-zinc-200"
+        className="text-[11.5px] text-zinc-500 transition hover:text-zinc-200"
       >
-        I&apos;ve saved it — dismiss
+        Dismiss
       </button>
-    </section>
+    </div>
   );
 }
