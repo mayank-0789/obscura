@@ -1,13 +1,29 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { usePrivy } from "@privy-io/react-auth";
+import { usePrivy, useLogin } from "@privy-io/react-auth";
+import { toast } from "sonner";
 import { useSyncUser } from "@/hooks/use-sync-user";
+import { useSignout } from "@/hooks/use-signout";
 
 export function SignInButton() {
   const router = useRouter();
-  const { ready, authenticated, user, login, logout } = usePrivy();
+  const { ready, authenticated, user } = usePrivy();
+  const signOut = useSignout();
   useSyncUser();
+
+  // Drive the post-auth redirect from Privy's own event so first-login users
+  // land on /dashboard without an effect-based flicker.
+  const { login } = useLogin({
+    onComplete: ({ wasAlreadyAuthenticated }) => {
+      if (wasAlreadyAuthenticated) return;
+      router.push("/dashboard");
+    },
+    onError: (code) => {
+      if (code === "exited_auth_flow") return;
+      toast.error("Sign-in failed", { description: code });
+    },
+  });
 
   if (!ready) {
     return (
@@ -41,10 +57,7 @@ export function SignInButton() {
         {identity}
       </span>
       <button
-        onClick={async () => {
-          await logout();
-          router.push("/");
-        }}
+        onClick={signOut}
         className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-100 transition hover:bg-zinc-800"
       >
         Sign out
