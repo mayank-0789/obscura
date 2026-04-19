@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useCreateAgent } from "@/hooks/use-create-agent";
 import type { CreateAgentResult } from "@/hooks/use-create-agent";
@@ -13,25 +13,58 @@ type Props = {
   onCreated: (result: CreateAgentResult) => void;
 };
 
+const FOCUSABLE = [
+  "a[href]",
+  "button:not([disabled])",
+  "input:not([disabled])",
+  "textarea:not([disabled])",
+  "select:not([disabled])",
+  "[tabindex]:not([tabindex='-1'])",
+].join(",");
+
 export function CreateAgentModal({ open, onClose, onCreated }: Props) {
   const [name, setName] = useState("");
   const [capInr, setCapInr] = useState<number | "">("");
+  const formRef = useRef<HTMLFormElement>(null);
   const firstInputRef = useRef<HTMLInputElement>(null);
+  const titleId = useId();
   const createAgent = useCreateAgent();
 
-  // Autofocus + reset on open.
+  // Reset state + capture pre-open focus target so we can restore it on close.
   useEffect(() => {
     if (!open) return;
     setName("");
     setCapInr("");
+    const previouslyFocused = document.activeElement as HTMLElement | null;
     firstInputRef.current?.focus();
+    return () => {
+      previouslyFocused?.focus?.();
+    };
   }, [open]);
 
-  // Esc to close (respects in-flight mutation).
+  // Esc closes. Tab/Shift-Tab are trapped to the form.
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !createAgent.isPending) onClose();
+      if (e.key === "Escape" && !createAgent.isPending) {
+        onClose();
+        return;
+      }
+      if (e.key !== "Tab" || !formRef.current) return;
+
+      const targets = formRef.current.querySelectorAll<HTMLElement>(FOCUSABLE);
+      if (targets.length === 0) return;
+      const first = targets[0]!;
+      const last = targets[targets.length - 1]!;
+      const active = document.activeElement;
+
+      if (e.shiftKey && active === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -70,6 +103,10 @@ export function CreateAgentModal({ open, onClose, onCreated }: Props) {
       onClick={() => !createAgent.isPending && onClose()}
     >
       <form
+        ref={formRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
         onClick={(e) => e.stopPropagation()}
         onSubmit={handleSubmit}
         className="w-full max-w-md rounded-xl border border-zinc-800 bg-[#0a0a0a] p-6 shadow-2xl"
@@ -78,7 +115,7 @@ export function CreateAgentModal({ open, onClose, onCreated }: Props) {
           <p className="font-mono text-xs uppercase tracking-[0.2em] text-emerald-400">
             New agent
           </p>
-          <h2 className="mt-2 text-xl font-semibold text-zinc-100">
+          <h2 id={titleId} className="mt-2 text-xl font-semibold text-zinc-100">
             Create an agent
           </h2>
           <p className="mt-1 text-sm text-zinc-500">

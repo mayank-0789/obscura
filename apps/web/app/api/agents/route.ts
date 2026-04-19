@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { desc, eq } from "drizzle-orm";
+import { count, desc, eq } from "drizzle-orm";
 import { privy } from "@/lib/privy-server";
 import {
   db,
@@ -15,6 +15,11 @@ import { env } from "@/lib/env";
 import { quoteInrToUsdg } from "@/lib/rates";
 import { generateAgentApiKey } from "@/lib/agent-keys";
 import { serializeAgent } from "@/lib/agent-serialize";
+import { checkLimit } from "@/lib/ratelimit";
+
+// Hard ceiling on agents per user. Protects Privy wallet quota + keeps a single
+// account from ballooning the DB. Raise as we learn real usage patterns.
+const AGENTS_PER_USER_LIMIT = 50;
 
 const CreateAgentBody = z.object({
   name: z.string().trim().min(1).max(60),
@@ -48,6 +53,19 @@ export async function POST(req: Request) {
   const body = await parseBody(req);
   if (body instanceof Response) return body;
 
+  // Rate limit ahead of any billable side effects (Privy wallet, DB writes).
+  const allowed = await checkLimit("create-agent", user.id, 5, "1 h");
+  if (!allowed) return apiError("rate_limited");
+
+  // Count check before the Privy call — we don't want to create a wallet only
+  // to reject the insert. Race is benign: two parallel creates may both pass
+  // the count, resulting in at most LIMIT+1 — not a correctness issue.
+  const [{ value: agentCount } = { value: 0 }] = await db
+    .select({ value: count() })
+    .from(agents)
+    .where(eq(agents.userId, user.id));
+  if (agentCount >= AGENTS_PER_USER_LIMIT) return apiError("agent_limit_reached");
+
   const wallet = await createAgentWallet(user.privyId);
   if (wallet instanceof Response) return wallet;
 
@@ -79,8 +97,12 @@ export async function POST(req: Request) {
       { status: 201 },
     );
   } catch (err) {
-    // Privy wallet exists but DB rows don't — v1 accepts this orphan risk.
-    // A sweep job can reconcile by listing Privy wallets and matching to agents.
+    // Privy wallet exists but the DB rows don't. We can't compensate by
+    // deleting the wallet — @privy-io/server-auth doesn't expose a delete
+    // method; wallets are permanent once minted. Reconciliation must be a
+    // post-MVP background job that pages Privy's REST API and marks wallets
+    // with no matching agents row as archived. For hackathon-scale traffic
+    // the cost of an occasional orphan (free-tier Privy quota) is negligible.
     console.error("[agents/create] db insert", err);
     return apiError("server_error");
   }

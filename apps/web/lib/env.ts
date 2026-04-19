@@ -13,6 +13,11 @@ export const env = createEnv({
     // server can sign on its behalf without user prompts. Optional while bootstrapping;
     // required before agent wallets can execute x402 payments.
     PRIVY_AUTHORIZATION_KEY_ID: z.string().optional(),
+    // Upstash Redis (used for rate limiting). Both must be set to enable; when
+    // either is missing, rate limiters short-circuit to "allow" so local dev works
+    // without needing an Upstash account.
+    UPSTASH_REDIS_REST_URL: z.string().url().optional(),
+    UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
   },
 
   client: {
@@ -29,6 +34,8 @@ export const env = createEnv({
     PRIVY_APP_SECRET: process.env.PRIVY_APP_SECRET,
     PRIVY_AUTHORIZATION_KEY: process.env.PRIVY_AUTHORIZATION_KEY,
     PRIVY_AUTHORIZATION_KEY_ID: process.env.PRIVY_AUTHORIZATION_KEY_ID,
+    UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
+    UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     NEXT_PUBLIC_PRIVY_APP_ID: process.env.NEXT_PUBLIC_PRIVY_APP_ID,
     NEXT_PUBLIC_SOLANA_CLUSTER: process.env.NEXT_PUBLIC_SOLANA_CLUSTER,

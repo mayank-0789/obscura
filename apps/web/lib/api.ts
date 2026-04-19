@@ -6,6 +6,8 @@ type ErrorCode =
   | "user_not_synced"
   | "not_found"
   | "bad_request"
+  | "rate_limited"
+  | "agent_limit_reached"
   | "server_error";
 
 const STATUS: Record<ErrorCode, number> = {
@@ -14,6 +16,8 @@ const STATUS: Record<ErrorCode, number> = {
   user_not_synced: 404,
   not_found: 404,
   bad_request: 400,
+  rate_limited: 429,
+  agent_limit_reached: 400,
   server_error: 500,
 };
 

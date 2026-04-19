@@ -9,6 +9,8 @@ const MESSAGES: Record<string, string> = {
   invalid_token: "Your session expired. Sign in again.",
   user_not_synced: "Your account isn't set up yet — refresh the page.",
   not_found: "We couldn't find that.",
+  rate_limited: "You're doing that too often. Wait a minute and retry.",
+  agent_limit_reached: "You've hit the agent limit for this account.",
   server_error: FALLBACK,
 };
 
