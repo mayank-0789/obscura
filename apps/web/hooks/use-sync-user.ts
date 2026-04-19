@@ -3,51 +3,37 @@
 import { useEffect } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { toast } from "sonner";
-import { useSignout } from "@/hooks/use-signout";
+import { useAuthedFetch, UnauthorizedError } from "@/hooks/use-authed-fetch";
 
-// Idempotent POST to /api/auth/sync whenever the Privy session becomes ready.
-// Redirects are handled by useLogin's onComplete — this hook only cares about DB state.
-// 401 from the server means our JWT no longer verifies; force a clean sign-out.
+// Idempotent POST to /api/auth/sync whenever a Privy session becomes ready.
+// Redirects are handled by useLogin's onComplete — this hook only cares about
+// DB state. 401 is already handled inside useAuthedFetch (force sign-out),
+// so we only need to toast for transient non-auth failures.
 export function useSyncUser() {
-  const { ready, authenticated, getAccessToken } = usePrivy();
-  const signOut = useSignout();
+  const { ready, authenticated } = usePrivy();
+  const authedFetch = useAuthedFetch();
 
   useEffect(() => {
     if (!ready || !authenticated) return;
     let cancelled = false;
 
     void (async () => {
-      const token = await getAccessToken();
-      if (!token || cancelled) return;
-
       try {
-        const res = await fetch("/api/auth/sync", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
+        const res = await authedFetch("/api/auth/sync", { method: "POST" });
+        if (cancelled || res.ok) return;
+        toast.error("Sign-in sync failed", {
+          description: "Your session is active. Refresh to retry.",
         });
-        if (cancelled) return;
-
-        if (res.status === 401) {
-          await signOut();
-          return;
-        }
-
-        if (!res.ok) {
-          toast.error("Sign-in sync failed", {
-            description: "Your session is active. Refresh to retry.",
-          });
-        }
-      } catch {
-        if (!cancelled) {
-          toast.error("Sign-in sync failed", {
-            description: "Check your connection and refresh.",
-          });
-        }
+      } catch (err) {
+        if (cancelled || err instanceof UnauthorizedError) return;
+        toast.error("Sign-in sync failed", {
+          description: "Check your connection and refresh.",
+        });
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [ready, authenticated, getAccessToken, signOut]);
+  }, [ready, authenticated, authedFetch]);
 }

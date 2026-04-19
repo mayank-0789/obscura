@@ -1,11 +1,15 @@
-import { eq } from "drizzle-orm";
 import type { User as PrivyUser } from "@privy-io/server-auth";
 import { privy } from "@/lib/privy-server";
 import { db, users } from "@/lib/db";
 import { requireAuth, AuthError } from "@/lib/auth";
 import { apiError, apiOk } from "@/lib/api";
 
-// POST /api/auth/sync — upsert user row by privy_id. Idempotent, safe to call repeatedly.
+// POST /api/auth/sync — upsert the current user row by privy_id. Idempotent,
+// safe to call repeatedly (and raced by concurrent callers — the hook may
+// fire more than once on rapid remounts or React strict-mode double-invokes).
+//
+// Implemented as a single atomic INSERT ... ON CONFLICT DO UPDATE so two
+// concurrent syncs can't both insert and crash on the unique_violation.
 export async function POST(req: Request) {
   let privyUserId: string;
   try {
@@ -20,27 +24,16 @@ export async function POST(req: Request) {
     const email = extractEmail(privyUser);
     const phone = privyUser.phone?.number ?? null;
 
-    const [existing] = await db
-      .select()
-      .from(users)
-      .where(eq(users.privyId, privyUserId))
-      .limit(1);
-
-    if (!existing) {
-      const [created] = await db
-        .insert(users)
-        .values({ privyId: privyUserId, email, phone })
-        .returning();
-      return apiOk({ user: created, isNew: true });
-    }
-
-    const [updated] = await db
-      .update(users)
-      .set({ email, phone, updatedAt: new Date() })
-      .where(eq(users.privyId, privyUserId))
+    const [user] = await db
+      .insert(users)
+      .values({ privyId: privyUserId, email, phone })
+      .onConflictDoUpdate({
+        target: users.privyId,
+        set: { email, phone, updatedAt: new Date() },
+      })
       .returning();
 
-    return apiOk({ user: updated, isNew: false });
+    return apiOk({ user });
   } catch (err) {
     console.error("[auth/sync]", err);
     return apiError("server_error");

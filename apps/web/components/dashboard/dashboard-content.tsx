@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useUser } from "@/hooks/use-user";
-import { AgentsEmptyState } from "./agents-empty-state";
+import { AgentsSection } from "./agents-section";
 import { WalletCard, WalletPendingCard } from "./wallet-card";
 
 export function DashboardContent() {
@@ -30,13 +30,13 @@ export function DashboardContent() {
         )}
       </header>
 
-      {data?.solanaWallet ? (
-        <WalletCard address={data.solanaWallet.address} />
+      {data?.solanaAddress ? (
+        <WalletCard address={data.solanaAddress} />
       ) : isLoading ? null : (
         <WalletPendingCard />
       )}
 
-      <AgentsEmptyState />
+      <AgentsSection />
 
       <Link
         href="/"

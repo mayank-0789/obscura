@@ -1,30 +1,23 @@
 "use client";
 
-import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { usePrivy } from "@privy-io/react-auth";
 import type { User } from "@payrail/db";
-import { useSignout } from "@/hooks/use-signout";
+import { useAuthedFetch } from "@/hooks/use-authed-fetch";
 
 export type MeResponse = {
   user: User;
-  solanaWallet: { id: string; address: string } | null;
+  solanaAddress: string | null;
 };
 
-class UnauthorizedError extends Error {
-  constructor() {
-    super("unauthorized");
-  }
-}
-
-// Fetches user + wallet from /api/me. Retries 404 (sync race) up to 3× with backoff.
-// On 401 we force a sign-out — the JWT no longer verifies, so there's no valid
-// session to keep dragging around.
+// Fetches user + wallet from /api/me. Retries 404 (sync race) up to 3× with
+// backoff. 401 is handled by useAuthedFetch — it forces a sign-out, so we
+// don't retry or render stale state here.
 export function useUser() {
-  const { ready, authenticated, getAccessToken } = usePrivy();
-  const signOut = useSignout();
+  const { ready, authenticated } = usePrivy();
+  const authedFetch = useAuthedFetch();
 
-  const query = useQuery<MeResponse>({
+  return useQuery<MeResponse>({
     queryKey: ["me"],
     enabled: ready && authenticated,
     staleTime: 60_000,
@@ -32,23 +25,10 @@ export function useUser() {
       err instanceof Error && err.message === "user_not_synced" && count < 3,
     retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 5000),
     queryFn: async () => {
-      const token = await getAccessToken();
-      if (!token) throw new UnauthorizedError();
-
-      const res = await fetch("/api/me", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (res.status === 401) throw new UnauthorizedError();
+      const res = await authedFetch("/api/me");
       if (res.status === 404) throw new Error("user_not_synced");
       if (!res.ok) throw new Error(`api_error_${res.status}`);
       return res.json();
     },
   });
-
-  useEffect(() => {
-    if (query.error instanceof UnauthorizedError) void signOut();
-  }, [query.error, signOut]);
-
-  return query;
 }

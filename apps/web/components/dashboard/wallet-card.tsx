@@ -1,11 +1,7 @@
-import { env } from "@/lib/env";
+import { solscanAccountUrl } from "@/lib/solscan";
 
 export function WalletCard({ address }: { address: string }) {
-  const cluster = env.NEXT_PUBLIC_SOLANA_CLUSTER;
-  const solscanUrl =
-    cluster === "devnet"
-      ? `https://solscan.io/account/${address}?cluster=devnet`
-      : `https://solscan.io/account/${address}`;
+  const solscanUrl = solscanAccountUrl(address);
 
   return (
     <section className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-6">
