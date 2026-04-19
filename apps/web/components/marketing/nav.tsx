@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Logo } from "./logo";
+import { SignInButton } from "../auth/sign-in-button";
 
 export function Nav({
   variant = "user",
@@ -43,12 +44,7 @@ export function Nav({
           >
             GitHub
           </Link>
-          <Link
-            href={variant === "merchant" ? "/merchants/dashboard" : "/dashboard"}
-            className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-1.5 font-medium text-zinc-100 transition hover:bg-zinc-800"
-          >
-            Sign in
-          </Link>
+          <SignInButton />
         </nav>
       </div>
     </header>

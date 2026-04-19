@@ -4,5 +4,14 @@
   "description": "Server middleware for API providers to accept agent payments in USDG on Solana.",
   "private": true,
   "main": "./src/index.ts",
-  "types": "./src/index.ts"
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@payrail/solana": "workspace:*",
+    "@payrail/types": "workspace:*",
+    "@solana/web3.js": "^1.98.4",
+    "x402-solana": "^2.0.4"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*"
+  }
 }
