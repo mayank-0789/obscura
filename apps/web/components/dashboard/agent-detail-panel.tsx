@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useAgentBalance } from "@/hooks/use-agent-balance";
 import { solscanAccountUrl } from "@/lib/solscan";
 import {
   formatInr,
@@ -11,13 +12,11 @@ import type { AgentDTO } from "@/types/agent";
 import { Kbd } from "./kbd";
 
 export function AgentDetailPanel({ agent }: { agent: AgentDTO }) {
+  const { data: balance } = useAgentBalance(agent.id);
   const solscanUrl = solscanAccountUrl(agent.publicKey);
   const isActive = agent.status === "active";
 
   const budget = agent.budget;
-  const remaining = budget
-    ? (BigInt(budget.capUsdg) - BigInt(budget.spentUsdg)).toString()
-    : null;
   const percent =
     budget && BigInt(budget.capUsdg) > 0n
       ? Math.min(
@@ -85,15 +84,9 @@ export function AgentDetailPanel({ agent }: { agent: AgentDTO }) {
       {/* Metric strip */}
       <section className="mt-8 grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-zinc-800 bg-zinc-800 md:grid-cols-3">
         <Metric
-          label="Budget left"
-          value={
-            remaining && budget
-              ? `$${formatUsdg(remaining)}`
-              : budget
-                ? `$${formatUsdg(budget.capUsdg)}`
-                : "—"
-          }
-          sub={budget ? `${(100 - percent).toFixed(0)}% remaining` : ""}
+          label="In wallet"
+          value={balance ? `$${formatUsdg(balance.amount)}` : "…"}
+          sub={`${STABLECOIN_TICKER} · held by agent`}
         />
         <Metric
           label="Spent this cycle"

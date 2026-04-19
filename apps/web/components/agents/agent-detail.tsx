@@ -10,6 +10,7 @@ import {
   STABLECOIN_TICKER,
 } from "@/lib/money-format";
 import { useAgent } from "@/hooks/use-agent";
+import { useAgentBalance } from "@/hooks/use-agent-balance";
 import type { AgentDTO } from "@/types/agent";
 import { AppShell } from "@/components/dashboard/app-shell";
 import { Kbd } from "@/components/dashboard/kbd";
@@ -49,10 +50,6 @@ function Content({ agent }: { agent: AgentDTO }) {
             100,
         )
       : 0;
-
-  const remaining = budget
-    ? (BigInt(budget.capUsdg) - BigInt(budget.spentUsdg)).toString()
-    : null;
 
   return (
     <div className="px-8 py-8 lg:px-12">
@@ -154,17 +151,7 @@ function Content({ agent }: { agent: AgentDTO }) {
 
       {/* Metrics strip */}
       <section className="mt-8 grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-zinc-800 bg-zinc-800 md:grid-cols-3">
-        <Metric
-          label="Budget left"
-          value={
-            remaining && budget
-              ? `$${formatUsdg(remaining)}`
-              : budget
-                ? `$${formatUsdg(budget.capUsdg)}`
-                : "—"
-          }
-          sub={budget ? `${(100 - percent).toFixed(0)}% remaining` : ""}
-        />
+        <Metric label="In wallet" render={<LiveBalance agentId={agent.id} />} sub={`${STABLECOIN_TICKER} · held by agent`} />
         <Metric
           label="Spent this cycle"
           value={budget ? `$${formatUsdg(budget.spentUsdg)}` : "—"}
@@ -282,6 +269,11 @@ function Metric({
       {sub && <div className="mt-2 text-[12px] text-zinc-500">{sub}</div>}
     </div>
   );
+}
+
+function LiveBalance({ agentId }: { agentId: string }) {
+  const { data, isLoading } = useAgentBalance(agentId);
+  return <>{isLoading ? "…" : data ? `$${formatUsdg(data.amount)}` : "$0.00"}</>;
 }
 
 function SectionHeader({

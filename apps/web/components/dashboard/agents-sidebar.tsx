@@ -1,5 +1,6 @@
 "use client";
 
+import { useAgentBalance } from "@/hooks/use-agent-balance";
 import { formatUsdg } from "@/lib/money-format";
 import type { AgentDTO } from "@/types/agent";
 import { Kbd } from "./kbd";
@@ -116,6 +117,7 @@ function AgentRow({
   selected: boolean;
   onSelect: () => void;
 }) {
+  const { data: balance } = useAgentBalance(agent.id);
   const budget = agent.budget;
   const percent =
     budget && BigInt(budget.capUsdg) > 0n
@@ -125,9 +127,6 @@ function AgentRow({
             100,
         )
       : 0;
-  const remaining = budget
-    ? (BigInt(budget.capUsdg) - BigInt(budget.spentUsdg)).toString()
-    : null;
 
   const dot =
     agent.status === "active"
@@ -161,11 +160,9 @@ function AgentRow({
         >
           {agent.name}
         </span>
-        {remaining && (
-          <span className="font-mono text-[11px] text-zinc-500">
-            ${formatUsdg(remaining)} left
-          </span>
-        )}
+        <span className="font-mono text-[11px] text-zinc-500">
+          {balance ? `$${formatUsdg(balance.amount)}` : "—"}
+        </span>
       </div>
 
       {budget && (
