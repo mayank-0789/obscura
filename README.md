@@ -63,8 +63,7 @@ Payrail has three distinct roles:
 payrail/
 ├── apps/
 │   ├── web/                             # main product (user UI + merchant UI + API routes)
-│   ├── demo-merchant-news/              # demo merchant #1 — paid news API (deployment pending)
-│   └── demo-merchant-weather/           # demo merchant #2 — paid weather API (deployment pending)
+│   └── demo-merchant-news/              # demo merchant — paid news API
 ├── packages/
 │   ├── db/                              # @payrail/db — Drizzle schema + client
 │   ├── solana/                          # @payrail/solana — treasury + SPL transfer helpers

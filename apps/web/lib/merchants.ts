@@ -1,9 +1,11 @@
 import "server-only";
 import { eq } from "drizzle-orm";
+import { ensureAta, PublicKey } from "@payrail/solana";
 import { privy } from "@/lib/privy-server";
 import { db, merchants, users, type Merchant, type User } from "@/lib/db";
 import { env } from "@/lib/env";
 import { registerMerchantPayoutAddress } from "@/lib/helius";
+import { getConnection, getStablecoinMint, getTreasury } from "@/lib/solana";
 
 /**
  * Typed error thrown by merchant-provisioning helpers. Carries only a code —
@@ -132,6 +134,27 @@ export async function provisionMerchant(
   }
 
   if (insertedRow) {
+    // Initialise the merchant's USDC ATA so agents' x402 payments can land on
+    // their very first call. Without this step, a freshly-signed-up merchant
+    // has a wallet but no token account — and `/api/x402/sign` refuses to
+    // add an ATA-create instruction (that'd make the agent pay rent for a
+    // stranger's account). Treasury covers the ~0.002 SOL rent; ZERO USDC
+    // moves. Best-effort: on failure, the merchant still works, they'll
+    // just need to manually receive any USDC before agents can pay them.
+    try {
+      await ensureAta({
+        connection: getConnection(),
+        payer: getTreasury(),
+        owner: new PublicKey(insertedRow.payoutWallet),
+        mint: getStablecoinMint(),
+      });
+    } catch (err) {
+      console.error(
+        `[merchants/provision] ATA init failed for ${insertedRow.payoutWallet}; merchant must self-initialise before agents can pay:`,
+        err,
+      );
+    }
+
     // Register the payout wallet with Helius so real-time webhooks fire on
     // incoming payments. Fire-and-forget: if Helius is unreachable or not
     // configured, the merchant still works (dashboards degrade to polling).

@@ -23,6 +23,8 @@ type AppShellContextValue = {
 
 const AppShellContext = createContext<AppShellContextValue | null>(null);
 
+const JUST_CREATED_KEY = "payrail:just-created-agent";
+
 export function useAppShell(): AppShellContextValue {
   const ctx = useContext(AppShellContext);
   if (!ctx) {
@@ -52,6 +54,20 @@ export function AppShell({ selectedAgentId, onSelectAgent, children }: Props) {
   const [justCreated, setJustCreated] = useState<CreateAgentResult | null>(
     null,
   );
+
+  // Survive the route change that AppShell#onCreated triggers via
+  // `onSelectAgent` — on /agents/[id], that's `router.push` which unmounts
+  // the current AppShell, nuking `justCreated` before the reveal card can
+  // render. sessionStorage bridges the unmount-then-remount gap.
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(JUST_CREATED_KEY);
+      if (!raw) return;
+      setJustCreated(JSON.parse(raw) as CreateAgentResult);
+    } catch {
+      sessionStorage.removeItem(JUST_CREATED_KEY);
+    }
+  }, []);
 
   const moveSelection = useCallback(
     (delta: 1 | -1) => {
@@ -127,7 +143,10 @@ export function AppShell({ selectedAgentId, onSelectAgent, children }: Props) {
               <RevealApiKeyCard
                 agentName={justCreated.agent.name}
                 apiKey={justCreated.apiKey}
-                onDismiss={() => setJustCreated(null)}
+                onDismiss={() => {
+                  setJustCreated(null);
+                  sessionStorage.removeItem(JUST_CREATED_KEY);
+                }}
               />
             </div>
           )}
@@ -141,6 +160,7 @@ export function AppShell({ selectedAgentId, onSelectAgent, children }: Props) {
         onClose={() => setCreateOpen(false)}
         onCreated={(result) => {
           setCreateOpen(false);
+          sessionStorage.setItem(JUST_CREATED_KEY, JSON.stringify(result));
           setJustCreated(result);
           onSelectAgent(result.agent.id);
         }}

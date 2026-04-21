@@ -7,6 +7,11 @@ export {
   type TransferSplInput,
   type TransferSplResult,
 } from "./transfer";
+export {
+  ensureAta,
+  type EnsureAtaInput,
+  type EnsureAtaResult,
+} from "./ensure-ata";
 
 // Re-export the web3.js and spl-token bits apps commonly need so consumers
 // can do `import { PublicKey, Connection } from "@payrail/solana"` instead of

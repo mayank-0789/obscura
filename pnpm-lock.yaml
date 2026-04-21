@@ -60,21 +60,18 @@ importers:
         specifier: ^2.0.4
         version: 2.0.4(@solana/spl-token@0.4.14(@solana/web3.js@1.98.4(bufferutil@4.1.0)(typescript@5.9.2)(utf-8-validate@5.0.10))(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.2)(utf-8-validate@5.0.10))(@solana/web3.js@1.98.4(bufferutil@4.1.0)(typescript@5.9.2)(utf-8-validate@5.0.10))
 
-  apps/demo-merchant-news:
+  apps/demo-agent:
     dependencies:
-      '@payrail/merchant-sdk':
+      '@payrail/sdk':
         specifier: workspace:*
-        version: link:../../packages/merchant-sdk
-      express:
-        specifier: ^5.2.1
-        version: 5.2.1
+        version: link:../../packages/sdk
+      dotenv:
+        specifier: ^17.4.2
+        version: 17.4.2
     devDependencies:
       '@repo/typescript-config':
         specifier: workspace:*
         version: link:../../packages/typescript-config
-      '@types/express':
-        specifier: ^5.0.6
-        version: 5.0.6
       '@types/node':
         specifier: ^22.15.3
         version: 22.15.3
@@ -85,11 +82,14 @@ importers:
         specifier: 5.9.2
         version: 5.9.2
 
-  apps/demo-merchant-weather:
+  apps/demo-merchant-news:
     dependencies:
       '@payrail/merchant-sdk':
         specifier: workspace:*
         version: link:../../packages/merchant-sdk
+      dotenv:
+        specifier: ^17.4.2
+        version: 17.4.2
       express:
         specifier: ^5.2.1
         version: 5.2.1
