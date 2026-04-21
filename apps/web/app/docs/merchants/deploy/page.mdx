@@ -1,0 +1,64 @@
+import { DocArticle } from "@/components/docs/doc-article";
+
+export default function ({ children }) {
+  return <DocArticle slug="/docs/merchants/deploy">{children}</DocArticle>;
+}
+
+# Deploy
+
+The merchant SDK is a regular Node package — no native deps, no
+persistent state, no webhooks. Anywhere Node runs, this runs.
+
+## Recommended platforms
+
+- **Railway, Fly, Render.** Drop in with a `Dockerfile` or a
+  buildpack. Set `PAYRAIL_PAYOUT_WALLET` + `HELIUS_RPC_URL` as env
+  vars. Best fit for Express-style servers.
+- **Vercel / Cloudflare Workers.** Use the SDK inside a Next.js route
+  handler or a Workers fetch handler — the `charge()` middleware has no
+  Express runtime dep, just express-shaped req/res. Express adapter
+  helpers are on the roadmap.
+- **AWS Lambda / GCF.** Wrap with `serverless-http`. Cold-start cost is
+  ~400ms for the first request's facilitator handshake; warm requests
+  are ~600ms due to the synchronous settlement hop.
+
+<Callout kind="warn" title="Pick a region close to the facilitator">
+  Each paid request does ~2 round-trips to
+  `facilitator.payai.network`. Hosting in us-east-1 / us-west-2 gives
+  the best latency for most PayAI regions. EU + AP get a bit slower.
+</Callout>
+
+## Environment variables
+
+<DocTable
+  headers={["Variable", "Required", "Notes"]}
+  rows={[
+    [<code key="c">PAYRAIL_PAYOUT_WALLET</code>, "Yes", <>Copy from <a href="/merchants/dashboard">merchants dashboard</a>.</>],
+    [<code key="c">HELIUS_RPC_URL</code>, "No", <>Recommended for production. Default is public RPC (rate-limited). <a href="https://helius.dev">helius.dev</a> is generous on the free tier.</>],
+    [<><code>PAYAI_API_KEY_ID</code> / <code>…_SECRET</code></>, "No", "PayAI paid tier. Free tier needs neither."],
+  ]}
+/>
+
+## Scaling notes
+
+- **Stateless.** The SDK holds no state between requests. Horizontal
+  scale is just adding Node processes.
+- **One network call per phase.** Phase 1 (no-payment) = 1 `/supported`
+  call. Phase 2 (paid retry) = 1 `/supported` + 1 `/verify` + 1
+  `/settle`. All async, no blocking I/O.
+- **No DB on the merchant side.** The middleware doesn't read or write
+  your database. If you want a local payment log, write to your own DB
+  in the handler using `res.locals.payrailSettlement`.
+
+## Health checks
+
+The middleware doesn't interfere with `/healthz`, `/_ping`, or
+whatever pattern your platform uses — it only runs on routes you
+explicitly wrap with `pay.charge()`.
+
+<CodeBlock lang="ts">
+{`app.get("/healthz", (_req, res) => res.json({ ok: true }));        // free
+app.get("/article/:id", pay.charge({ amount: "10000" }), handler); // paid`}
+</CodeBlock>
+
+Next: [Error handling](/docs/merchants/errors).

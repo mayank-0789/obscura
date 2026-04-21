@@ -25,6 +25,13 @@ export const env = createEnv({
     DODO_ENVIRONMENT: z.enum(["test_mode", "live_mode"]).default("test_mode"),
     // Helius — Solana RPC for on-chain reads + tx submission.
     HELIUS_RPC_URL: z.string().url(),
+    // Helius Enhanced Webhooks — used to push payment-confirmed events to
+    // merchant dashboards in real time. All three optional: if any is
+    // missing, merchant registration + webhook verification short-circuit
+    // to best-effort (dashboards fall back to poll-only updates).
+    HELIUS_API_KEY: z.string().optional(),
+    HELIUS_WEBHOOK_ID: z.string().optional(),
+    HELIUS_WEBHOOK_AUTH_TOKEN: z.string().optional(),
     // Treasury — single raw keypair holding pre-funded USDG. Credits agent
     // wallets on Dodo webhook. Format: JSON array of 64 ints from solana-keygen.
     TREASURY_SECRET_KEY: z.string().min(1),
@@ -57,6 +64,9 @@ export const env = createEnv({
     DODO_TOPUP_PRODUCT_ID: process.env.DODO_TOPUP_PRODUCT_ID,
     DODO_ENVIRONMENT: process.env.DODO_ENVIRONMENT,
     HELIUS_RPC_URL: process.env.HELIUS_RPC_URL,
+    HELIUS_API_KEY: process.env.HELIUS_API_KEY,
+    HELIUS_WEBHOOK_ID: process.env.HELIUS_WEBHOOK_ID,
+    HELIUS_WEBHOOK_AUTH_TOKEN: process.env.HELIUS_WEBHOOK_AUTH_TOKEN,
     TREASURY_SECRET_KEY: process.env.TREASURY_SECRET_KEY,
     TREASURY_PUBLIC_KEY: process.env.TREASURY_PUBLIC_KEY,
     STABLECOIN_MINT: process.env.STABLECOIN_MINT,

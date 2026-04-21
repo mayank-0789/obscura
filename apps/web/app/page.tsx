@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Nav } from "../components/marketing/nav";
 import { Footer } from "../components/marketing/footer";
+import { CtaLink } from "../components/marketing/cta-link";
 import { FlowDiagram } from "../components/marketing/landing/flow-diagram";
 import { CodeEditor } from "../components/marketing/landing/code-editor";
 import { ReceiptCard } from "../components/marketing/landing/receipt-card";
@@ -78,18 +79,9 @@ function Hero() {
             className="reveal mt-10 flex flex-col gap-3 sm:flex-row"
             style={{ animationDelay: "0.5s" }}
           >
-            <Link
-              href="/dashboard"
-              className="group inline-flex items-center justify-between gap-3 border border-emerald-400 bg-emerald-400 px-6 py-4 text-sm font-semibold text-black transition hover:bg-emerald-300"
-            >
-              <span>Start your first agent</span>
-              <span
-                aria-hidden="true"
-                className="transition-transform group-hover:translate-x-1"
-              >
-                →
-              </span>
-            </Link>
+            <CtaLink dashboard="agent" variant="primary" arrow="→">
+              Start your first agent
+            </CtaLink>
             <Link
               href="/merchants"
               className="group inline-flex items-center justify-between gap-3 border border-zinc-700 bg-transparent px-6 py-4 text-sm font-medium text-zinc-300 transition hover:border-zinc-500 hover:text-zinc-100"
@@ -203,7 +195,7 @@ function Quickstart() {
 
             <div className="mt-10 flex flex-wrap gap-3 font-mono text-[11px] uppercase tracking-[0.22em] text-zinc-500">
               <Link
-                href="/docs/users/quickstart"
+                href="/docs/agents/quickstart"
                 className="inline-flex items-center gap-2 border-b border-zinc-700 pb-0.5 transition hover:border-emerald-400 hover:text-emerald-400"
               >
                 Read the quickstart
@@ -276,7 +268,11 @@ function SplitAudience() {
               "UPI and card top-ups via Dodo — GST-compliant, MoR-backed.",
               "A dashboard that shows every rupee in and every 0.008 USDC out.",
             ]}
-            cta={{ href: "/dashboard", label: "Start your first agent" }}
+            cta={{
+              kind: "dashboard",
+              dashboard: "agent",
+              label: "Start your first agent",
+            }}
             arrow="→"
             accent="emerald"
           />
@@ -290,7 +286,11 @@ function SplitAudience() {
               "USDC accrues in a dedicated payout wallet — no custody risk.",
               "Cash out to bank via Dodo payouts (v2) or swap yourself today.",
             ]}
-            cta={{ href: "/merchants", label: "For API providers" }}
+            cta={{
+              kind: "link",
+              href: "/merchants",
+              label: "For API providers",
+            }}
             arrow="↗"
             accent="amber"
           />
@@ -299,6 +299,13 @@ function SplitAudience() {
     </section>
   );
 }
+
+// CTA descriptor for an AudienceCard. Either a static href (for cross-links
+// like "/merchants" landing) or an auth-aware smart CTA that sends the user
+// to a specific dashboard when signed in.
+type AudienceCta =
+  | { kind: "link"; href: string; label: string }
+  | { kind: "dashboard"; dashboard: "agent" | "merchant"; label: string };
 
 function AudienceCard({
   tag,
@@ -313,8 +320,8 @@ function AudienceCard({
   title: string;
   subtitle: string;
   bullets: string[];
-  cta: { href: string; label: string };
-  arrow: string;
+  cta: AudienceCta;
+  arrow: "→" | "↗";
   accent: "emerald" | "amber";
 }) {
   const accentText =
@@ -360,13 +367,19 @@ function AudienceCard({
       </ul>
 
       <div className="mt-10 flex items-end">
-        <Link
-          href={cta.href}
-          className={`inline-flex items-center gap-3 border-b py-1 font-mono text-[12px] uppercase tracking-[0.22em] text-zinc-300 transition ${accentBorder} ${accentHover}`}
-        >
-          <span>{cta.label}</span>
-          <span aria-hidden="true">{arrow}</span>
-        </Link>
+        {cta.kind === "dashboard" ? (
+          <CtaLink dashboard={cta.dashboard} variant="inline" arrow={arrow}>
+            {cta.label}
+          </CtaLink>
+        ) : (
+          <Link
+            href={cta.href}
+            className={`inline-flex items-center gap-3 border-b py-1 font-mono text-[12px] uppercase tracking-[0.22em] text-zinc-300 transition ${accentBorder} ${accentHover}`}
+          >
+            <span>{cta.label}</span>
+            <span aria-hidden="true">{arrow}</span>
+          </Link>
+        )}
       </div>
     </article>
   );
@@ -567,18 +580,9 @@ function FinalCTA() {
           chai.
         </p>
         <div className="mt-12 flex flex-wrap justify-center gap-3">
-          <Link
-            href="/dashboard"
-            className="group inline-flex items-center justify-between gap-3 border border-emerald-400 bg-emerald-400 px-7 py-4 text-sm font-semibold text-black transition hover:bg-emerald-300"
-          >
-            <span>Start your first agent</span>
-            <span
-              aria-hidden="true"
-              className="transition-transform group-hover:translate-x-1"
-            >
-              →
-            </span>
-          </Link>
+          <CtaLink dashboard="agent" variant="primary" arrow="→" className="px-7">
+            Start your first agent
+          </CtaLink>
           <Link
             href="/merchants"
             className="group inline-flex items-center justify-between gap-3 border border-zinc-700 px-7 py-4 text-sm font-medium text-zinc-300 transition hover:border-zinc-500 hover:text-zinc-100"

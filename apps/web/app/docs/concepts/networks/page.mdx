@@ -1,0 +1,98 @@
+import { DocArticle } from "@/components/docs/doc-article";
+
+export default function ({ children }) {
+  return <DocArticle slug="/docs/concepts/networks">{children}</DocArticle>;
+}
+
+# Devnet vs mainnet
+
+Payrail supports two Solana networks:
+
+- **`solana-devnet`** — free test network. Default for new accounts.
+  Funds are synthetic and worthless; good for end-to-end integration
+  tests.
+- **`solana` (mainnet-beta)** — the real Solana network. Actual USDC,
+  actual money.
+
+The two networks are isolated — a devnet transaction never touches
+mainnet and vice versa. Wallets, assets, and nonces are all network-scoped.
+
+## Default: devnet
+
+Both SDKs default to `solana-devnet`. That's deliberate:
+
+- Mistakes are free during integration. An off-by-a-zero price in
+  `pay.charge()` costs the merchant nothing.
+- Test agents and test merchants can be set up in seconds with
+  zero-stakes keypairs.
+- The flow is identical to mainnet — the same x402 handshake, the same
+  facilitator, the same settlement. Moving to production is an env flag
+  change.
+
+## Switching to mainnet
+
+### Agent side
+
+Agents don't pick a network — they use whatever network their merchant
+serves. When you're ready for real money, hit a merchant configured for
+mainnet. The SDK handles everything else.
+
+### Merchant side
+
+Flip the `network` config:
+
+<CodeBlock lang="ts">
+{`const pay = payrail({
+  payoutWallet: process.env.PAYRAIL_PAYOUT_WALLET!,
+  network: "solana",   // was "solana-devnet"
+});`}
+</CodeBlock>
+
+The `mint` default automatically switches:
+
+- `solana-devnet` → `4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU` (devnet USDC)
+- `solana` → `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v` (mainnet USDC)
+
+## Wallet addresses are network-isolated
+
+A single keypair can hold tokens on both networks — the address is the
+same — but the balances are separate. **Don't mix them:**
+
+- Your devnet payout wallet should only appear in a devnet
+  `pay.charge()` config.
+- Your mainnet payout wallet is usually a different address entirely
+  (generated at the time you switched to prod).
+
+Payrail's merchant dashboard shows network-scoped balances and feeds,
+so you won't accidentally see devnet earnings appear next to mainnet
+ones.
+
+## Getting devnet USDC
+
+For agent-side testing, hit any PayAI-supported devnet faucet — or let
+Payrail's top-up flow fund your devnet agent wallet in 30 seconds via
+UPI (the devnet USDC comes out of a Payrail-operated treasury, not a
+real exchange).
+
+For merchant-side testing, any devnet USDC reaching your payout wallet
+counts. A single agent spend ($0.01) is enough to see the full flow
+end-to-end.
+
+## Mainnet readiness checklist
+
+Before you flip the flag:
+
+1. [ ] **Your dashboard balance is real**. Check
+   `https://solscan.io/account/<payout_wallet>` shows the expected
+   mainnet USDC.
+2. [ ] **Your RPC is production-grade**. The default public RPC is
+   rate-limited; set `HELIUS_RPC_URL` or similar.
+3. [ ] **Your prices are right**. One extra zero in `amount` costs 10×
+   per call on mainnet. Use the dashboard's API catalog to cross-check.
+4. [ ] **Your handler is idempotent**. If a second settle-retry runs
+   against your endpoint (rare but possible), does your handler
+   double-charge your downstream systems?
+5. [ ] **PayAI paid-tier creds**. Free tier is throttled. For
+   production RPS, set `apiKeyId` + `apiKeySecret`.
+
+Once all five are checked, the flag flip is safe.

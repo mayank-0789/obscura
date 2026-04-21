@@ -121,17 +121,24 @@ async function parseBody(req: Request) {
 }
 
 async function createAgentWallet(privyUserId: string) {
-  // Attach the delegated-signing key at birth so the x402 hot path can sign
-  // for this wallet without prompting the user.
-  const authorizationKeyIds = env.PRIVY_AUTHORIZATION_KEY_ID
-    ? [env.PRIVY_AUTHORIZATION_KEY_ID]
-    : undefined;
+  // Attach our delegated signer so the x402 hot path can sign for this wallet
+  // server-side. Verified via scripts/spike-privy-variants.ts (2026-04-20):
+  // `additionalSigners: [{ signerId: <auth-key-id> }]` is the parameter Privy
+  // honours at signTransaction time. The seemingly-equivalent
+  // `authorizationKeyIds: [...]` is silently ignored by the sign endpoint
+  // even though createWallet accepts it — see project_privy_delegated_signing.md.
+  if (!env.PRIVY_AUTHORIZATION_KEY_ID) {
+    console.error(
+      "[agents/create] PRIVY_AUTHORIZATION_KEY_ID is not set; agents would be un-signable",
+    );
+    return apiError("server_error");
+  }
 
   try {
     const wallet = await privy.walletApi.createWallet({
       chainType: "solana",
       owner: { userId: privyUserId },
-      authorizationKeyIds,
+      additionalSigners: [{ signerId: env.PRIVY_AUTHORIZATION_KEY_ID }],
     });
     return { id: wallet.id, address: wallet.address };
   } catch (err) {

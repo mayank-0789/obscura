@@ -11,9 +11,11 @@ import {
 } from "@/lib/money-format";
 import { useAgent } from "@/hooks/use-agent";
 import { useAgentBalance } from "@/hooks/use-agent-balance";
+import { useAgentTransactions } from "@/hooks/use-agent-transactions";
 import type { AgentDTO } from "@/types/agent";
 import { AppShell } from "@/components/dashboard/app-shell";
 import { Kbd } from "@/components/dashboard/kbd";
+import { RecentSpendsList } from "@/components/dashboard/recent-spends-list";
 
 export function AgentDetail({ id }: { id: string }) {
   const { data: agent, isLoading, error } = useAgent(id);
@@ -219,6 +221,9 @@ function Content({ agent }: { agent: AgentDTO }) {
         </div>
       </section>
 
+      {/* Recent spends */}
+      <AgentSpendsSection agentId={agent.id} />
+
       {/* Danger zone */}
       <section className="mt-10">
         <SectionHeader
@@ -274,6 +279,28 @@ function Metric({
 function LiveBalance({ agentId }: { agentId: string }) {
   const { data, isLoading } = useAgentBalance(agentId);
   return <>{isLoading ? "…" : data ? `$${formatUsdg(data.amount)}` : "$0.00"}</>;
+}
+
+// Live payment feed for this agent. Mirrors the merchant-dashboard pattern:
+// 10 most recent, prev/next handoff to /agents/[id]/spends for the full
+// paginated history.
+function AgentSpendsSection({ agentId }: { agentId: string }) {
+  const spends = useAgentTransactions(agentId, { limit: 10 });
+  return (
+    <section className="mt-10">
+      <SectionHeader
+        title="Recent spends"
+        hint="Last 10 · polls every 10s"
+      />
+      <div className="mt-4">
+        <RecentSpendsList
+          transactions={spends.data?.transactions}
+          isLoading={spends.isLoading}
+          viewAllHref={`/agents/${agentId}/spends`}
+        />
+      </div>
+    </section>
+  );
 }
 
 function SectionHeader({

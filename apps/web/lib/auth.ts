@@ -39,12 +39,12 @@ export async function requireAuth(req: Request): Promise<string> {
   }
 }
 
-// Verifies the JWT AND resolves the Privy user to our DB row. Use in routes
-// that operate on user-scoped resources (agents, merchants, top-ups). Throws
-// AuthError('user_not_synced') if the JWT is valid but the DB row is missing
-// — client should recover by posting /api/auth/sync.
-export async function requireUser(req: Request): Promise<User> {
-  const privyUserId = await requireAuth(req);
+// Resolves a verified Privy user id to our DB row. Separated from
+// `requireUser` so callers that verify the JWT themselves (e.g. the merchant
+// dual-auth guard, which also accepts mk_ Bearer keys) can reuse the row
+// lookup and stay in sync if this ever grows a banned-user / soft-delete
+// check.
+export async function loadUserByPrivyId(privyUserId: string): Promise<User> {
   const [user] = await db
     .select()
     .from(users)
@@ -52,6 +52,15 @@ export async function requireUser(req: Request): Promise<User> {
     .limit(1);
   if (!user) throw new AuthError("user_not_synced");
   return user;
+}
+
+// Verifies the JWT AND resolves the Privy user to our DB row. Use in routes
+// that operate on user-scoped resources (agents, merchants, top-ups). Throws
+// AuthError('user_not_synced') if the JWT is valid but the DB row is missing
+// — client should recover by posting /api/auth/sync.
+export async function requireUser(req: Request): Promise<User> {
+  const privyUserId = await requireAuth(req);
+  return loadUserByPrivyId(privyUserId);
 }
 
 // Thin wrapper around requireUser that returns the user OR an error response.

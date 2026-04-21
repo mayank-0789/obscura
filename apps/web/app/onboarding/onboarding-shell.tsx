@@ -1,0 +1,202 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { usePrivy } from "@privy-io/react-auth";
+import { toast } from "sonner";
+import { Logo } from "@/components/marketing/logo";
+import { useSignout } from "@/hooks/use-signout";
+import { useSyncUser } from "@/hooks/use-sync-user";
+import { useUser } from "@/hooks/use-user";
+import { useSetRole } from "@/hooks/use-set-role";
+import { RoleCard } from "@/components/onboarding/role-card";
+import {
+  ONBOARDED_KEY,
+  destinationForRole,
+  type Role,
+} from "@/lib/onboarding";
+
+export function OnboardingShell() {
+  const router = useRouter();
+  const { ready, authenticated } = usePrivy();
+  const signOut = useSignout();
+  // Mount sync explicitly here — SignInButton isn't rendered on this page, and
+  // without it a brand-new signup could click a role card before
+  // /api/auth/sync has created the users row (the backend then returns
+  // user_not_synced → 404). Mounting here guarantees the sync fires as soon
+  // as Privy is ready on this route.
+  useSyncUser();
+  const { data: me, isLoading: meLoading, isFetched: meFetched } = useUser();
+  const setRole = useSetRole();
+  const [pending, setPending] = useState<Role | null>(null);
+
+  // Guard: if Privy says we're not logged in, bounce to the landing page.
+  useEffect(() => {
+    if (ready && !authenticated) {
+      router.replace("/");
+    }
+  }, [ready, authenticated, router]);
+
+  // Skip this screen entirely for returning users who've already completed
+  // onboarding on this device. Runs only after `me` has resolved — otherwise
+  // we could flash the picker in the gap between mount and first /me success.
+  useEffect(() => {
+    if (!meFetched || !me) return;
+    const flag =
+      typeof window !== "undefined" &&
+      localStorage.getItem(ONBOARDED_KEY) === "1";
+    if (!flag) return;
+    router.replace(destinationForRole(me.user.role as Role));
+  }, [meFetched, me, router]);
+
+  const choose = async (role: Role) => {
+    if (pending) return;
+    if (!meFetched || !me) return;
+    setPending(role);
+    try {
+      await setRole.mutateAsync(role);
+      if (typeof window !== "undefined") {
+        localStorage.setItem(ONBOARDED_KEY, "1");
+      }
+      router.push(destinationForRole(role));
+    } catch (err) {
+      setPending(null);
+      const message = err instanceof Error ? err.message : "unknown";
+      const description =
+        message === "rate_limited"
+          ? "You're going too fast — wait a moment and retry."
+          : message === "bad_request"
+            ? "Server rejected the request. Refresh and try again."
+            : message === "user_not_synced"
+              ? "Your session is still warming up. Try again in a second."
+              : "Please try again.";
+      toast.error("Could not save your choice", { description });
+    }
+  };
+
+  const showSkeleton = !ready || meLoading || (!meFetched && authenticated);
+
+  return (
+    <div className="min-h-screen bg-[#0a0a0a] text-zinc-100 antialiased">
+      <header className="border-b border-zinc-900">
+        <div className="mx-auto flex h-14 max-w-[1100px] items-center justify-between px-6">
+          <Link
+            href="/"
+            className="flex items-center gap-2.5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]"
+          >
+            <Logo size="sm" />
+            <span className="font-display text-[17px] font-light tracking-tight">
+              Payrail
+            </span>
+          </Link>
+          <button
+            onClick={signOut}
+            className="rounded-md border border-zinc-800 bg-zinc-950 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-400 transition hover:border-zinc-700 hover:text-zinc-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]"
+          >
+            Sign out
+          </button>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-[900px] px-6 py-16 md:py-24">
+        {showSkeleton ? (
+          <OnboardingSkeleton />
+        ) : (
+          <>
+            <div className="mb-4 flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.28em] text-emerald-400">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]" />
+              Welcome
+            </div>
+            <h1 className="font-display text-[48px] font-light leading-[1.05] tracking-[-0.02em] text-zinc-50 md:text-[56px]">
+              How will you use{" "}
+              <span className="italic text-emerald-gradient">the rail?</span>
+            </h1>
+            <p className="mt-5 max-w-[560px] text-[17px] leading-[1.65] text-zinc-300">
+              Payrail has two sides — pick one to start, or choose both.
+            </p>
+            <p className="mt-2 text-[13px] text-zinc-500">
+              You can add the other side anytime from your dashboard.
+            </p>
+
+            <div className="mt-14 grid gap-5 md:grid-cols-2">
+              <RoleCard
+                kicker="01 / Agent developer"
+                title="Ship an agent that pays for APIs."
+                body="Install @payrail/sdk, drop in an API key, point fetch at a paid endpoint. Your agent pays in stablecoins automatically — no wallet code."
+                features={[
+                  "One SDK key per agent",
+                  "Monthly spend caps",
+                  "Fund with UPI or card",
+                ]}
+                onClick={() => choose("user")}
+                isLoading={pending === "user"}
+                disabled={!!pending && pending !== "user"}
+              />
+              <RoleCard
+                kicker="02 / API provider"
+                title="Charge per API call."
+                body="Install @payrail/merchant-sdk, wrap an Express route with pay.charge. Get paid in USDC on Solana directly to your Payrail-managed wallet."
+                features={[
+                  "Managed Solana payout wallet",
+                  "Live earnings dashboard",
+                  "Get paid in USDC",
+                ]}
+                onClick={() => choose("merchant")}
+                isLoading={pending === "merchant"}
+                disabled={!!pending && pending !== "merchant"}
+              />
+            </div>
+
+            <div className="mt-10 flex flex-col items-start gap-3 border-t border-zinc-900 pt-10 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-zinc-500">
+                  Doing both?
+                </p>
+                <p className="mt-1.5 text-[14px] text-zinc-400">
+                  Get both dashboards with one account. Switch between them
+                  from the top bar.
+                </p>
+              </div>
+              <button
+                onClick={() => choose("both")}
+                disabled={!!pending}
+                className="inline-flex items-center gap-2 border border-zinc-800 bg-zinc-950 px-5 py-2.5 font-mono text-[11px] uppercase tracking-[0.22em] text-zinc-300 transition enabled:hover:border-emerald-400/40 enabled:hover:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]"
+              >
+                <span>
+                  {pending === "both" ? "Setting up…" : "Set up both"}
+                </span>
+                <span aria-hidden>→</span>
+              </button>
+            </div>
+
+            <p className="mt-12 text-[13px] text-zinc-600">
+              New here?{" "}
+              <Link
+                href="/docs"
+                className="text-zinc-400 underline decoration-zinc-700 underline-offset-4 hover:text-zinc-200 hover:decoration-zinc-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a] rounded"
+              >
+                Read the docs first
+              </Link>
+              .
+            </p>
+          </>
+        )}
+      </main>
+    </div>
+  );
+}
+
+function OnboardingSkeleton() {
+  return (
+    <div aria-hidden>
+      <div className="mb-4 h-3 w-20 rounded bg-zinc-900" />
+      <div className="h-12 w-3/4 rounded bg-zinc-900" />
+      <div className="mt-3 h-5 w-1/2 rounded bg-zinc-900/70" />
+      <div className="mt-14 grid gap-5 md:grid-cols-2">
+        <div className="h-[300px] rounded border border-zinc-900 bg-[#0c0c0e]" />
+        <div className="h-[300px] rounded border border-zinc-900 bg-[#0c0c0e]" />
+      </div>
+    </div>
+  );
+}

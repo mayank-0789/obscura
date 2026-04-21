@@ -1,0 +1,89 @@
+import { DocArticle } from "@/components/docs/doc-article";
+
+export default function ({ children }) {
+  return <DocArticle slug="/docs/merchants/reference">{children}</DocArticle>;
+}
+
+# API reference
+
+Every export from `@payrail/merchant-sdk`, one section per symbol.
+
+## `payrail(config)`
+
+The merchant-side factory. Returns a `PayrailMerchantClient` — a small
+object whose only method is `charge()`.
+
+<CodeBlock lang="ts">
+{`import { payrail } from "@payrail/merchant-sdk";
+
+const pay = payrail(config: MerchantSdkConfig);`}
+</CodeBlock>
+
+### `MerchantSdkConfig`
+
+<DocTable
+  headers={["Option", "Type", "Required", "Default", "Description"]}
+  rows={[
+    [<code key="c">payoutWallet</code>, <code key="c">string</code>, "Yes", "—", "Solana pubkey (base58) where payments land."],
+    [<code key="c">network</code>, <code key="c">{`"solana" | "solana-devnet"`}</code>, "No", <code key="c">{`"solana-devnet"`}</code>, "Which Solana network to settle on."],
+    [<code key="c">mint</code>, <code key="c">string</code>, "No", "devnet / mainnet USDC", "SPL token mint to accept."],
+    [<code key="c">decimals</code>, <code key="c">number</code>, "No", <code key="c">6</code>, "Decimals for the mint (USDC + USDG both use 6)."],
+    [<code key="c">facilitatorUrl</code>, <code key="c">string</code>, "No", <code key="c">https://facilitator.payai.network</code>, "Override to self-host or switch providers."],
+    [<code key="c">rpcUrl</code>, <code key="c">string</code>, "No", "Solana public RPC", "RPC endpoint for chain reads."],
+    [<code key="c">apiKeyId</code>, <code key="c">string</code>, "No", "—", <>PayAI paid-tier JWT key ID. Set both this and <code>apiKeySecret</code> to enable paid tier.</>],
+    [<code key="c">apiKeySecret</code>, <code key="c">string</code>, "No", "—", "PayAI paid-tier JWT secret."],
+  ]}
+/>
+
+## `pay.charge(config)`
+
+Returns an Express-compatible middleware. Runs *before* your route
+handler, intercepts payment-less requests with 402, and settles
+payment-bearing requests before calling `next()`.
+
+### `ChargeConfig`
+
+<DocTable
+  headers={["Option", "Type", "Required", "Description"]}
+  rows={[
+    [<code key="c">amount</code>, <><code>string</code> (atomic units, e.g. <code>"10000"</code>)</>, "Yes", "Price per call."],
+    [<code key="c">description</code>, <code key="c">string</code>, "No", "Human-readable description included in the 402 body."],
+    [<code key="c">mimeType</code>, <code key="c">string</code>, "No", <>Response MIME advertised. Default <code>application/json</code>.</>],
+    [<code key="c">maxTimeoutSeconds</code>, <code key="c">number</code>, "No", <>Max client wait for payment. Default <code>300</code>.</>],
+    [<code key="c">asset</code>, <code key="c">{`{ address: string; decimals: number }`}</code>, "No", "Per-route override of the SDK-default mint + decimals."],
+  ]}
+/>
+
+### Side effects on `res`
+
+On a successful settlement, the middleware:
+
+- Sets an `X-Payment-Response` header — base64-encoded JSON of the
+  settlement result.
+- Sets `res.locals.payrailSettlement` — the parsed settlement object
+  with the Solana tx signature.
+- Calls `next()` so your downstream handler runs with both in place.
+
+See [Settlement receipts](/docs/merchants/receipts) for reading them.
+
+## Re-exports
+
+- **`PaymentRequirements`** — the x402-solana type for a 402 challenge
+  body. Useful for typing handlers that read settlement via
+  `res.locals.payrailSettlement`.
+
+<CodeBlock lang="ts">
+{`import type { PaymentRequirements } from "@payrail/merchant-sdk";`}
+</CodeBlock>
+
+## Protocol-level notes
+
+- **One `createPaymentRequirements` call per request.** The SDK dedupes
+  the `/supported` round-trip internally, so verify + settle reuse the
+  same quote built during the 402 phase.
+- **Synchronous settle.** The middleware waits for on-chain confirmation
+  before calling `next()`. See [How it works](/docs/merchants/flow) for
+  the latency trade-off.
+- **No Payrail API calls from the middleware.** The SDK talks directly
+  to the PayAI facilitator + Solana RPC — zero dependency on Payrail
+  infrastructure at runtime.

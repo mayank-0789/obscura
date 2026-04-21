@@ -1,0 +1,87 @@
+import { DocArticle } from "@/components/docs/doc-article";
+
+export default function ({ children }) {
+  return <DocArticle slug="/docs/concepts/spend-caps">{children}</DocArticle>;
+}
+
+# Spend caps
+
+Every Payrail agent has a **monthly spend cap** — a hard ceiling on how
+much the agent can spend in a calendar month, enforced at signature
+time. Caps are the single most important safety feature on the agent
+side: a leaked API key can never drain more than the remaining cap.
+
+## How the cap is enforced
+
+When `/api/x402/sign` receives a sign request, it runs this SQL before
+producing a signature:
+
+<CodeBlock lang="sql">
+{`UPDATE budgets
+SET spent_usdg = spent_usdg + $amount
+WHERE agent_id = $agent_id
+  AND spent_usdg + $amount <= cap_usdg
+RETURNING id;`}
+</CodeBlock>
+
+Postgres returns zero rows if the would-be post-update value exceeds
+the cap. We interpret that as "over cap," refuse to sign, and return a
+`402 over_cap` response.
+
+This is **atomic** at the DB level — no read-then-write race. Two
+concurrent sign requests that would collectively exceed the cap are
+handled correctly: one succeeds, one returns `over_cap`.
+
+## INR vs USDC
+
+Caps are authored in **rupees** in the dashboard because that's what
+users think in. Internally we store two values:
+
+- `cap_inr` — the rupee amount the user set (source of truth).
+- `cap_usdg` — a snapshot of the INR→USDC exchange rate at the time the
+  cap was created, used for the atomic check above.
+
+We DON'T re-compute the rate on every spend. That's deliberate: a
+merchant asking for $0.01 shouldn't see a different "allowed" outcome
+depending on the hour the rupee rate was pulled. If you change the cap
+via the dashboard, a fresh snapshot is taken.
+
+## Reset cadence
+
+Caps reset at the start of every calendar month, UTC. There's no prorating
+or rolling window — the cap is simply "this month's budget."
+
+A scheduled job runs on the 1st of each month to zero out `spent_usdg`
+across every budget row.
+
+## Practical patterns
+
+### Fleet-of-agents
+
+Give each agent a small per-month cap (say ₹500). Spin up many agents
+in parallel — your total exposure is still bounded per-agent, even if
+one key leaks.
+
+### Burst workloads
+
+If an agent will do a burst of 1000 paid calls in a few minutes, set
+the cap to cover the burst plus a safety margin. `over_cap` responses
+are non-retryable; once you hit the ceiling you can't get through
+without raising it.
+
+### Audit trail
+
+Every spend — successful or failed — is recorded in `transactions`.
+Failed spends stay at `status='failed'` with the reason in `memo`,
+which is useful when debugging "why is my agent over cap" issues.
+
+## What caps don't protect against
+
+- **Application-level errors.** If your agent is buggy and makes 10000
+  redundant API calls, the cap limits the damage but doesn't prevent
+  it. Build in idempotency on the agent side.
+- **Merchant pricing changes.** The merchant's `amount` is what gets
+  charged. If a merchant raises their price, your agent spends more
+  per-call — the cap is the bound.
+- **Protocol-level attacks.** x402 replay protection handles duplicate
+  payments, but the cap is a spend ceiling, not a fraud detector.

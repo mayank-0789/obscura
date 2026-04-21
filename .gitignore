@@ -36,3 +36,7 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+
+# Devnet test keypairs used by scripts/stage1-*.ts (regenerated on demand;
+# holding trivial amounts of devnet SOL/USDC — still, not committed).
+scripts/devnet-wallets/

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Nav } from "../../../components/marketing/nav";
 import { Footer } from "../../../components/marketing/footer";
+import { CtaLink } from "../../../components/marketing/cta-link";
 import { FAQ, type QA } from "../../../components/marketing/landing/faq";
 import { MerchantCodeEditor } from "../../../components/marketing/landing/merchant-code-editor";
 import { EarningsCard } from "../../../components/marketing/landing/earnings-card";
@@ -73,18 +74,9 @@ function Hero() {
             className="reveal mt-10 flex flex-col gap-3 sm:flex-row"
             style={{ animationDelay: "0.5s" }}
           >
-            <Link
-              href="/merchants/dashboard"
-              className="group inline-flex items-center justify-between gap-3 border border-emerald-400 bg-emerald-400 px-6 py-4 text-sm font-semibold text-black transition hover:bg-emerald-300"
-            >
-              <span>Create merchant account</span>
-              <span
-                aria-hidden="true"
-                className="transition-transform group-hover:translate-x-1"
-              >
-                →
-              </span>
-            </Link>
+            <CtaLink dashboard="merchant" variant="primary" arrow="→">
+              Create merchant account
+            </CtaLink>
             <Link
               href="/docs/merchants/quickstart"
               className="group inline-flex items-center justify-between gap-3 border border-zinc-700 bg-transparent px-6 py-4 text-sm font-medium text-zinc-300 transition hover:border-zinc-500 hover:text-zinc-100"
@@ -536,18 +528,14 @@ function FinalCTA() {
           your next standup.
         </p>
         <div className="mt-12 flex flex-wrap justify-center gap-3">
-          <Link
-            href="/merchants/dashboard"
-            className="group inline-flex items-center justify-between gap-3 border border-emerald-400 bg-emerald-400 px-7 py-4 text-sm font-semibold text-black transition hover:bg-emerald-300"
+          <CtaLink
+            dashboard="merchant"
+            variant="primary"
+            arrow="→"
+            className="px-7"
           >
-            <span>Create merchant account</span>
-            <span
-              aria-hidden="true"
-              className="transition-transform group-hover:translate-x-1"
-            >
-              →
-            </span>
-          </Link>
+            Create merchant account
+          </CtaLink>
           <Link
             href="/docs/merchants/quickstart"
             className="group inline-flex items-center justify-between gap-3 border border-zinc-700 px-7 py-4 text-sm font-medium text-zinc-300 transition hover:border-zinc-500 hover:text-zinc-100"

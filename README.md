@@ -63,17 +63,16 @@ Payrail has three distinct roles:
 payrail/
 ├── apps/
 │   ├── web/                             # main product (user UI + merchant UI + API routes)
-│   ├── demo-merchant-news/              # demo merchant #1 — paid news API, deployed externally
-│   └── demo-merchant-weather/           # demo merchant #2 — paid weather API, deployed externally
+│   ├── demo-merchant-news/              # demo merchant #1 — paid news API (deployment pending)
+│   └── demo-merchant-weather/           # demo merchant #2 — paid weather API (deployment pending)
 ├── packages/
-│   ├── types/                           # @payrail/types — shared TS types
 │   ├── db/                              # @payrail/db — Drizzle schema + client
-│   ├── solana/                          # @payrail/solana — Solana helpers + constants
+│   ├── solana/                          # @payrail/solana — treasury + SPL transfer helpers
 │   ├── sdk/                             # @payrail/sdk — client SDK (drop into agent code)
-│   ├── merchant-sdk/                    # @payrail/merchant-sdk — server middleware
+│   ├── merchant-sdk/                    # @payrail/merchant-sdk — Express middleware
 │   ├── eslint-config/                   # shared ESLint config
 │   └── typescript-config/               # shared TypeScript config
-├── scripts/                             # one-off scripts: treasury seeding, local testing
+├── scripts/                             # spikes, stage tests, agent provisioning, treasury funding
 ├── turbo.json                           # turbo task graph
 ├── pnpm-workspace.yaml                  # workspace definition
 └── package.json                         # root (name: "payrail")
@@ -84,16 +83,15 @@ payrail/
 > **A package exists only if 2+ consumers use it. Single-consumer code stays local to its app.**
 
 Shared (in `packages/`):
-- `types` — used by web, sdk, merchant-sdk, scripts (4 consumers)
 - `db` — used by web + scripts (2 consumers)
-- `solana` — used by web + merchant-sdk + scripts (3 consumers)
+- `solana` — used by web + scripts (2 consumers)
 - `sdk` / `merchant-sdk` — standalone, published externally
 
 Local (in `apps/web/lib/`):
 - `dodo/` — only web uses Dodo
 - `privy/` — only web uses Privy server SDK
-- `policy/` — spend-cap enforcement (app-specific)
-- `ratelimit/` — rate limiting for public endpoints
+- `agent-auth.ts` + `x402-tx.ts` — only web uses these (x402 sign endpoint)
+- `ratelimit.ts` — rate limiting for public endpoints
 
 ---
 
@@ -144,7 +142,23 @@ pnpm build --filter=@payrail/sdk
 
 ## Status
 
-🚧 Scaffold in place (Turborepo + empty folder structure). Next up: detailed HLD review, then wire up Privy + Dodo + Drizzle + Solana in that order.
+✅ End-to-end x402 integration proven on Solana devnet. Agent wallets can pay merchants via Payrail's backend + Privy delegated signing + PayAI facilitator. Settlement visible on-chain (multiple Solscan-verifiable txs).
+
+**Shipped:**
+- Landing + merchant marketing pages (editorial aesthetic)
+- Authenticated product surface: dashboard, agent detail, top-up (Linear-style split view)
+- Flow A — fiat top-up: Dodo checkout → webhook → treasury → agent wallet
+- `/api/x402/sign` — atomic cap check, Privy delegated sign, PAYMENT-SIGNATURE encoding
+- `@payrail/sdk` v0.1.0 — client SDK (publish-ready, dry-run verified)
+- `@payrail/merchant-sdk` v0.1.0 — Express middleware (publish-ready, dry-run verified)
+
+**Pending (post-packaging work):**
+- Deploy `apps/web` to Vercel (payrail.sh)
+- Build + deploy demo merchant apps (`apps/demo-merchant-*`)
+- Wire the activity feed UI to real `transactions` rows
+- Publish the two SDKs to npm
+
+See memory in `/memory/project_frontier_hackathon.md` for the full progress log.
 
 ---
 

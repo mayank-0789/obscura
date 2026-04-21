@@ -1,17 +1,64 @@
 {
   "name": "@payrail/merchant-sdk",
-  "version": "0.0.0",
-  "description": "Server middleware for API providers to accept agent payments in USDG on Solana.",
-  "private": true,
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
+  "version": "0.1.0",
+  "description": "Express middleware for API sellers to accept x402 payments on Solana via PayAI facilitator.",
+  "license": "MIT",
+  "author": "Payrail",
+  "homepage": "https://payrail.sh",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/payrail/payrail.git",
+    "directory": "packages/merchant-sdk"
+  },
+  "keywords": [
+    "x402",
+    "solana",
+    "express",
+    "middleware",
+    "payments",
+    "api-monetization",
+    "usdc",
+    "payrail"
+  ],
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "check-types": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "pnpm run clean && pnpm run build"
+  },
   "dependencies": {
-    "@payrail/solana": "workspace:*",
-    "@payrail/types": "workspace:*",
-    "@solana/web3.js": "^1.98.4",
     "x402-solana": "^2.0.4"
   },
+  "peerDependencies": {
+    "@solana/web3.js": ">=1.98.4"
+  },
   "devDependencies": {
-    "@repo/typescript-config": "workspace:*"
+    "@repo/typescript-config": "workspace:*",
+    "@solana/web3.js": "^1.98.4",
+    "tsup": "^8.5.1",
+    "typescript": "5.9.2"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

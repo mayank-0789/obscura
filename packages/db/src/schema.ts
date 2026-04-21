@@ -186,6 +186,9 @@ export const transactions = pgTable(
     rateSnapshot: numeric("rate_snapshot", { precision: 10, scale: 4 }),
     // Merchant pubkey, literal "TREASURY", or "USER_BANK" sentinel.
     counterparty: text("counterparty").notNull(),
+    // Host of the paid resource for kind='spend' (e.g. "news.example.com").
+    // NULL for topups/payouts. Populated from the x402 `resource.url`.
+    merchantHost: text("merchant_host"),
     // NULL while pending; set once confirmed.
     solanaSig: text("solana_sig"),
     dodoPaymentId: text("dodo_payment_id"),
@@ -201,6 +204,14 @@ export const transactions = pgTable(
     // Unique on solana_sig — multiple NULLs allowed (pending txs).
     uniqueIndex("transactions_solana_sig_idx").on(t.solanaSig),
     index("transactions_dodo_payment_id_idx").on(t.dodoPaymentId),
+    // Partial index for merchant earnings queries:
+    //   WHERE counterparty = ? AND status = 'confirmed' AND kind = 'spend'
+    //   ORDER BY created_at DESC
+    // Filters on kind='spend' to keep the index tight — topup/refund/payout
+    // rows are irrelevant to merchant dashboards.
+    index("transactions_counterparty_confirmed_idx")
+      .on(t.counterparty, t.status, t.createdAt.desc())
+      .where(sql`${t.kind} = 'spend'`),
   ],
 );
 
@@ -227,7 +238,10 @@ export const merchants = pgTable(
       .defaultNow(),
   },
   (t) => [
-    index("merchants_owner_user_id_idx").on(t.ownerUserId),
+    // Unique — one merchant per user. Enforces 1:1 at the DB level so that a
+    // double-POST race on /api/merchants can't produce two rows; the losing
+    // INSERT trips ON CONFLICT and we re-read the winner.
+    uniqueIndex("merchants_owner_user_id_idx").on(t.ownerUserId),
     uniqueIndex("merchants_payout_wallet_idx").on(t.payoutWallet),
   ],
 );

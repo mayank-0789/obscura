@@ -1,0 +1,87 @@
+import { DocArticle } from "@/components/docs/doc-article";
+
+export default function ({ children }) {
+  return <DocArticle slug="/docs/agents/flow">{children}</DocArticle>;
+}
+
+# How it works
+
+A single `agent.fetch(url)` call triggers a full x402 payment handshake.
+Your code never sees it — but understanding the wire flow is the fastest
+path to debugging a misbehaving integration.
+
+## The six messages
+
+<CodeBlock lang="text" filename="" noCopy>
+{`1.  agent.fetch(url)                                   → [merchant]
+2.  402 Payment Required + PAYMENT-REQUIRED header     ← [merchant]
+3.  POST /api/x402/sign   Bearer pk_…                   → [payrail]
+       (auth · cap check · Privy sign · encode)
+4.  { paymentSignatureHeader }                          ← [payrail]
+5.  retry w/ PAYMENT-SIGNATURE                          → [merchant]
+       (merchant → PayAI verify + settle on Solana)
+6.  200 + data + X-Payment-Response                     ← [merchant]`}
+</CodeBlock>
+
+## What Payrail does in step 3
+
+The agent SDK forwards the merchant's 402 challenge to Payrail's
+`/api/x402/sign` endpoint, authenticated with your agent's API key.
+Our backend runs four steps atomically before returning a signature:
+
+1. **Authenticate.** Bearer token → `agent_api_keys.key_hash` lookup → load
+   the owning agent + its budget.
+2. **Cap check.** An atomic `UPDATE budgets SET spent_usdg = spent + amount
+   WHERE spent + amount <= cap` increments the counter only if the result
+   stays under the monthly cap. Zero rows back means the call would
+   overflow — we return `over_cap` (402) without signing.
+3. **Sign.** Build an unsigned Solana `VersionedTransaction` (SPL transfer
+   from the agent's Privy-custodied wallet to the merchant's payout
+   wallet) and hand it to Privy's delegated-signer API for signing.
+4. **Encode.** Return the signed tx to the SDK as a base64
+   `PAYMENT-SIGNATURE` header.
+
+## Why the agent can't sign directly
+
+The agent wallet is custodied by Privy; Payrail's backend is the only
+party authorized to sign transactions for it. This is deliberate:
+
+- **Bounded loss on key compromise.** A leaked API key can only spend up
+  to the remaining monthly cap — not drain the wallet.
+- **No seed-phrase hygiene in your agent.** Your agent never holds a
+  private key, which means no rotation problem, no secrets in your
+  container image, no KMS integration.
+- **Atomic spend accounting.** We record every tx in a `transactions` row
+  before we sign, so the ledger and chain stay in lockstep.
+
+## What the facilitator does in step 5
+
+The merchant forwards your payment-bearing request to the PayAI
+facilitator, which:
+
+1. **Verifies** the signature is valid + matches the quoted amount/recipient.
+2. **Co-signs** as the fee-payer (so the agent never needs SOL for gas).
+3. **Submits** the transaction to Solana and waits for confirmation.
+4. **Returns** a settlement receipt with the tx signature.
+
+The merchant then attaches that receipt as an `X-Payment-Response`
+header on the final 200 response. That's the header you can decode to
+verify settlement on Solscan.
+
+## Verify on-chain
+
+The `X-Payment-Response` header is base64-encoded JSON. Decode it to
+get the Solana tx signature:
+
+<CodeBlock lang="ts">
+{`const receipt = JSON.parse(
+  Buffer.from(
+    response.headers.get("X-Payment-Response")!,
+    "base64",
+  ).toString("utf8"),
+);
+console.log(\`https://solscan.io/tx/\${receipt.transaction}?cluster=devnet\`);`}
+</CodeBlock>
+
+Next: [Error handling](/docs/agents/errors) — every failure mode the
+flow above can produce.

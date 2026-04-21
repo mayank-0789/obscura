@@ -1,0 +1,78 @@
+import { DocArticle } from "@/components/docs/doc-article";
+
+export default function ({ children }) {
+  return <DocArticle slug="/docs/agents/advanced">{children}</DocArticle>;
+}
+
+# Advanced usage
+
+The `Payrail` constructor accepts three options beyond `apiKey`. Together
+they cover local development, custom network stacks, and standard
+`RequestInit` pass-through.
+
+## Point at a different Payrail instance
+
+For local development, point at your own Payrail backend:
+
+<CodeBlock lang="ts">
+{`const agent = new Payrail({
+  apiKey: process.env.PAYRAIL_KEY!,
+  baseUrl: "http://localhost:3000",
+});`}
+</CodeBlock>
+
+Useful for end-to-end testing the full agent → Payrail → merchant loop
+against a local Next.js dev server without touching production infra.
+
+## Use a custom fetch
+
+On older Node, edge runtimes, or in tests, inject your own fetch:
+
+<CodeBlock lang="ts">
+{`import { fetch as undiciFetch } from "undici";
+
+const agent = new Payrail({
+  apiKey: process.env.PAYRAIL_KEY!,
+  fetch: undiciFetch as typeof fetch,
+});`}
+</CodeBlock>
+
+The SDK uses the injected fetch for every HTTP call it makes — both the
+outbound request to the merchant and the internal sign request to
+Payrail — so behavior stays consistent across runtimes.
+
+## Pass through init options
+
+`agent.fetch()` accepts the standard `RequestInit` — headers, method,
+body, signal (AbortController), etc. Your headers survive the payment
+retry.
+
+<CodeBlock lang="ts">
+{`const controller = new AbortController();
+setTimeout(() => controller.abort(), 5000);
+
+const res = await agent.fetch(url, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ query: "solana news" }),
+  signal: controller.signal,
+});`}
+</CodeBlock>
+
+Two subtleties worth knowing:
+
+1. **Headers survive the retry.** Internally the SDK merges its
+   `PAYMENT-SIGNATURE` header into the `Headers` object you passed; it
+   doesn't replace yours. So `Content-Type`, `Accept`, and any custom
+   `X-` headers reach the merchant on the paid request.
+2. **Body is re-sent as-is.** The SDK buffers the request body on the
+   first call and replays it exactly on the paid retry. For `body:
+   ReadableStream`, you'll need a Stream that can be re-read — or use
+   `body: Buffer` / string / `URLSearchParams` instead.
+3. **AbortSignal cancels both hops.** The signal aborts whichever HTTP
+   call is in flight — the initial 402 probe OR the paid retry.
+
+## Full constructor reference
+
+See [API reference](/docs/agents/reference) for `PayrailOptions`,
+`PayrailError`, and every exported type.

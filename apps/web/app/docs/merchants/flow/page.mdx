@@ -1,0 +1,93 @@
+import { DocArticle } from "@/components/docs/doc-article";
+
+export default function ({ children }) {
+  return <DocArticle slug="/docs/merchants/flow">{children}</DocArticle>;
+}
+
+# How it works
+
+Every paid request goes through a two-phase handshake. The middleware
+handles both phases for you — this page is for debugging and
+integration confidence.
+
+## The swimlane
+
+<CodeBlock lang="text" filename="" noCopy>
+{`[agent]                 [your server]                [PayAI]
+  │                         │                           │
+  │  GET /article/42        │                           │
+  │────────────────────────▶│                           │
+  │                         │  /supported (price quote) │
+  │                         │──────────────────────────▶│
+  │                         │◀──────────────────────────│
+  │  402 + PAYMENT-REQUIRED │                           │
+  │◀────────────────────────│                           │
+  │                         │                           │
+  │  (agent signs via its wallet & retries)             │
+  │                         │                           │
+  │  GET /article/42        │                           │
+  │  PAYMENT-SIGNATURE: …   │                           │
+  │────────────────────────▶│                           │
+  │                         │  /supported (same quote)  │
+  │                         │──────────────────────────▶│
+  │                         │◀──────────────────────────│
+  │                         │  verifyPayment            │
+  │                         │──────────────────────────▶│
+  │                         │◀──────────────────────────│
+  │                         │  settlePayment (on-chain) │
+  │                         │──────────────────────────▶│
+  │                         │◀──────────────────────────│
+  │  200 + data             │                           │
+  │  X-Payment-Response: …  │                           │
+  │◀────────────────────────│                           │`}
+</CodeBlock>
+
+## Phase 1 — no payment header present
+
+The middleware computes a `PaymentRequirements` object from your
+`pay.charge()` config + a fresh quote from PayAI's `/supported`
+endpoint, then responds with:
+
+- `402 Payment Required`
+- Body: JSON `PaymentRequirements` (the quote)
+- Header: `PAYMENT-REQUIRED` (same content, base64-encoded, for
+  convenience)
+
+The client signs a transaction satisfying those requirements and
+retries.
+
+## Phase 2 — payment header present
+
+On the retry, the middleware:
+
+1. Builds the same `PaymentRequirements` (PayAI serves a cache if the
+   previous quote is still valid).
+2. Calls `verifyPayment(header, requirements)` — PayAI cryptographically
+   verifies the signature, amount, recipient, network, and nonce.
+3. If valid, calls `settlePayment(header, requirements)` — PayAI submits
+   the transaction to Solana and waits for confirmation.
+4. Attaches an `X-Payment-Response` header + `res.locals.payrailSettlement`
+   with the tx signature.
+5. Calls `next()` — your route handler runs with the payment already
+   settled.
+
+## Fees + fee-payer
+
+PayAI co-signs every transaction as the Solana fee-payer. That means:
+
+- The **agent** pays in USDC only — no SOL balance required.
+- **You** receive USDC in full — no network fee deducted.
+- **PayAI** takes a small protocol fee from the buyer side; your payout
+  matches `amount` exactly.
+
+## Synchronous settle: latency trade
+
+The middleware settles **before** your handler runs, so
+`res.locals.payrailSettlement.transaction` is a real, confirmed tx
+signature by the time you build your response. This adds ~300–600ms of
+facilitator round-trip to every paid request. For production workloads
+requiring sub-100ms p99, the x402 spec supports settle-after-handler —
+but synchronous settle is the right default for hackathon / v1.
+
+Next: [Settlement receipts](/docs/merchants/receipts) — reading the
+settlement object.

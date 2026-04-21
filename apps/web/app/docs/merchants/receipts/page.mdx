@@ -1,0 +1,81 @@
+import { DocArticle } from "@/components/docs/doc-article";
+
+export default function ({ children }) {
+  return <DocArticle slug="/docs/merchants/receipts">{children}</DocArticle>;
+}
+
+# Settlement receipts
+
+On every successful payment, the middleware exposes the on-chain
+settlement result in two places:
+
+- **`res.locals.payrailSettlement`** — the parsed settlement object,
+  available to your route handler synchronously.
+- **`X-Payment-Response` header** — a base64-encoded JSON copy of the
+  same object, sent on the wire so clients can verify on-chain.
+
+## Read it in your handler
+
+Pull the tx signature into your response body, log to analytics, or
+write to your own DB.
+
+<CodeBlock lang="ts" filename="server.ts">
+{`import type { Response } from "express";
+
+app.get(
+  "/article/:id",
+  pay.charge({ amount: "10000", description: "News article" }),
+  (req, res: Response) => {
+    const settlement = (res.locals as {
+      payrailSettlement?: { transaction: string };
+    }).payrailSettlement;
+
+    res.json({
+      id: req.params.id,
+      headline: \`Article #\${req.params.id}\`,
+      body: "Lorem ipsum…",
+      settledSig: settlement?.transaction ?? null,
+    });
+  },
+);`}
+</CodeBlock>
+
+## Shape of the settlement object
+
+<CodeBlock lang="ts">
+{`type PayrailSettlement = {
+  success: true;
+  transaction: string;        // base58 Solana tx signature
+  network: "solana" | "solana-devnet";
+  payer: string;              // base58 sender pubkey (the agent wallet)
+  errorReason: null;
+};`}
+</CodeBlock>
+
+Settlement failures never reach your handler — the middleware intercepts
+them with a 402 response and `next()` is not called. Your route only
+runs on a confirmed, on-chain settlement.
+
+## Decode `X-Payment-Response`
+
+Clients can verify settlement independently:
+
+<CodeBlock lang="ts">
+{`const header = response.headers.get("X-Payment-Response");
+if (header) {
+  const receipt = JSON.parse(
+    Buffer.from(header, "base64").toString("utf8"),
+  );
+  console.log(
+    \`Paid! https://solscan.io/tx/\${receipt.transaction}?cluster=devnet\`,
+  );
+}`}
+</CodeBlock>
+
+## Where it shows up on the dashboard
+
+Every settlement lands in your [merchant
+dashboard](/merchants/dashboard) within a second via real-time SSE. Each
+row shows the payer agent, the route, the amount, the timestamp, and a
+Solscan deep-link to the on-chain transaction. The full feed is
+available at `/merchants/payments` with cursor pagination.

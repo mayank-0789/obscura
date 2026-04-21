@@ -1,0 +1,109 @@
+import { DocArticle } from "@/components/docs/doc-article";
+
+export default function ({ children }) {
+  return <DocArticle slug="/docs/merchants/pricing">{children}</DocArticle>;
+}
+
+# Pricing & assets
+
+Each `pay.charge()` call produces independent middleware, so you can
+price every route differently. Prices are authored in **atomic units** —
+USDC uses 6 decimals, so `"10000"` is $0.01.
+
+## Per-route prices
+
+<CodeBlock lang="ts">
+{`const cheap    = pay.charge({ amount: "1000" });     // $0.001
+const standard = pay.charge({ amount: "10000" });    // $0.01
+const premium  = pay.charge({ amount: "100000" });   // $0.10
+
+app.get("/preview/:id",   cheap,    previewHandler);
+app.get("/article/:id",   standard, articleHandler);
+app.get("/analysis/:id",  premium,  analysisHandler);`}
+</CodeBlock>
+
+## Why atomic-unit strings
+
+- **Exact.** JS numbers lose precision above 2⁵³; atomic amounts go
+  higher.
+- **Predictable.** No rounding, no locale, no decimal-separator drift.
+- **Stable.** Changing decimals (e.g. switching mints) doesn't silently
+  re-price — you'd see the error.
+
+## Dashboard catalog
+
+Optionally register each route on the [APIs
+page](/merchants/apis) of your dashboard. The catalog is display-only —
+it doesn't change what the SDK charges. But registered routes show up
+with friendly names in your payment feed and per-API analytics.
+
+## Custom mint / decimals
+
+Override at the SDK level for every route, or per-route via `asset`.
+Any SPL token the PayAI facilitator supports can be used — USDC is the
+default.
+
+<CodeBlock lang="ts">
+{`// every route prices in a different stablecoin
+const pay = payrail({
+  payoutWallet: process.env.PAYRAIL_PAYOUT_WALLET!,
+  mint: "<BASE58_MINT_ADDRESS>",
+  decimals: 6,
+});
+
+// or override just one route
+app.get(
+  "/premium-report",
+  pay.charge({
+    amount: "500000",
+    asset: {
+      address: "<BASE58_MINT_ADDRESS>",
+      decimals: 6,
+    },
+  }),
+  reportHandler,
+);`}
+</CodeBlock>
+
+## Mainnet
+
+Flip one flag when you're ready for real money. The mint default
+switches to canonical USDC automatically.
+
+<CodeBlock lang="ts">
+{`const pay = payrail({
+  payoutWallet: process.env.PAYRAIL_PAYOUT_WALLET!,
+  network: "solana",        // mainnet-beta
+  // mint defaults to EPjFW…Dt1v (USDC on mainnet)
+});`}
+</CodeBlock>
+
+## PayAI paid tier
+
+The free tier is fine for demos and low-volume workloads. At production
+RPS, get API credentials from [payai.network](https://payai.network)
+and plug them in:
+
+<CodeBlock lang="ts">
+{`const pay = payrail({
+  payoutWallet: process.env.PAYRAIL_PAYOUT_WALLET!,
+  network: "solana",
+  apiKeyId: process.env.PAYAI_API_KEY_ID,
+  apiKeySecret: process.env.PAYAI_API_KEY_SECRET,
+});`}
+</CodeBlock>
+
+## Custom RPC
+
+The SDK hits Solana RPC only for chain reads during verification.
+Default is `api.devnet.solana.com` / `api.mainnet-beta.solana.com`.
+Point at Helius / Triton / QuickNode for lower latency:
+
+<CodeBlock lang="ts">
+{`const pay = payrail({
+  payoutWallet: process.env.PAYRAIL_PAYOUT_WALLET!,
+  rpcUrl: process.env.HELIUS_RPC_URL,
+});`}
+</CodeBlock>
+
+Next: [Deploy](/docs/merchants/deploy) — runtime notes for production.

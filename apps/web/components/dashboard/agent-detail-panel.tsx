@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useAgentBalance } from "@/hooks/use-agent-balance";
+import { useAgentTransactions } from "@/hooks/use-agent-transactions";
 import { solscanAccountUrl } from "@/lib/solscan";
 import {
   formatInr,
@@ -10,9 +11,11 @@ import {
 } from "@/lib/money-format";
 import type { AgentDTO } from "@/types/agent";
 import { Kbd } from "./kbd";
+import { RecentSpendsList } from "./recent-spends-list";
 
 export function AgentDetailPanel({ agent }: { agent: AgentDTO }) {
   const { data: balance } = useAgentBalance(agent.id);
+  const spends = useAgentTransactions(agent.id, { limit: 10 });
   const solscanUrl = solscanAccountUrl(agent.publicKey);
   const isActive = agent.status === "active";
 
@@ -127,24 +130,15 @@ export function AgentDetailPanel({ agent }: { agent: AgentDTO }) {
         </section>
       )}
 
-      {/* Activity placeholder */}
+      {/* Recent spends — paid calls this agent has made. Mirrors the
+          merchant dashboard's RecentPaymentsList but flipped: same rows in
+          `transactions`, read from the other side. */}
       <section className="mt-12">
-        <div className="flex items-center justify-between">
-          <div className="text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500">
-            Recent activity
-          </div>
-          <div className="font-mono text-[10px] text-zinc-600">
-            Last 24 hrs · Coming soon
-          </div>
-        </div>
-        <div className="mt-4 rounded-lg border border-dashed border-zinc-800 bg-zinc-950/50 p-8 text-center">
-          <div className="text-[13px] text-zinc-400">
-            Per-call activity lands here once your agent starts spending.
-          </div>
-          <div className="mt-2 font-mono text-[11px] text-zinc-600">
-            settlement, amount, host, latency — all on-chain verifiable
-          </div>
-        </div>
+        <RecentSpendsList
+          transactions={spends.data?.transactions}
+          isLoading={spends.isLoading}
+          viewAllHref={`/agents/${agent.id}/spends`}
+        />
       </section>
 
       {/* Status banner for non-active states */}

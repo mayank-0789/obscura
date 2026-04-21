@@ -12,6 +12,15 @@ const MESSAGES: Record<string, string> = {
   not_found: "We couldn't find that.",
   rate_limited: "You're doing that too often. Wait a minute and retry.",
   agent_limit_reached: "You've hit the agent limit for this account.",
+  // x402 agent-flow codes — surfaced by the SDK when /api/x402/sign rejects.
+  agent_inactive:
+    "This agent is paused or cancelled. Reactivate it to resume payments.",
+  invalid_challenge:
+    "The merchant's payment request was rejected as invalid or expired.",
+  over_cap:
+    "This payment would exceed the agent's monthly spend cap. Raise the cap or wait for the next cycle.",
+  signing_failed:
+    "We couldn't sign the payment. Try again; if this persists, check the agent's status.",
   server_error: FALLBACK,
 };
 

@@ -1,0 +1,95 @@
+import { DocArticle } from "@/components/docs/doc-article";
+
+export default function ({ children }) {
+  return <DocArticle slug="/docs/merchants/quickstart">{children}</DocArticle>;
+}
+
+# Charge per API call
+
+Wrap one Express route with `pay.charge()` and your API starts quoting
+prices in USDC, verifying payments via the x402 protocol, and settling
+on Solana in the same request. No account on our side at runtime — the
+middleware speaks x402 directly to the PayAI facilitator.
+
+**Time to first settled payment:** ~5 minutes.
+
+## Grab your payout wallet
+
+1. [Sign up](/merchants) and pick "API provider" during onboarding.
+2. Your dashboard shows a **payout wallet** — a Solana address Payrail
+   minted for you. Click the copy button.
+3. Paste it into your server's environment:
+
+<CodeBlock lang="bash" filename="your-api/.env">
+{`PAYRAIL_PAYOUT_WALLET=7xK3r…NhGP`}
+</CodeBlock>
+
+<Callout kind="info" title="You don't hold the key in your server">
+  The payout wallet only *receives* funds — it never signs anything
+  from your server. Payrail manages the key so a future cash-out flow
+  can swap USDC → INR on your behalf. Nothing to rotate, nothing to
+  leak.
+</Callout>
+
+## Wrap a route
+
+Create `server.ts` and paste this in. The `charge` middleware goes
+*before* your handler — it intercepts payment-less requests with a 402,
+and passes payment-bearing requests through after settling on-chain.
+
+<CodeBlock lang="ts" filename="server.ts">
+{`import express from "express";
+import { payrail } from "@payrail/merchant-sdk";
+
+const pay = payrail({
+  payoutWallet: process.env.PAYRAIL_PAYOUT_WALLET!,
+  network: "solana-devnet",
+});
+
+const app = express();
+
+app.get(
+  "/article/:id",
+  pay.charge({ amount: "10000", description: "News article" }),
+  (req, res) => {
+    res.json({
+      id: req.params.id,
+      headline: \`Article #\${req.params.id}\`,
+      body: "Lorem ipsum dolor sit amet…",
+    });
+  },
+);
+
+app.listen(3001, () =>
+  console.log("Paid API on http://localhost:3001"),
+);`}
+</CodeBlock>
+
+Run it:
+
+<CodeBlock lang="bash" filename="terminal">
+{`npx tsx server.ts
+# → Paid API on http://localhost:3001`}
+</CodeBlock>
+
+<Callout kind="info" title="Pricing is in atomic units">
+  `amount: "10000"` is $0.01 because USDC has 6 decimals
+  (10000 ÷ 10<sup>6</sup> = 0.01). Pass a string to avoid JS float
+  rounding. See [Pricing & assets](/docs/merchants/pricing) for
+  per-route prices and non-USDC stablecoins.
+</Callout>
+
+## Watch earnings land
+
+With the server running, point any x402 client — the [agent
+quickstart](/docs/agents/quickstart) works — at your route. On your
+[merchant dashboard](/merchants/dashboard) the payment shows up within
+a second via real-time SSE, including the Solana tx signature with a
+Solscan deep-link.
+
+## What's next
+
+- [How it works](/docs/merchants/flow) — every step of the two-phase x402 handshake.
+- [Settlement receipts](/docs/merchants/receipts) — reading `res.locals.payrailSettlement` + the `X-Payment-Response` header.
+- [Pricing & assets](/docs/merchants/pricing) — per-route prices, custom mints, mainnet switching.
+- [Deploy](/docs/merchants/deploy) — where this SDK runs best.

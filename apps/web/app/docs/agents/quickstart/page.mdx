@@ -1,0 +1,68 @@
+import { DocArticle } from "@/components/docs/doc-article";
+
+export default function ({ children }) {
+  return <DocArticle slug="/docs/agents/quickstart">{children}</DocArticle>;
+}
+
+# Your agent's first paid call
+
+In five lines of TypeScript, your agent will pay a live API on Solana
+devnet and get data back. No wallet code, no blockchain libraries, no
+seed phrases — just an API key you paste into an env var.
+
+**Time to first paid call:** ~3 minutes.
+
+## Create an agent + grab its API key
+
+1. Open [payrail.sh/dashboard](/dashboard) and sign in.
+2. Press <Kbd>⌘N</Kbd> (or click **+ New agent**). Name your agent, pick
+   a monthly spend cap in rupees, submit.
+3. A green banner appears with your agent's plaintext API key (format
+   `pk_…`). **Copy it now** — it's shown only once. Payrail stores only
+   a hash.
+4. Click **Top up** on the agent row and fund it with ₹500 via UPI or a
+   test card. Funds arrive on devnet within ~30 seconds.
+
+<CodeBlock lang="bash" filename="your-agent/.env">
+{`PAYRAIL_KEY=pk_abc…xyz`}
+</CodeBlock>
+
+## Write five lines
+
+Create `agent.ts` and paste this in. Swap the URL for any paid
+endpoint — here we're hitting a demo merchant we run on Solana devnet
+that charges $0.01 per article.
+
+<CodeBlock lang="ts" filename="agent.ts">
+{`import { Payrail } from "@payrail/sdk";
+
+const agent = new Payrail({ apiKey: process.env.PAYRAIL_KEY! });
+
+const res = await agent.fetch(
+  "https://demo-merchant-news.payrail.sh/article/42",
+);
+console.log(await res.json());`}
+</CodeBlock>
+
+Run it:
+
+<CodeBlock lang="bash" filename="terminal">
+{`npx tsx --env-file=.env agent.ts
+
+# You should see:
+# { id: '42', headline: 'Dummy article #42', body: 'Lorem…', settledSig: '3Nh…ou2ALF' }`}
+</CodeBlock>
+
+<Callout kind="info" title="What the response header carries">
+  The merchant attaches an `X-Payment-Response` header on success — a
+  base64-encoded settlement receipt with the Solana tx signature. Decode
+  + open it on Solscan to verify on-chain.
+</Callout>
+
+## What's next
+
+- [How it works](/docs/agents/flow) — the full x402 handshake, end to end.
+- [Error handling](/docs/agents/errors) — every `PayrailErrorCode` and
+  when to retry.
+- [Advanced usage](/docs/agents/advanced) — custom `fetch`, pointing at a
+  local Payrail instance, AbortSignal + RequestInit pass-through.

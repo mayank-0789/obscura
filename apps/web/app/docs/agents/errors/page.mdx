@@ -1,0 +1,101 @@
+import { DocArticle } from "@/components/docs/doc-article";
+
+export default function ({ children }) {
+  return <DocArticle slug="/docs/agents/errors">{children}</DocArticle>;
+}
+
+# Error handling
+
+The SDK throws `PayrailError` with a typed `code` for every failure mode.
+Switch on `err.code` for user-facing responses, or rethrow unknown codes.
+
+## The pattern
+
+<CodeBlock lang="ts" filename="agent.ts">
+{`import { Payrail, PayrailError } from "@payrail/sdk";
+
+const agent = new Payrail({ apiKey: process.env.PAYRAIL_KEY! });
+
+try {
+  const res = await agent.fetch(url);
+  return await res.json();
+} catch (err) {
+  if (err instanceof PayrailError) {
+    switch (err.code) {
+      case "over_cap":
+        // Monthly spend cap hit. Raise it in the dashboard or wait
+        // for the calendar-month reset.
+        throw new Error("This agent has no budget left this month.");
+      case "agent_inactive":
+        // Agent paused or cancelled in the dashboard.
+        throw new Error("Agent is inactive.");
+      case "invalid_token":
+        // API key revoked, rotated, or mistyped.
+        throw new Error("Payrail API key invalid — rotate in dashboard.");
+      case "invalid_challenge":
+        // The merchant sent a malformed 402 — not your fault.
+        throw new Error("Merchant payment request was invalid.");
+      case "signing_failed":
+        // Privy or Solana failed to sign. Safe to retry.
+        throw new Error("Payment signing failed — retry in a moment.");
+      case "network_error":
+        // Couldn't reach Payrail backend.
+        throw new Error("Payrail unreachable — retry in a moment.");
+      default:
+        throw err;
+    }
+  }
+  throw err;
+}`}
+</CodeBlock>
+
+## Every error code
+
+<DocTable
+  headers={["Code", "Status", "When it fires"]}
+  rows={[
+    [<code key="c">over_cap</code>, "402", "Agent's monthly spend cap would be exceeded."],
+    [<code key="c">agent_inactive</code>, "403", "Agent is paused or cancelled."],
+    [<code key="c">missing_token</code>, "401", <>No Bearer token on the request to Payrail. The SDK sets this for you — only fires if <code>apiKey</code> is empty.</>],
+    [<code key="c">invalid_token</code>, "401", "API key is unknown, revoked, or mis-formatted."],
+    [<code key="c">invalid_challenge</code>, "400", "Merchant's 402 response is malformed or for the wrong network/mint."],
+    [<code key="c">signing_failed</code>, "500", "Privy or Solana failed to sign. Safe to retry once."],
+    [<code key="c">bad_request</code>, "400", <>SDK-level constructor issue (e.g. missing <code>apiKey</code>) or a malformed sign-request body.</>],
+    [<code key="c">server_error</code>, "500", "Unhandled Payrail backend error. Safe to retry once; contact support if persistent."],
+    [<code key="c">no_payment_required_header</code>, "—", "Merchant returned 402 but without a PAYMENT-REQUIRED header (protocol violation on the merchant)."],
+    [<code key="c">network_error</code>, "—", <>Couldn&apos;t reach Payrail. Check <code>baseUrl</code> / connectivity.</>],
+    [<code key="c">unknown</code>, "—", "Catch-all for unrecognized error codes. Treat as a retryable server-side issue."],
+  ]}
+/>
+
+## When to retry
+
+The SDK doesn't retry on its own — that's your call, and depends on
+whether the operation is idempotent. A safe pattern:
+
+<CodeBlock lang="ts">
+{`const RETRYABLE = new Set<string>([
+  "signing_failed",
+  "server_error",
+  "network_error",
+]);
+
+async function callWithRetry(url: string, attempts = 2): Promise<Response> {
+  try {
+    return await agent.fetch(url);
+  } catch (err) {
+    if (
+      err instanceof PayrailError &&
+      RETRYABLE.has(err.code) &&
+      attempts > 0
+    ) {
+      await new Promise((r) => setTimeout(r, 500));
+      return callWithRetry(url, attempts - 1);
+    }
+    throw err;
+  }
+}`}
+</CodeBlock>
+
+`over_cap`, `agent_inactive`, and `invalid_token` are intentionally NOT
+retryable — retrying them just wastes round-trips.

@@ -53,9 +53,9 @@ export function Footer() {
             title="Developers"
             links={[
               { label: "Docs", href: "/docs" },
-              { label: "Agent SDK", href: "/docs/users/quickstart" },
+              { label: "Agent SDK", href: "/docs/agents/quickstart" },
               { label: "Merchant SDK", href: "/docs/merchants/quickstart" },
-              { label: "FAQ", href: "/docs/faq" },
+              { label: "GitHub", href: "https://github.com/payrail/payrail" },
             ]}
           />
           <FooterGroup

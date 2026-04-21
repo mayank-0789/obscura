@@ -1,0 +1,65 @@
+import { DocArticle } from "@/components/docs/doc-article";
+
+export default function ({ children }) {
+  return <DocArticle slug="/docs/merchants/errors">{children}</DocArticle>;
+}
+
+# Error handling
+
+The middleware handles x402 errors itself — a malformed payment becomes
+a 402 with an explanation body, a failed settlement becomes a 402 with
+`settle_failed`. Your handler never runs on a broken payment.
+
+Exceptions bubble into Express's `next(err)` so you can catch them in a
+global error handler:
+
+<CodeBlock lang="ts" filename="server.ts">
+{`app.use((err: unknown, _req, res, _next) => {
+  console.error("[paid-route]", err);
+  res.status(500).json({ error: "internal" });
+});`}
+</CodeBlock>
+
+## Every response shape
+
+<DocTable
+  headers={["Status", "Body", "Meaning"]}
+  rows={[
+    ["402", <code key="c">{`{ accepts, x402Version, ... }`}</code>, <>No <code>PAYMENT-SIGNATURE</code> sent. Body holds the price quote; a <code>PAYMENT-REQUIRED</code> header carries a base64 copy.</>],
+    ["402", <code key="c">{`{ error: "invalid_payment", reason }`}</code>, "Signature verified but amount / mint / recipient don't match the quote."],
+    ["402", <code key="c">{`{ error: "settle_failed", reason }`}</code>, "Signature is valid but on-chain settlement failed (funds, RPC, or facilitator). Retry later."],
+    ["500", <code key="c">next(err)</code>, "Unexpected throw — usually a misconfigured facilitator URL or RPC."],
+  ]}
+/>
+
+## Why 402 instead of 500 for settle failures
+
+The client is better equipped to handle payment failures than your
+server is. A 402 with `settle_failed` is an actionable response: the
+client knows the signature was valid but settlement didn't land, and
+can choose to retry with a fresh signature. A 500 would hide that
+detail and trigger the wrong recovery path.
+
+## Logging
+
+Settlement failures + malformed payments are logged to `stderr` by
+PayAI's underlying x402-solana library. For production you'll want to:
+
+1. Forward these to your log aggregator (Datadog, Axiom, Sentry).
+2. Alert on sustained `settle_failed` rates — indicates facilitator or
+   RPC problems.
+3. Ignore `invalid_payment` noise — clients trying random payloads is
+   normal.
+
+## What never reaches your handler
+
+Your handler only runs after a confirmed, on-chain settlement. So you
+never need to handle:
+
+- Unsigned requests (→ 402 with quote).
+- Invalid signatures (→ 402 with `invalid_payment`).
+- Expired nonces or blockhashes (→ 402 with `invalid_payment`).
+- Settlement failures (→ 402 with `settle_failed`).
+- Wrong network / mint mismatches (→ 402 with `invalid_payment`).
+
+If your handler runs, the payment is in your wallet.

@@ -1,0 +1,107 @@
+import { DocArticle } from "@/components/docs/doc-article";
+
+export default function ({ children }) {
+  return <DocArticle slug="/docs/concepts/x402">{children}</DocArticle>;
+}
+
+# The x402 protocol
+
+x402 is an open HTTP-native micropayment protocol. The name comes from
+the HTTP status code `402 Payment Required`, which was reserved in the
+original HTTP/1.1 spec but left unspecified for 25 years.
+
+## The wire protocol in one page
+
+An x402 payment is four HTTP messages with a specific header dance.
+
+**Request 1 — plain GET**
+
+<CodeBlock lang="http" noCopy>
+{`GET /article/42 HTTP/1.1
+Host: news.example.com`}
+</CodeBlock>
+
+**Response 1 — 402 with a quote**
+
+<CodeBlock lang="http" noCopy>
+{`HTTP/1.1 402 Payment Required
+PAYMENT-REQUIRED: <base64(body)>
+Content-Type: application/json
+
+{
+  "x402Version": 1,
+  "accepts": [{
+    "scheme": "exact",
+    "network": "solana-devnet",
+    "maxAmountRequired": "10000",
+    "payTo": "<merchant-wallet>",
+    "asset": "<usdc-mint>",
+    "extra": { "feePayer": "<facilitator>", "validUntil": 1735689600 }
+  }]
+}`}
+</CodeBlock>
+
+**Request 2 — retry with a signed payment**
+
+<CodeBlock lang="http" noCopy>
+{`GET /article/42 HTTP/1.1
+Host: news.example.com
+PAYMENT-SIGNATURE: <base64(payment)>`}
+</CodeBlock>
+
+**Response 2 — 200 + data + settlement receipt**
+
+<CodeBlock lang="http" noCopy>
+{`HTTP/1.1 200 OK
+X-Payment-Response: <base64(settlement)>
+Content-Type: application/json
+
+{ "id": "42", "body": "..." }`}
+</CodeBlock>
+
+That's the whole protocol on the wire. Four messages. Three headers:
+`PAYMENT-REQUIRED` (quote), `PAYMENT-SIGNATURE` (proof-of-payment),
+`X-Payment-Response` (settlement receipt).
+
+## What makes it different
+
+- **HTTP-native.** Not a sidecar service, not a webhook callback — plain
+  request/response. `curl` + `jq` can debug it.
+- **Chain-agnostic at the spec level.** The `accepts[].network` field
+  picks the chain. `x402-solana` is the Solana adapter; other chains
+  have sibling libraries.
+- **Two-step transactions.** The buyer signs a tx but doesn't submit.
+  The seller (or a delegated facilitator) submits. This guarantees
+  "no-data-no-pay" — a signed tx is worthless until the seller
+  broadcasts it, so if the seller never ships data, the payment doesn't
+  land.
+
+## Why Solana
+
+- **Sub-cent transaction fees** (fraction of a lamport per transfer) —
+  the only chain where a $0.001 API call doesn't get eaten by gas.
+- **Fast confirmations.** Payrail's settle-before-handler path adds
+  ~400ms, which is livable because Solana's confirmation is ~400ms.
+  An Ethereum L1 version of this would add 12 seconds.
+- **Fee-payer decoupling.** Solana lets a third party pay the network
+  fee. PayAI exploits this to let buyers pay in pure USDC — no SOL
+  balance required.
+
+## Replay protection
+
+Every x402 payment is bound to a specific challenge:
+
+- The signed Solana transaction includes a `recentBlockhash` that
+  expires after ~150 blocks (~60 seconds).
+- The quote has a `validUntil` timestamp.
+- The facilitator checks a nonce to prevent replays within the window.
+
+A signature stolen off the wire can't be re-used after a minute — and
+during that minute, the facilitator rejects the duplicate.
+
+## Further reading
+
+- [x402-solana on npm](https://www.npmjs.com/package/x402-solana) — the
+  underlying library Payrail wraps for merchants.
+- [PayAI facilitator docs](https://payai.network) — the facilitator
+  sitting between merchants and Solana.
