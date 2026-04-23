@@ -6,7 +6,7 @@ export default function ({ children }) {
 
 # API reference
 
-Every export from `@payrail/sdk`, one section per symbol.
+Every export from `@payrail-app/sdk`, one section per symbol.
 
 ## `class Payrail`
 
@@ -14,7 +14,7 @@ The agent-side client. Wraps `fetch` and handles the x402 payment
 handshake transparently.
 
 <CodeBlock lang="ts">
-{`import { Payrail } from "@payrail/sdk";
+{`import { Payrail } from "@payrail-app/sdk";
 
 const agent = new Payrail(options: PayrailOptions);`}
 </CodeBlock>
@@ -25,7 +25,7 @@ const agent = new Payrail(options: PayrailOptions);`}
   headers={["Option", "Type", "Required", "Default", "Description"]}
   rows={[
     [<code key="c">apiKey</code>, <code key="c">string</code>, "Yes", "—", <>Agent API key (<code>pk_…</code>) from the dashboard.</>],
-    [<code key="c">baseUrl</code>, <code key="c">string</code>, "No", <code key="c">https://payrail.sh</code>, "Override for local dev or self-hosted Payrail."],
+    [<code key="c">baseUrl</code>, <code key="c">string</code>, "Yes", "—", "URL of the Payrail backend that signs payments (the host of your deployed apps/web)."],
     [<code key="c">fetch</code>, <code key="c">typeof globalThis.fetch</code>, "No", <>native <code>fetch</code></>, "Inject a custom fetch (undici, node-fetch, a mock in tests)."],
   ]}
 />
@@ -43,7 +43,7 @@ Throws `PayrailError` on any failure — see [Error handling](/docs/agents/error
 Typed error thrown by `agent.fetch()`.
 
 <CodeBlock lang="ts">
-{`import { PayrailError } from "@payrail/sdk";
+{`import { PayrailError } from "@payrail-app/sdk";
 
 try {
   await agent.fetch(url);

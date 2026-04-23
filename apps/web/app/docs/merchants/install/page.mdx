@@ -6,7 +6,7 @@ export default function ({ children }) {
 
 # Install
 
-The `@payrail/merchant-sdk` package gives you one Express-style
+The `@payrail-app/merchant-sdk` package gives you one Express-style
 middleware that handles x402 payment challenges + settlement. Any route
 it wraps becomes a paid endpoint: the middleware returns 402 until the
 client pays, verifies + settles on Solana via the PayAI facilitator,
@@ -44,7 +44,7 @@ yarn add https://github.com/mayank-0789/payrail/releases/download/v0.1.0/payrail
 ## Verify
 
 <CodeBlock lang="bash" filename="terminal">
-{`node -e "console.log(require('@payrail/merchant-sdk/package.json').version)"`}
+{`node -e "console.log(require('@payrail-app/merchant-sdk/package.json').version)"`}
 </CodeBlock>
 
 You're ready. The [Quickstart](/docs/merchants/quickstart) gets you a

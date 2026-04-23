@@ -1,5 +1,5 @@
 /**
- * @payrail/sdk — pay-per-call SDK for AI agents.
+ * @payrail-app/sdk — pay-per-call SDK for AI agents.
  *
  * Wraps the native `fetch` with automatic x402 handling: when an HTTP call
  * receives a 402 with a `PAYMENT-REQUIRED` header, the SDK asks the Payrail
@@ -8,11 +8,14 @@
  * wallet, the Solana chain, and the signing key never leave Payrail's
  * backend — the agent only holds an API key.
  *
- *   npm install @payrail/sdk
+ *   npm install @payrail-app/sdk
  *
- *   import { Payrail } from "@payrail/sdk";
- *   const agent = new Payrail({ apiKey: process.env.PAYRAIL_KEY! });
- *   const res = await agent.fetch("https://demo-merchant-news.payrail.sh/top");
+ *   import { Payrail } from "@payrail-app/sdk";
+ *   const agent = new Payrail({
+ *     apiKey: process.env.PAYRAIL_KEY!,
+ *     baseUrl: process.env.PAYRAIL_BASE_URL!, // e.g. https://<your-app>.up.railway.app
+ *   });
+ *   const res = await agent.fetch("https://your-merchant.example.com/top");
  *   const json = await res.json();
  */
 
@@ -20,13 +23,17 @@ import { PayrailError, type PayrailErrorCode } from "./errors.js";
 
 export { PayrailError, type PayrailErrorCode };
 
-const DEFAULT_BASE_URL = "https://payrail.sh";
-
 export type PayrailOptions = {
   /** Agent API key from the Payrail dashboard. Format: `pk_<28 chars>`. */
   apiKey: string;
-  /** Override for the Payrail backend. Defaults to https://payrail.sh. */
-  baseUrl?: string;
+  /**
+   * Base URL of the Payrail backend that will sign your agent's payments.
+   * Required — point it at whatever host you've deployed the Payrail web
+   * app on (Railway, Vercel, your own domain). No default is shipped so
+   * callers can't silently talk to a wrong/dead host. Example:
+   * `"https://my-payrail.up.railway.app"`.
+   */
+  baseUrl: string;
   /**
    * Optional fetch implementation. Defaults to `globalThis.fetch`. Useful
    * for injecting undici in Node, a mock in tests, or a proxy-wrapped
@@ -44,8 +51,14 @@ export class Payrail {
     if (!options.apiKey) {
       throw new PayrailError("bad_request", "Payrail: apiKey is required");
     }
+    if (!options.baseUrl) {
+      throw new PayrailError(
+        "bad_request",
+        "Payrail: baseUrl is required (e.g. https://<your-app>.up.railway.app)",
+      );
+    }
     this.#apiKey = options.apiKey;
-    this.#baseUrl = (options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
+    this.#baseUrl = options.baseUrl.replace(/\/+$/, "");
     this.#fetch = options.fetch ?? globalThis.fetch.bind(globalThis);
   }
 

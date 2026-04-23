@@ -11,10 +11,10 @@ importers:
       '@neondatabase/serverless':
         specifier: ^1.1.0
         version: 1.1.0
-      '@payrail/merchant-sdk':
+      '@payrail-app/merchant-sdk':
         specifier: workspace:*
         version: link:packages/merchant-sdk
-      '@payrail/sdk':
+      '@payrail-app/sdk':
         specifier: workspace:*
         version: link:packages/sdk
       '@privy-io/server-auth':
@@ -62,7 +62,7 @@ importers:
 
   apps/demo-agent:
     dependencies:
-      '@payrail/sdk':
+      '@payrail-app/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
       dotenv:
@@ -84,7 +84,7 @@ importers:
 
   apps/demo-merchant-news:
     dependencies:
-      '@payrail/merchant-sdk':
+      '@payrail-app/merchant-sdk':
         specifier: workspace:*
         version: link:../../packages/merchant-sdk
       dotenv:
@@ -127,10 +127,10 @@ importers:
       '@next/mdx':
         specifier: ^16.2.4
         version: 16.2.4(@mdx-js/loader@3.1.1)(@mdx-js/react@3.1.1(@types/react@19.2.2)(react@19.2.0))
-      '@payrail/db':
+      '@payrail-app/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@payrail/solana':
+      '@payrail-app/solana':
         specifier: workspace:*
         version: link:../../packages/solana
       '@privy-io/react-auth':

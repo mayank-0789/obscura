@@ -6,7 +6,7 @@ export default function ({ children }) {
 
 # Install
 
-The `@payrail/sdk` package wraps `fetch()` and handles the x402 payment
+The `@payrail-app/sdk` package wraps `fetch()` and handles the x402 payment
 handshake on 402 responses. Your agent code stays a normal HTTP client —
 Payrail signs the on-chain transaction on your behalf when a paid API
 asks for payment.
@@ -36,7 +36,7 @@ yarn add https://github.com/mayank-0789/payrail/releases/download/v0.1.0/payrail
 
 <Callout kind="tip" title="Post-launch">
   Once published to npm the one-liner becomes{" "}
-  <code>npm install @payrail/sdk</code>. Everything else in these docs
+  <code>npm install @payrail-app/sdk</code>. Everything else in these docs
   stays identical.
 </Callout>
 
@@ -45,7 +45,7 @@ yarn add https://github.com/mayank-0789/payrail/releases/download/v0.1.0/payrail
 A minimal sanity check — this should print the installed version:
 
 <CodeBlock lang="bash" filename="terminal">
-{`node -e "console.log(require('@payrail/sdk/package.json').version)"`}
+{`node -e "console.log(require('@payrail-app/sdk/package.json').version)"`}
 </CodeBlock>
 
 You're ready. The [Quickstart](/docs/agents/quickstart) gets you to a

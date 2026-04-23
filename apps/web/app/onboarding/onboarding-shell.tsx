@@ -123,7 +123,7 @@ export function OnboardingShell() {
               <RoleCard
                 kicker="01 / Agent developer"
                 title="Ship an agent that pays for APIs."
-                body="Install @payrail/sdk, drop in an API key, point fetch at a paid endpoint. Your agent pays in stablecoins automatically — no wallet code."
+                body="Install @payrail-app/sdk, drop in an API key, point fetch at a paid endpoint. Your agent pays in stablecoins automatically — no wallet code."
                 features={[
                   "One SDK key per agent",
                   "Monthly spend caps",
@@ -136,7 +136,7 @@ export function OnboardingShell() {
               <RoleCard
                 kicker="02 / API provider"
                 title="Charge per API call."
-                body="Install @payrail/merchant-sdk, wrap an Express route with pay.charge. Get paid in USDC on Solana directly to your Payrail-managed wallet."
+                body="Install @payrail-app/merchant-sdk, wrap an Express route with pay.charge. Get paid in USDC on Solana directly to your Payrail-managed wallet."
                 features={[
                   "Managed Solana payout wallet",
                   "Live earnings dashboard",

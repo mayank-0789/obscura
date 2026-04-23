@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { Payrail, PayrailError } from "@payrail/sdk";
+import { Payrail, PayrailError } from "@payrail-app/sdk";
 
 // Demo agent — a "news reader" that autonomously buys headlines + articles
 // from the demo merchant via Payrail. Loops forever (Ctrl-C to stop).

@@ -1,11 +1,11 @@
 /**
- * @payrail/merchant-sdk — Express-style middleware for API sellers who want
+ * @payrail-app/merchant-sdk — Express-style middleware for API sellers who want
  * to accept x402 payments on Solana.
  *
- *   npm install @payrail/merchant-sdk
+ *   npm install @payrail-app/merchant-sdk
  *
  *   import express from "express";
- *   import { payrail } from "@payrail/merchant-sdk";
+ *   import { payrail } from "@payrail-app/merchant-sdk";
  *
  *   const pay = payrail({
  *     payoutWallet: process.env.PAYOUT_WALLET!,

@@ -1,4 +1,4 @@
-import { ensureAta, PublicKey } from "@payrail/solana";
+import { ensureAta, PublicKey } from "@payrail-app/solana";
 import { apiOk } from "@/lib/api";
 import { merchantAuthGuard } from "@/lib/merchant-auth";
 import { getMerchantStats } from "@/lib/merchant-queries";

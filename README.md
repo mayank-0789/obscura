@@ -22,17 +22,17 @@ Payrail has three distinct roles:
 
 | Role | Description | Uses our web app? | Integrates with |
 |---|---|---|---|
-| 👤 **User** | Human developer who funds and runs AI agents | Yes — signup, dashboard, top-up | `@payrail/sdk` (drops into their agent code) |
+| 👤 **User** | Human developer who funds and runs AI agents | Yes — signup, dashboard, top-up | `@payrail-app/sdk` (drops into their agent code) |
 | 🤖 **Agent** | Autonomous program that spends stablecoins per call | No — it's code, uses API keys | Our backend's `/api/x402/sign` |
-| 🏪 **Merchant** | Human running a paid API/MCP server | Yes — separate merchant signup | `@payrail/merchant-sdk` (wraps their routes) |
+| 🏪 **Merchant** | Human running a paid API/MCP server | Yes — separate merchant signup | `@payrail-app/merchant-sdk` (wraps their routes) |
 
 ## Product flow
 
 1. User signs up → creates an agent → tops up with UPI via Dodo Payments
 2. Dodo webhook fires → our backend transfers USDG from treasury → agent's dedicated Solana wallet
-3. User drops `@payrail/sdk` into their agent's code
+3. User drops `@payrail-app/sdk` into their agent's code
 4. Agent hits paid APIs → SDK handles the X402 payment dance automatically (sign on Solana, retry with `X-Payment` header)
-5. Merchants running `@payrail/merchant-sdk` middleware earn USDG per call, with optional fiat cash-out via Dodo payouts
+5. Merchants running `@payrail-app/merchant-sdk` middleware earn USDG per call, with optional fiat cash-out via Dodo payouts
 
 ---
 
@@ -63,10 +63,10 @@ payrail/
 │   ├── web/                             # main product (user UI + merchant UI + API routes)
 │   └── demo-merchant-news/              # demo merchant — paid news API
 ├── packages/
-│   ├── db/                              # @payrail/db — Drizzle schema + client
-│   ├── solana/                          # @payrail/solana — treasury + SPL transfer helpers
-│   ├── sdk/                             # @payrail/sdk — client SDK (drop into agent code)
-│   ├── merchant-sdk/                    # @payrail/merchant-sdk — Express middleware
+│   ├── db/                              # @payrail-app/db — Drizzle schema + client
+│   ├── solana/                          # @payrail-app/solana — treasury + SPL transfer helpers
+│   ├── sdk/                             # @payrail-app/sdk — client SDK (drop into agent code)
+│   ├── merchant-sdk/                    # @payrail-app/merchant-sdk — Express middleware
 │   ├── eslint-config/                   # shared ESLint config
 │   └── typescript-config/               # shared TypeScript config
 ├── scripts/                             # spikes, stage tests, agent provisioning, treasury funding
@@ -126,7 +126,7 @@ Filter a single app/package:
 
 ```bash
 pnpm dev --filter=web
-pnpm build --filter=@payrail/sdk
+pnpm build --filter=@payrail-app/sdk
 ```
 
 ---
@@ -140,8 +140,8 @@ pnpm build --filter=@payrail/sdk
 - Authenticated product surface: dashboard, agent detail, top-up (Linear-style split view)
 - Flow A — fiat top-up: Dodo checkout → webhook → treasury → agent wallet
 - `/api/x402/sign` — atomic cap check, Privy delegated sign, PAYMENT-SIGNATURE encoding
-- `@payrail/sdk` v0.1.0 — client SDK (publish-ready, dry-run verified)
-- `@payrail/merchant-sdk` v0.1.0 — Express middleware (publish-ready, dry-run verified)
+- `@payrail-app/sdk` v0.1.0 — client SDK (publish-ready, dry-run verified)
+- `@payrail-app/merchant-sdk` v0.1.0 — Express middleware (publish-ready, dry-run verified)
 
 **Pending (post-packaging work):**
 - Deploy `apps/web` to Vercel (payrail.sh)

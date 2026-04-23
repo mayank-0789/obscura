@@ -1,7 +1,7 @@
-import { createDb } from "@payrail/db";
+import { createDb } from "@payrail-app/db";
 import { env } from "@/lib/env";
 
-// Drizzle + Neon singleton. Re-exports @payrail/db so consumers need one import.
+// Drizzle + Neon singleton. Re-exports @payrail-app/db so consumers need one import.
 export const db = createDb(env.DATABASE_URL);
 
-export * from "@payrail/db";
+export * from "@payrail-app/db";

@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { usePrivy } from "@privy-io/react-auth";
-import type { User } from "@payrail/db";
+import type { User } from "@payrail-app/db";
 import { useAuthedFetch } from "@/hooks/use-authed-fetch";
 
 export type MeResponse = {

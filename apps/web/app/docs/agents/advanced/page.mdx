@@ -33,6 +33,7 @@ On older Node, edge runtimes, or in tests, inject your own fetch:
 
 const agent = new Payrail({
   apiKey: process.env.PAYRAIL_KEY!,
+  baseUrl: process.env.PAYRAIL_BASE_URL!,
   fetch: undiciFetch as typeof fetch,
 });`}
 </CodeBlock>

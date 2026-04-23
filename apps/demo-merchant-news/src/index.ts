@@ -1,6 +1,6 @@
 import "dotenv/config";
 import express from "express";
-import { payrail } from "@payrail/merchant-sdk";
+import { payrail } from "@payrail-app/merchant-sdk";
 
 const payoutWallet = process.env.PAYOUT_WALLET;
 if (!payoutWallet) {

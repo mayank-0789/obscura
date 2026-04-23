@@ -1,4 +1,4 @@
-# @payrail/merchant-sdk
+# @payrail-app/merchant-sdk
 
 Server middleware for API sellers who want to accept pay-per-call x402 payments. Drop one line into your Express-style route; the SDK returns `402 Payment Required` until the client pays, verifies + settles the Solana transaction via the PayAI facilitator, and then lets your handler run.
 
@@ -12,7 +12,7 @@ During the private beta, install from GitHub (we'll publish to npm at launch). S
 
 ```ts
 import express from "express";
-import { payrail } from "@payrail/merchant-sdk";
+import { payrail } from "@payrail-app/merchant-sdk";
 
 const pay = payrail({
   payoutWallet: process.env.PAYOUT_WALLET!,  // Solana pubkey where USDC lands

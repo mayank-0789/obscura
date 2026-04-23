@@ -1,5 +1,5 @@
 {
-  "name": "@payrail/db",
+  "name": "@payrail-app/db",
   "version": "0.0.0",
   "private": true,
   "main": "./src/index.ts",

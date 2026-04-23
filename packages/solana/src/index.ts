@@ -14,7 +14,7 @@ export {
 } from "./ensure-ata";
 
 // Re-export the web3.js and spl-token bits apps commonly need so consumers
-// can do `import { PublicKey, Connection } from "@payrail/solana"` instead of
+// can do `import { PublicKey, Connection } from "@payrail-app/solana"` instead of
 // adding @solana/* as a direct dep.
 export { PublicKey, Keypair, Connection } from "@solana/web3.js";
 export type { Commitment } from "@solana/web3.js";

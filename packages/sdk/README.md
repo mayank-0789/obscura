@@ -1,4 +1,4 @@
-# @payrail/sdk
+# @payrail-app/sdk
 
 Pay-per-call SDK for AI agents. Wraps `fetch()` so any x402-enabled paid API becomes callable transparently — the SDK handles the payment handshake, signs the Solana transaction server-side via Payrail, and retries the request with a valid payment header.
 
@@ -6,19 +6,24 @@ Your agent never touches a private key, a blockchain library, or a wallet file. 
 
 ## Install
 
-During the private beta, install from GitHub (we'll publish to npm at launch). See the [agent quickstart](https://payrail.sh/docs/users/quickstart) for the install command that matches your package manager.
+```bash
+npm install @payrail-app/sdk
+# or: pnpm add @payrail-app/sdk
+# or: yarn add @payrail-app/sdk
+```
 
 ## Quickstart
 
 ```ts
-import { Payrail } from "@payrail/sdk";
+import { Payrail } from "@payrail-app/sdk";
 
 const agent = new Payrail({
   apiKey: process.env.PAYRAIL_KEY!,
+  baseUrl: process.env.PAYRAIL_BASE_URL!, // e.g. https://<your-app>.up.railway.app
 });
 
 const res = await agent.fetch(
-  "https://demo-merchant-news.payrail.sh/article/42",
+  "https://your-merchant.example.com/article/42",
 );
 const data = await res.json();
 ```
@@ -29,11 +34,11 @@ That's it. The SDK calls the URL; if the merchant returns `402 Payment Required`
 
 ### `new Payrail(options)`
 
-| Option    | Type           | Default                 | Description                                                           |
-| --------- | -------------- | ----------------------- | --------------------------------------------------------------------- |
-| `apiKey`  | `string`       | **required**            | Agent API key from the Payrail dashboard (`pk_…`).                    |
-| `baseUrl` | `string`       | `"https://payrail.sh"`  | Override for self-hosted / staging / local dev.                       |
-| `fetch`   | `typeof fetch` | `globalThis.fetch`      | Inject a custom fetch (undici, mocks, proxies).                       |
+| Option    | Type           | Default            | Description                                                                             |
+| --------- | -------------- | ------------------ | --------------------------------------------------------------------------------------- |
+| `apiKey`  | `string`       | **required**       | Agent API key from the Payrail dashboard (`pk_…`).                                      |
+| `baseUrl` | `string`       | **required**       | URL of the Payrail backend that signs your payments (the host of your deployed `apps/web`). |
+| `fetch`   | `typeof fetch` | `globalThis.fetch` | Inject a custom fetch (undici, mocks, proxies).                                         |
 
 ### `agent.fetch(url, init?)`
 
@@ -44,7 +49,7 @@ Throws `PayrailError` on any sign-flow failure.
 ### `PayrailError`
 
 ```ts
-import { PayrailError } from "@payrail/sdk";
+import { PayrailError } from "@payrail-app/sdk";
 
 try {
   const res = await agent.fetch(url);
@@ -100,7 +105,7 @@ The SDK needs `globalThis.fetch` (Node 18+ ships it). Older Node / edge runtimes
 
 ## Support
 
-Docs: [payrail.sh/docs](https://payrail.sh/docs) · Issues: [github.com/payrail/payrail/issues](https://github.com/payrail/payrail/issues)
+Issues: [github.com/mayank-0789/payrail/issues](https://github.com/mayank-0789/payrail/issues)
 
 ## License
 

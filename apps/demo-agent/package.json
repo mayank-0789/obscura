@@ -9,7 +9,7 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
-    "@payrail/sdk": "workspace:*",
+    "@payrail-app/sdk": "workspace:*",
     "dotenv": "^17.4.2"
   },
   "devDependencies": {

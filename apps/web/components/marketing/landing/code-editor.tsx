@@ -26,7 +26,7 @@ const lines: Line[] = [
         <span className={tokens.id}>Payrail</span>
         <span className={tokens.op}> {"}"} </span>
         <span className={tokens.kw}>from</span>{" "}
-        <span className={tokens.str}>&quot;@payrail/sdk&quot;</span>
+        <span className={tokens.str}>&quot;@payrail-app/sdk&quot;</span>
         <span className={tokens.op}>;</span>
       </>
     ),
@@ -149,7 +149,7 @@ export function CodeEditor() {
           </span>
         </div>
         <div className="flex items-center gap-4 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-600">
-          <span className="hidden sm:inline">@payrail/sdk@0.1.0</span>
+          <span className="hidden sm:inline">@payrail-app/sdk@0.1.0</span>
           <span className="text-zinc-700">·</span>
           <span>Node 22 · TS 5.9</span>
         </div>

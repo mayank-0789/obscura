@@ -1,6 +1,6 @@
 // POST /api/x402/sign — the heart of Payrail's agent-spending loop.
 //
-// Called by @payrail/sdk when an agent's fetch() receives a 402 from a paid
+// Called by @payrail-app/sdk when an agent's fetch() receives a 402 from a paid
 // API. The SDK forwards the PAYMENT-REQUIRED header (base64 JSON from the
 // merchant) + the original URL; we authenticate the caller via the agent's
 // API key, enforce the monthly spend cap, build the Solana payment
@@ -31,7 +31,7 @@ import { privy } from "@/lib/privy-server";
 import { env } from "@/lib/env";
 import { getConnection } from "@/lib/solana";
 import { buildUnsignedX402PaymentTx } from "@/lib/x402-tx";
-import { PublicKey } from "@payrail/solana";
+import { PublicKey } from "@payrail-app/solana";
 import { createPaymentPayload } from "x402-solana";
 import type { PaymentRequired, PaymentRequirements } from "x402-solana";
 import type { VersionedTransaction } from "@solana/web3.js";

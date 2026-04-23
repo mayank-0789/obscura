@@ -1,6 +1,6 @@
 import "server-only";
 import { eq } from "drizzle-orm";
-import { ensureAta, PublicKey } from "@payrail/solana";
+import { ensureAta, PublicKey } from "@payrail-app/solana";
 import { privy } from "@/lib/privy-server";
 import { db, merchants, users, type Merchant, type User } from "@/lib/db";
 import { env } from "@/lib/env";

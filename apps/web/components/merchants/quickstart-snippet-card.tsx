@@ -21,7 +21,7 @@ export function QuickstartSnippetCard({
   const walletDisplay = payoutWallet ?? "<your-payout-wallet>";
 
   const snippet = `import express from "express";
-import { payrail } from "@payrail/merchant-sdk";
+import { payrail } from "@payrail-app/merchant-sdk";
 
 const pay = payrail({
   payoutWallet: "${walletDisplay}",

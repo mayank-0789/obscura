@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { User } from "@payrail/db";
+import type { User } from "@payrail-app/db";
 import { useAuthedFetch } from "@/hooks/use-authed-fetch";
 import { parseApiError } from "@/lib/parse-api-error";
 import type { Role } from "@/lib/onboarding";

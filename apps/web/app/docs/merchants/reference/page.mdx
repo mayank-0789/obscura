@@ -6,7 +6,7 @@ export default function ({ children }) {
 
 # API reference
 
-Every export from `@payrail/merchant-sdk`, one section per symbol.
+Every export from `@payrail-app/merchant-sdk`, one section per symbol.
 
 ## `payrail(config)`
 
@@ -14,7 +14,7 @@ The merchant-side factory. Returns a `PayrailMerchantClient` — a small
 object whose only method is `charge()`.
 
 <CodeBlock lang="ts">
-{`import { payrail } from "@payrail/merchant-sdk";
+{`import { payrail } from "@payrail-app/merchant-sdk";
 
 const pay = payrail(config: MerchantSdkConfig);`}
 </CodeBlock>
@@ -73,7 +73,7 @@ See [Settlement receipts](/docs/merchants/receipts) for reading them.
   `res.locals.payrailSettlement`.
 
 <CodeBlock lang="ts">
-{`import type { PaymentRequirements } from "@payrail/merchant-sdk";`}
+{`import type { PaymentRequirements } from "@payrail-app/merchant-sdk";`}
 </CodeBlock>
 
 ## Protocol-level notes

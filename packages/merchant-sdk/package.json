@@ -1,5 +1,5 @@
 {
-  "name": "@payrail/merchant-sdk",
+  "name": "@payrail-app/merchant-sdk",
   "version": "0.1.0",
   "description": "Express middleware for API sellers to accept x402 payments on Solana via PayAI facilitator.",
   "license": "MIT",

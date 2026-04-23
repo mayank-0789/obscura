@@ -171,7 +171,7 @@ function Quickstart() {
               <span className="italic text-emerald-gradient">three lines.</span>
             </h2>
             <p className="mt-6 text-[15px] leading-[1.7] text-zinc-400">
-              Drop <code className="font-mono text-emerald-400">@payrail/sdk</code>{" "}
+              Drop <code className="font-mono text-emerald-400">@payrail-app/sdk</code>{" "}
               into your agent. The wrapped{" "}
               <code className="font-mono text-zinc-300">fetch()</code> now has
               a budget, a signer, and a paper trail.

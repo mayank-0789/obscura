@@ -12,7 +12,7 @@ import {
   transferSpl,
   TransferAlreadyLanded,
   TransferNeverLanded,
-} from "@payrail/solana";
+} from "@payrail-app/solana";
 import {
   db,
   agents,

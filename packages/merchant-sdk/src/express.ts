@@ -47,7 +47,7 @@ export type PayrailMerchantClient = {
 
 export function payrail(config: MerchantSdkConfig): PayrailMerchantClient {
   if (!config.payoutWallet) {
-    throw new Error("@payrail/merchant-sdk: payoutWallet is required");
+    throw new Error("@payrail-app/merchant-sdk: payoutWallet is required");
   }
 
   const network = config.network ?? "solana-devnet";

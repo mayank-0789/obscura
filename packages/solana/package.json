@@ -1,5 +1,5 @@
 {
-  "name": "@payrail/solana",
+  "name": "@payrail-app/solana",
   "version": "0.0.0",
   "private": true,
   "main": "./src/index.ts",

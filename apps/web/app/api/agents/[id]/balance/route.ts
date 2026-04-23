@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { PublicKey, getAssociatedTokenAddress } from "@payrail/solana";
+import { PublicKey, getAssociatedTokenAddress } from "@payrail-app/solana";
 import { db, agents } from "@/lib/db";
 import { authGuard } from "@/lib/auth";
 import { apiError, apiOk } from "@/lib/api";
