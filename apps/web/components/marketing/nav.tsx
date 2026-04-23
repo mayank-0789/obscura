@@ -53,7 +53,7 @@ export function Nav({
             </Link>
           )}
           <Link
-            href="https://github.com"
+            href="https://github.com/mayank-0789/payrail"
             className="hidden items-center gap-1.5 transition hover:text-zinc-100 md:inline-flex"
           >
             GitHub

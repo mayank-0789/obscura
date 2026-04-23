@@ -6,18 +6,17 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { useAgents } from "@/hooks/use-agents";
 import { useCreateTopupSession } from "@/hooks/use-create-topup-session";
+import { useTopupQuote } from "@/hooks/use-topup-quote";
 import { UnauthorizedError } from "@/hooks/use-authed-fetch";
 import { describeError } from "@/lib/error-messages";
 import { STABLECOIN_TICKER } from "@/lib/money-format";
 import { AppShell } from "@/components/dashboard/app-shell";
+import { BreakdownCard } from "@/components/topup/breakdown-card";
 import { Kbd } from "@/components/dashboard/kbd";
 
-const PRESETS = [10, 100, 500, 1000] as const;
-const MIN_INR = 10;
+const PRESETS = [500, 1000, 2500, 5000] as const;
+const MIN_INR = 500;
 const MAX_INR = 100_000;
-// Mirrors lib/rates.ts quoteInrToUsdg — hardcoded rate for now. When we
-// plug in a live oracle, pull this from the server.
-const INR_PER_USDC = 85;
 
 export function TopupForm() {
   const router = useRouter();
@@ -28,7 +27,7 @@ export function TopupForm() {
   const createSession = useCreateTopupSession();
 
   const [agentId, setAgentId] = useState<string>(initialAgentId);
-  const [amountInr, setAmountInr] = useState<number | "">(100);
+  const [amountInr, setAmountInr] = useState<number | "">(500);
 
   // If we arrived without ?agent_id= and agents loaded, pick the first active
   // agent.
@@ -43,10 +42,7 @@ export function TopupForm() {
     [agents, agentId],
   );
 
-  const usdcPreview =
-    typeof amountInr === "number" && amountInr > 0
-      ? (amountInr / INR_PER_USDC).toFixed(2)
-      : "0.00";
+  const { breakdown, rateSource, loading: quoteLoading } = useTopupQuote(amountInr);
 
   const canSubmit =
     !!selectedAgent &&
@@ -210,25 +206,12 @@ export function TopupForm() {
                 </p>
               </div>
 
-              {/* Preview */}
-              <div className="border-b border-zinc-800 bg-[#0a0a0a] px-6 py-5">
-                <div className="flex items-center justify-between text-[13px]">
-                  <span className="text-zinc-400">Your agent receives</span>
-                  <span className="font-mono text-[16px] font-semibold text-zinc-50">
-                    ≈ ${usdcPreview} {STABLECOIN_TICKER}
-                  </span>
-                </div>
-                <div className="mt-2 flex items-center justify-between text-[11.5px] text-zinc-500">
-                  <span>Conversion rate (beta)</span>
-                  <span className="font-mono">₹{INR_PER_USDC} / USDC</span>
-                </div>
-                <div className="mt-2 flex items-center justify-between text-[11.5px] text-zinc-500">
-                  <span>Platform fee</span>
-                  <span className="font-mono text-emerald-400">
-                    0% during beta
-                  </span>
-                </div>
-              </div>
+              {/* Breakdown */}
+              <BreakdownCard
+                breakdown={breakdown}
+                rateSource={rateSource}
+                loading={quoteLoading}
+              />
 
               {/* Footer */}
               <div className="flex items-center justify-between gap-2 px-6 py-4">

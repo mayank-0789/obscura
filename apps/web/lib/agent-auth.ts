@@ -74,16 +74,7 @@ export async function agentAuthGuard(
   try {
     return await requireAgentApiKey(req);
   } catch (err) {
-    if (err instanceof AgentAuthError) {
-      switch (err.code) {
-        case "missing_token":
-          return apiError("missing_token");
-        case "invalid_token":
-          return apiError("invalid_token");
-        case "agent_inactive":
-          return apiError("agent_inactive");
-      }
-    }
+    if (err instanceof AgentAuthError) return apiError(err.code);
     throw err;
   }
 }

@@ -18,6 +18,16 @@ export function formatInr(paise: string | bigint): string {
   return rupees.toLocaleString("en-IN");
 }
 
+// Breakdown lines need sub-rupee precision (GST lands on 76.27, fees on
+// decimals). Capped at 9 quadrillion paise which is more than big enough.
+export function formatInrExact(paise: string | bigint): string {
+  const amount = Number(toBigInt(paise)) / 100;
+  return amount.toLocaleString("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 export function formatUsdg(micros: string | bigint): string {
   // Safe for our cap ceilings — max $11,700 worth; well inside Number range.
   const amount = Number(toBigInt(micros)) / 1_000_000;

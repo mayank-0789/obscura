@@ -80,6 +80,12 @@ export async function createMerchantWallet(
  * minted Privy wallet — the same accepted tradeoff as agents/create, since
  * @privy-io/server-auth provides no delete API.
  *
+ * TODO(reconciler): orphan wallets leak from the race-loser path below
+ * (line ~185) and any future mid-flight DB failure. Planned cleanup is
+ * `scripts/reconcile-privy-wallets.ts` — pages Privy, diffs against
+ * agents.privy_wallet_id + merchants.privy_wallet_id, archives orphans.
+ * Run it weekly once volume makes the free-tier quota bite.
+ *
  * Returns `{ merchant, created }` — `created` distinguishes the happy path
  * (first caller) from the race-loser path (second caller reading winner's row).
  */

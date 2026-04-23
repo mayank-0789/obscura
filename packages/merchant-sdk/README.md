@@ -6,7 +6,7 @@ The facilitator co-signs as the fee-payer, so **your users never need SOL** — 
 
 ## Install
 
-During the hackathon, install from GitHub (we'll publish to npm at launch). See the [merchant quickstart](https://payrail.sh/docs/merchants/quickstart) for the install command that matches your package manager.
+During the private beta, install from GitHub (we'll publish to npm at launch). See the [merchant quickstart](https://payrail.sh/docs/merchants/quickstart) for the install command that matches your package manager.
 
 ## Quickstart
 

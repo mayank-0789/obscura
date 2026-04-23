@@ -21,7 +21,7 @@ const app = express();
 const ARTICLES = [
   { id: 47, headline: "Solana breaks 10k TPS again", tag: "infra" },
   { id: 48, headline: "Jupiter v3 launches routing engine", tag: "defi" },
-  { id: 49, headline: "Colosseum announces $30M accelerator", tag: "funding" },
+  { id: 49, headline: "Helius launches Solana RPC pro tier", tag: "infra" },
   { id: 50, headline: "Stripe acquires Privy for $400M", tag: "m&a" },
   { id: 51, headline: "USDG mint expands to 4 new chains", tag: "stables" },
 ];
@@ -84,8 +84,8 @@ app.get(
       at: new Date().toISOString(),
       digest:
         "Solana ecosystem moves: throughput milestone at 10k TPS, Jupiter " +
-        "ships a new routing engine, Colosseum launches a $30M accelerator " +
-        "cohort. Watch stablecoin mint expansion for cross-chain flows.",
+        "ships a new routing engine, Helius expands its RPC pro tier. " +
+        "Watch stablecoin mint expansion for cross-chain flows.",
       articleIds: ARTICLES.slice(0, 3).map((a) => a.id),
     });
   },

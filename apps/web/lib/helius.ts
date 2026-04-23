@@ -12,9 +12,10 @@ import { env } from "@/lib/env";
 // ⚠ GET → modify → PUT is not atomic. Two concurrent signups within the same
 // ~500ms window can clobber each other's registrations — only the last PUT
 // wins. Bounded in practice by the 1-per-10s create-merchant rate limit
-// shared across /api/onboarding/role and /api/merchants, but a post-signup
-// reconciler (enumerate merchants, ensure each payout_wallet is in the
-// webhook's accountAddresses list) is the proper fix.
+// shared across /api/onboarding/role and /api/merchants. The safety-net is
+// `reconcileMerchantPayoutAddresses` below, exposed via
+// POST /api/admin/helius/reconcile — run it periodically (cron or manual) to
+// diff-merge any addresses that got dropped by a race back onto Helius.
 //
 // Setup (one-time, done on Helius dashboard or via POST /v0/webhooks):
 //   - webhookURL: https://<our-host>/api/webhooks/helius
@@ -70,6 +71,67 @@ export async function registerMerchantPayoutAddress(
       err,
     );
   }
+}
+
+/**
+ * Diff-merge reconciler for the shared webhook's `accountAddresses` list.
+ * Fixes drift from the GET-modify-PUT race in `registerMerchantPayoutAddress`
+ * (two concurrent signups can clobber each other: second PUT drops first's
+ * addition) and surfaces any Helius-side config drift (manual edits, failed
+ * signup-time registrations).
+ *
+ * Takes the authoritative list of payout wallets from the caller (typically
+ * enumerated from the `merchants` table) and ensures every one is present in
+ * Helius. Never removes addresses — a wallet missing from the merchants table
+ * is more likely a stale DB read than a deletion intent, and removing it
+ * silently would break real-time events for any merchant still transacting.
+ *
+ * Returns the diff so callers (operator cron, admin endpoint) can log it.
+ */
+export type HeliusReconcileResult =
+  | { ok: false; reason: "not_configured" }
+  | {
+      ok: true;
+      heliusCount: number;
+      dbCount: number;
+      addressesAdded: string[];
+      addressesAlreadyPresent: number;
+    };
+
+export async function reconcileMerchantPayoutAddresses(
+  dbWallets: string[],
+): Promise<HeliusReconcileResult> {
+  if (!env.HELIUS_API_KEY || !env.HELIUS_WEBHOOK_ID) {
+    return { ok: false, reason: "not_configured" };
+  }
+
+  const current = await fetchWebhookConfig();
+  const heliusSet = new Set(current.accountAddresses);
+  const missing = dbWallets.filter((w) => !heliusSet.has(w));
+
+  if (missing.length === 0) {
+    return {
+      ok: true,
+      heliusCount: current.accountAddresses.length,
+      dbCount: dbWallets.length,
+      addressesAdded: [],
+      addressesAlreadyPresent: dbWallets.length,
+    };
+  }
+
+  const next: HeliusWebhookConfig = {
+    ...current,
+    accountAddresses: [...current.accountAddresses, ...missing],
+  };
+  await putWebhookConfig(next);
+
+  return {
+    ok: true,
+    heliusCount: current.accountAddresses.length,
+    dbCount: dbWallets.length,
+    addressesAdded: missing,
+    addressesAlreadyPresent: dbWallets.length - missing.length,
+  };
 }
 
 async function fetchWebhookConfig(): Promise<HeliusWebhookConfig> {

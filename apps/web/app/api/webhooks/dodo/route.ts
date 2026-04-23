@@ -1,6 +1,12 @@
 import { z } from "zod";
 import { and, eq } from "drizzle-orm";
-import type { PaymentSucceededWebhookEvent } from "dodopayments/resources/webhooks/webhooks";
+import type {
+  DisputeOpenedWebhookEvent,
+  PaymentFailedWebhookEvent,
+  PaymentSucceededWebhookEvent,
+  RefundSucceededWebhookEvent,
+  UnwrapWebhookEvent,
+} from "dodopayments/resources/webhooks/webhooks";
 import {
   PublicKey,
   transferSpl,
@@ -16,7 +22,7 @@ import {
 } from "@/lib/db";
 import { apiError, apiOk } from "@/lib/api";
 import { verifyDodoWebhook, WebhookVerifyError } from "@/lib/dodo/webhook";
-import { quoteInrToUsdg } from "@/lib/rates";
+import { calculateTopupBreakdown } from "@/lib/pricing";
 import { getConnection, getStablecoinMint, getTreasury } from "@/lib/solana";
 import { env } from "@/lib/env";
 
@@ -26,10 +32,13 @@ const PaymentMetadata = z.object({
   agent_id: z.string().uuid(),
   amount_inr_paise: z.string().regex(/^\d+$/),
   user_id: z.string().uuid(),
+  // Rate at the time the checkout intent was created. Locked here so the
+  // webhook credits exactly the USDG we promised in the UI breakdown,
+  // regardless of how the live rate has moved since.
+  rate_snapshot: z.string().regex(/^\d+(\.\d+)?$/),
 });
 
-// POST /api/webhooks/dodo — receive payment events from Dodo and credit the
-// agent wallet on `payment.succeeded`.
+// POST /api/webhooks/dodo — receive payment events from Dodo and dispatch.
 //
 // Four layers of safety, in order:
 //   1. Signature verification.
@@ -41,6 +50,15 @@ const PaymentMetadata = z.object({
 //      (TransferAlreadyLanded) or retries cleanly (TransferNeverLanded).
 //   4. Retries of a failed claim clear webhook_log.error and re-enter the
 //      same idempotent processing path. No row gets permanently stuck.
+//
+// Dispatched event types (everything else is acknowledged + markProcessed):
+//   - payment.succeeded  → credit the agent wallet with USDG
+//   - payment.failed     → log (informational; Dodo never collected)
+//   - refund.succeeded   → log loudly. We have no user-facing refund flow,
+//                          so refunds can only arrive out-of-band (Dodo
+//                          support / bank chargeback). No ledger write, no
+//                          on-chain clawback — an operator reacts to the log.
+//   - dispute.opened     → log loudly; same reasoning. No auto-action.
 export async function POST(req: Request) {
   const rawBody = await req.text();
 
@@ -62,15 +80,35 @@ export async function POST(req: Request) {
   if (claim instanceof Response) return claim;
 
   try {
-    if (event.type === "payment.succeeded") {
-      await creditAgentForPayment(event);
-    }
+    await dispatchEvent(event);
     await markProcessed(claim.id);
     return apiOk({ ok: true });
   } catch (err) {
     console.error("[dodo/webhook] processing failed", event.type, err);
     await markErrored(claim.id, err);
     return apiError("server_error");
+  }
+}
+
+async function dispatchEvent(event: UnwrapWebhookEvent): Promise<void> {
+  switch (event.type) {
+    case "payment.succeeded":
+      await creditAgentForPayment(event);
+      return;
+    case "payment.failed":
+      await recordPaymentFailed(event);
+      return;
+    case "refund.succeeded":
+      await recordRefund(event);
+      return;
+    case "dispute.opened":
+      await recordDisputeOpened(event);
+      return;
+    default:
+      // Any other event type — acknowledge and move on. Dodo emits dozens of
+      // subscription/credit/dispute-stage events we don't consume; logging
+      // them at debug level keeps logs clean while still being traceable.
+      return;
   }
 }
 
@@ -142,6 +180,30 @@ async function creditAgentForPayment(event: PaymentSucceededWebhookEvent) {
   const metadata = PaymentMetadata.parse(event.data.metadata);
   const paymentId = event.data.payment_id;
 
+  // Defense in depth — every money-relevant field from the webhook payload is
+  // cross-checked against what we asked for at session creation. Any mismatch
+  // throws, webhook_log.error captures it, no credit happens.
+  //
+  // Currency: must be INR. Session flags disable currency selection so this
+  // should never trip in practice; present to catch merchant-config drift.
+  if (event.data.currency !== "INR") {
+    throw new Error(
+      `currency_mismatch: expected=INR actual=${event.data.currency}`,
+    );
+  }
+
+  // Amount: what Dodo collected must equal what we asked for. Catches the
+  // classic footgun where a Fixed-Price product silently ignores our `amount`,
+  // or a rogue discount code slipping through despite allow_discount_code=false.
+  const expectedPaise = BigInt(metadata.amount_inr_paise);
+  const actualPaise = BigInt(event.data.total_amount);
+  if (expectedPaise !== actualPaise) {
+    throw new Error(
+      `amount_mismatch: expected=${expectedPaise} actual=${actualPaise} ` +
+        `(check Dodo product: Pay What You Want + no discount code)`,
+    );
+  }
+
   // Has this payment already been credited (or started crediting)?
   const [existingTx] = await db
     .select({ id: transactions.id, status: transactions.status })
@@ -161,8 +223,12 @@ async function creditAgentForPayment(event: PaymentSucceededWebhookEvent) {
     .limit(1);
   if (!agent) throw new Error(`agent ${metadata.agent_id} not found`);
 
-  const inrPaise = BigInt(metadata.amount_inr_paise);
-  const { usdg: usdgMicros, rate } = quoteInrToUsdg(inrPaise);
+  const inrPaise = expectedPaise;
+  const rate = Number(metadata.rate_snapshot);
+  // Deterministic re-compute from the market rate locked at checkout + the
+  // charged amount. Produces the same USDG the user saw on the breakdown
+  // card. `rate` here is the market rate; pricing applies the spread inside.
+  const { usdgMicros } = calculateTopupBreakdown(inrPaise, rate);
 
   // Pre-insert a pending row so if we crash between transfer and update, the
   // next attempt finds this row and doesn't create a duplicate — and on
@@ -219,4 +285,50 @@ async function creditAgentForPayment(event: PaymentSucceededWebhookEvent) {
       confirmedAt: new Date(),
     })
     .where(eq(transactions.id, pendingTxId));
+}
+
+// payment.failed — Dodo never collected from the user (card declined, UPI
+// timeout, etc.). No ledger mutation is needed because payment.succeeded was
+// never received and no USDG was credited. Log at info level for visibility
+// into funnel drop-off.
+async function recordPaymentFailed(
+  event: PaymentFailedWebhookEvent,
+): Promise<void> {
+  console.info(
+    `[dodo/webhook] payment.failed payment_id=${event.data.payment_id} ` +
+      `amount=${event.data.total_amount} currency=${event.data.currency}`,
+  );
+}
+
+// refund.succeeded — Dodo has returned INR to the user. We have no
+// user-facing refund flow, so refunds can only arrive out-of-band (Dodo
+// support ticket, bank chargeback). No ledger mutation, no on-chain
+// clawback — an operator sees the log and decides what to do (manual USDG
+// recovery via Privy if the agent hasn't spent the balance yet, or just
+// absorb the loss if they have). Revisit when we build a refund flow into
+// the product.
+async function recordRefund(
+  event: RefundSucceededWebhookEvent,
+): Promise<void> {
+  const refund = event.data;
+  console.error(
+    `[dodo/webhook] REFUND: payment_id=${refund.payment_id} ` +
+      `amount=${refund.amount ?? "full"} currency=${refund.currency ?? "n/a"} ` +
+      `reason=${refund.reason ?? "n/a"} — no automated action, operator must decide`,
+  );
+}
+
+// dispute.opened — a chargeback has been filed. Funds are frozen at Dodo
+// pending investigation; if we lose, a refund.succeeded follows. Same
+// rationale as refunds — no ledger mutation, operator reacts to the log.
+async function recordDisputeOpened(
+  event: DisputeOpenedWebhookEvent,
+): Promise<void> {
+  const dispute = event.data;
+  console.error(
+    `[dodo/webhook] DISPUTE OPENED: payment_id=${dispute.payment_id} ` +
+      `dispute_id=${dispute.dispute_id} amount=${dispute.amount} ` +
+      `currency=${dispute.currency} stage=${dispute.dispute_stage} ` +
+      `— operator action may be required`,
+  );
 }

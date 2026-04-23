@@ -6,7 +6,7 @@ Your agent never touches a private key, a blockchain library, or a wallet file. 
 
 ## Install
 
-During the hackathon, install from GitHub (we'll publish to npm at launch). See the [agent quickstart](https://payrail.sh/docs/users/quickstart) for the install command that matches your package manager.
+During the private beta, install from GitHub (we'll publish to npm at launch). See the [agent quickstart](https://payrail.sh/docs/users/quickstart) for the install command that matches your package manager.
 
 ## Quickstart
 

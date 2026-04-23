@@ -9,8 +9,7 @@ import { Payrail, PayrailError } from "@payrail/sdk";
 
 const API_KEY = process.env.PAYRAIL_KEY;
 const BASE_URL = process.env.PAYRAIL_BASE_URL ?? "http://localhost:3000";
-const MERCHANT_URL =
-  process.env.MERCHANT_URL ?? "http://localhost:3001";
+const MERCHANT_URL = process.env.MERCHANT_URL ?? "http://localhost:3001";
 const CYCLE_MS = Number(process.env.CYCLE_MS ?? 25_000);
 
 if (!API_KEY) {

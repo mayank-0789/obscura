@@ -17,7 +17,7 @@ type NavGroup = {
   items: NavItem[];
 };
 
-// Sidebar entries. Cash-out is v2 (out of scope for hackathon).
+// Sidebar entries. Cash-out is on the v2 roadmap.
 const GROUPS: NavGroup[] = [
   {
     title: "Workspace",

@@ -124,7 +124,10 @@ export const budgets = pgTable(
     capUsdg: bigint("cap_usdg", { mode: "bigint" })
       .notNull()
       .default(sql`0`),
-    // Running counter for current period. Reset by monthly cron.
+    // Running counter for the current period. Reset lazily inside the x402
+    // cap-check path (apps/web/app/api/x402/sign/route.ts) — no cron: if the
+    // period has elapsed when the next sign arrives, spentUsdg is zeroed and
+    // periodStart advanced in the same transaction as the cap check.
     spentUsdg: bigint("spent_usdg", { mode: "bigint" })
       .notNull()
       .default(sql`0`),

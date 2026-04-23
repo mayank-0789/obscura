@@ -311,7 +311,7 @@ function Quickstart() {
               </Link>
               <span className="text-zinc-700">/</span>
               <Link
-                href="https://github.com"
+                href="https://github.com/mayank-0789/payrail"
                 className="inline-flex items-center gap-2 border-b border-zinc-700 pb-0.5 transition hover:border-emerald-400 hover:text-emerald-400"
               >
                 View on GitHub
@@ -551,7 +551,7 @@ function FinalCTA() {
         </div>
 
         <p className="mt-16 font-mono text-[10px] uppercase tracking-[0.26em] text-zinc-600">
-          Built at Colosseum Frontier 2026 · Solana × Dodo · Shipped from India
+          Solana × Dodo · Shipped from India
         </p>
       </div>
     </section>

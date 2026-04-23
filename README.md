@@ -2,8 +2,6 @@
 
 > **The payment rail for AI agents.** Fund with UPI or card via Dodo Payments. Agents spend stablecoins autonomously on Solana via the X402 protocol.
 
-Built for the **Colosseum Solana Frontier Hackathon 2026** + **Superteam India × Dodo Payments** side track.
-
 🌐 [payrail.sh](https://payrail.sh) · Solana × Dodo Payments
 
 ---
@@ -96,7 +94,7 @@ Local (in `apps/web/lib/`):
 
 ## Getting started
 
-> ⚠️ Work in progress — this repo is actively being built for the hackathon.
+> ⚠️ Work in progress.
 
 ```bash
 # 1. install deps
@@ -133,12 +131,6 @@ pnpm build --filter=@payrail/sdk
 
 ---
 
-## Hackathon deadlines
-
-- **Build deadline (internal):** May 7, 2026
-- **Colosseum Frontier hard deadline:** May 11, 2026
-- **Winner announcement:** May 26, 2026
-
 ## Status
 
 ✅ End-to-end x402 integration proven on Solana devnet. Agent wallets can pay merchants via Payrail's backend + Privy delegated signing + PayAI facilitator. Settlement visible on-chain (multiple Solscan-verifiable txs).
@@ -156,8 +148,6 @@ pnpm build --filter=@payrail/sdk
 - Build + deploy demo merchant apps (`apps/demo-merchant-*`)
 - Wire the activity feed UI to real `transactions` rows
 - Publish the two SDKs to npm
-
-See memory in `/memory/project_frontier_hackathon.md` for the full progress log.
 
 ---
 

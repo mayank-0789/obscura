@@ -70,6 +70,22 @@ export async function POST(req: Request) {
 
   const amount = BigInt(requirements.amount);
 
+  // Lazy period reset (replaces the monthly-cron the schema originally
+  // assumed). Idempotent: only touches budgets whose period has elapsed, and
+  // concurrent resets converge on the same (spentUsdg=0, periodStart=now).
+  // Kept as a separate statement from the cap check below so the cap check
+  // stays the same race-safe single UPDATE — reset first, then enforce.
+  await db
+    .update(budgets)
+    .set({
+      spentUsdg: sql`0`,
+      periodStart: sql`now()`,
+      updatedAt: sql`now()`,
+    })
+    .where(
+      sql`${budgets.agentId} = ${agent.id} AND ${budgets.period} = 'monthly' AND now() - ${budgets.periodStart} >= interval '1 month'`,
+    );
+
   // Atomic cap check + increment. Zero rows back means the would-be post-update
   // value exceeds cap_usdg — no TOCTOU window even under concurrency.
   //

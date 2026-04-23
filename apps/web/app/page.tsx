@@ -203,7 +203,7 @@ function Quickstart() {
               </Link>
               <span className="text-zinc-700">/</span>
               <Link
-                href="https://github.com"
+                href="https://github.com/mayank-0789/payrail"
                 className="inline-flex items-center gap-2 border-b border-zinc-700 pb-0.5 transition hover:border-emerald-400 hover:text-emerald-400"
               >
                 View on GitHub
@@ -531,7 +531,7 @@ const userFaqs: QA[] = [
   },
   {
     q: "What stablecoin do agents actually hold?",
-    a: "USDC on Solana devnet during the hackathon, USDG on mainnet once it lists. The mint is set via env — swapping is a one-line change, and the SDK never cares which token it is.",
+    a: "USDC on Solana devnet today, USDG on mainnet once it lists. The mint is set via env — swapping is a one-line change, and the SDK never cares which token it is.",
   },
   {
     q: "Who controls the money?",
@@ -543,7 +543,7 @@ const userFaqs: QA[] = [
   },
   {
     q: "What does it cost?",
-    a: "Free during the hackathon beta. Production pricing is 2% platform fee on the fiat leg plus ~1% network + FX, surfaced upfront on the top-up screen. Merchants receive the full USDC amount minus Solana fees.",
+    a: "Free during private beta. Production pricing is 2% platform fee on the fiat leg plus ~1% network + FX, surfaced upfront on the top-up screen. Merchants receive the full USDC amount minus Solana fees.",
   },
   {
     q: "Why India first?",
@@ -598,7 +598,7 @@ function FinalCTA() {
         </div>
 
         <p className="mt-16 font-mono text-[10px] uppercase tracking-[0.26em] text-zinc-600">
-          Built at Colosseum Frontier 2026 · Solana × Dodo · Shipped from India
+          Solana × Dodo · Shipped from India
         </p>
       </div>
     </section>

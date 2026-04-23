@@ -11,14 +11,9 @@
     "db:push": "pnpm --filter @payrail/db exec drizzle-kit push",
     "db:studio": "pnpm --filter @payrail/db exec drizzle-kit studio",
     "db:migrate": "pnpm --filter @payrail/db exec drizzle-kit migrate",
-    "spike:privy": "tsx scripts/privy-spike.ts",
     "spike:privy-variants": "tsx scripts/spike-privy-variants.ts",
-    "spike:x402-sign": "tsx scripts/spike-x402-sign.ts",
     "stage1:setup": "tsx scripts/stage1-setup.ts",
     "stage1:fund": "tsx scripts/stage1-fund.ts",
-    "stage1:merchant": "tsx scripts/stage1-merchant.ts",
-    "stage1:client": "tsx scripts/stage1-client.ts",
-    "stage2:client": "tsx scripts/stage2-client.ts",
     "stage2:provision-agent": "tsx scripts/stage2-provision-agent.ts"
   },
   "devDependencies": {

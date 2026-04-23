@@ -60,7 +60,7 @@ export async function POST(req: Request) {
 
   let body: z.infer<typeof CreateKeyBody>;
   try {
-    body = CreateKeyBody.parse(await req.json().catch(() => ({})));
+    body = CreateKeyBody.parse(await req.json());
   } catch {
     return apiError("bad_request");
   }

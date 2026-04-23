@@ -153,7 +153,7 @@ async function handleEvent(
   // defense against B3 (spoofed-payload money flip): even with a leaked
   // auth token, an attacker can't forge a Solana transaction signature —
   // getSignatureStatuses will either return null (sig not found) or err.
-  // Cost: one RPC call per matched event. Trivial at hackathon volumes.
+  // Cost: one RPC call per matched event. Trivial at current volumes.
   const onchainOk = await verifySignatureOnChain(event.signature);
   if (!onchainOk) {
     console.warn(

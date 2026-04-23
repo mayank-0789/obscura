@@ -21,7 +21,7 @@ export function Footer() {
         </div>
 
         {/* Link grid */}
-        <div className="mt-12 grid gap-12 md:grid-cols-5">
+        <div className="mt-12 grid gap-12 md:grid-cols-4">
           <div className="md:col-span-2">
             <Link href="/" className="group inline-flex items-center gap-3">
               <Logo />
@@ -35,8 +35,7 @@ export function Footer() {
               </div>
             </Link>
             <p className="mt-6 max-w-xs text-[13px] leading-[1.65] text-zinc-500">
-              Fund in rupees. Settle in stablecoins. Built at Colosseum
-              Frontier 2026, shipped from India.
+              Fund in rupees. Settle in stablecoins. Shipped from India.
             </p>
           </div>
 
@@ -46,7 +45,6 @@ export function Footer() {
               { label: "For agent devs", href: "/" },
               { label: "For merchants", href: "/merchants" },
               { label: "Dashboard", href: "/dashboard" },
-              { label: "Pricing", href: "/#pricing" },
             ]}
           />
           <FooterGroup
@@ -55,16 +53,7 @@ export function Footer() {
               { label: "Docs", href: "/docs" },
               { label: "Agent SDK", href: "/docs/agents/quickstart" },
               { label: "Merchant SDK", href: "/docs/merchants/quickstart" },
-              { label: "GitHub", href: "https://github.com/payrail/payrail" },
-            ]}
-          />
-          <FooterGroup
-            title="Company"
-            links={[
-              { label: "GitHub", href: "https://github.com" },
-              { label: "X (Twitter)", href: "https://x.com" },
-              { label: "Status", href: "/status" },
-              { label: "License (MIT)", href: "/LICENSE" },
+              { label: "GitHub", href: "https://github.com/mayank-0789/payrail" },
             ]}
           />
         </div>

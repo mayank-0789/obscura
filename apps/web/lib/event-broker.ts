@@ -7,7 +7,7 @@ import "server-only";
 // ⚠ Single-instance only. In a multi-replica deployment (horizontal scaling
 // across Vercel regions / multiple Node pods), the webhook lands on instance
 // A while an SSE client is connected to instance B — the event is lost.
-// For hackathon deployments (single Next.js instance) this is fine. Production
+// For single-instance deployments this is fine. Multi-replica production
 // would swap to Redis Pub/Sub or similar without changing the call sites.
 
 export type MerchantPaymentEvent = {

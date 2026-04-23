@@ -1,29 +1,20 @@
-// Money conversion helpers.
+// Money conversion — pure math only. No I/O, no server-only imports.
+// Safe to import from client components.
 //
-// All monetary values move around as bigints in base units:
-//   - INR is measured in paise  (₹1 = 100 paise)
-//   - USDG is measured in micros (1 USDG = 1_000_000 base units; 6 decimals)
-//
-// v1 uses a hardcoded FX rate — good enough for the hackathon demo. Swap this
-// function for a live quote (Frankfurter / Pyth / Jupiter) by changing the
-// single INR_PER_USD constant or replacing the body with a fetch.
-// Every caller goes through `quoteInrToUsdg`, so the change is one file.
+// Live-rate fetch + fallback wrapper live in lib/fx.ts (server-only).
 
-const INR_PER_USD = 85;
-
-const USDG_PER_USD = 1_000_000n; // 6 decimals
-const PAISE_PER_INR = 100n;
+// Client-safe so the top-up hook can render a sensible UI before the live
+// rate arrives. `lib/fx.ts` re-exports this for server callers.
+export const FX_FALLBACK_INR_PER_USD = 85;
 
 /**
- * Convert an INR amount (paise) to USDG base units at the current snapshot rate.
- * Rate is locked at call time and should be stored alongside the resulting USDG
- * amount (see `budgets.rate_snapshot` / `transactions.rate_snapshot`).
+ * Pure converter: INR (paise) → USDG (micros) at a given rate.
+ *
+ * Math: paise / 100 = INR; INR / rate = USD; USD × 1_000_000 = micros.
+ * Combined: `micros = paise × 10_000 / rate`. Scale `rate` by 1_000_000 so
+ * we stay in integer math: `micros = paise × 1e10 / rateScaled`.
  */
-export function quoteInrToUsdg(paise: bigint): {
-  usdg: bigint;
-  rate: number;
-} {
-  const rate = INR_PER_USD;
-  const usdg = (paise * USDG_PER_USD) / (PAISE_PER_INR * BigInt(rate));
-  return { usdg, rate };
+export function convertInrToUsdg(paise: bigint, rate: number): bigint {
+  const rateScaled = BigInt(Math.round(rate * 1_000_000));
+  return (paise * 10_000_000_000n) / rateScaled;
 }

@@ -12,7 +12,7 @@ import {
 import { authGuard } from "@/lib/auth";
 import { apiError, apiOk } from "@/lib/api";
 import { env } from "@/lib/env";
-import { quoteInrToUsdg } from "@/lib/rates";
+import { quoteInrToUsdg } from "@/lib/fx";
 import { generateAgentApiKey } from "@/lib/agent-keys";
 import { serializeAgent } from "@/lib/agent-serialize";
 import { checkLimit } from "@/lib/ratelimit";
@@ -74,7 +74,7 @@ export async function POST(req: Request) {
   if (wallet instanceof Response) return wallet;
 
   const capInrPaise = BigInt(body.monthlyCapInr) * 100n;
-  const { usdg: capUsdg, rate } = quoteInrToUsdg(capInrPaise);
+  const { usdg: capUsdg, rate } = await quoteInrToUsdg(capInrPaise);
   const apiKey = generateAgentApiKey();
 
   try {
@@ -103,10 +103,13 @@ export async function POST(req: Request) {
   } catch (err) {
     // Privy wallet exists but the DB rows don't. We can't compensate by
     // deleting the wallet — @privy-io/server-auth doesn't expose a delete
-    // method; wallets are permanent once minted. Reconciliation must be a
-    // post-MVP background job that pages Privy's REST API and marks wallets
-    // with no matching agents row as archived. For hackathon-scale traffic
-    // the cost of an occasional orphan (free-tier Privy quota) is negligible.
+    // method; wallets are permanent once minted. At current scale the cost
+    // of an occasional orphan (free-tier Privy quota) is negligible.
+    //
+    // TODO(reconciler): add `scripts/reconcile-privy-wallets.ts` that pages
+    // Privy's `walletApi.list({ chainType: 'solana' })` and diffs against
+    // agents.privy_wallet_id + merchants.privy_wallet_id, archiving any
+    // wallet with no matching row. Run weekly once mainnet volume grows.
     console.error("[agents/create] db insert", err);
     return apiError("server_error");
   }

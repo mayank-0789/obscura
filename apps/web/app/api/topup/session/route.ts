@@ -6,12 +6,14 @@ import { apiError, apiOk } from "@/lib/api";
 import { env } from "@/lib/env";
 import { dodo } from "@/lib/dodo/client";
 import { checkLimit } from "@/lib/ratelimit";
+import { getInrPerUsd } from "@/lib/fx";
+import { calculateTopupBreakdown, serializeBreakdown } from "@/lib/pricing";
 
 const CreateTopupSessionBody = z.object({
   agentId: z.string().uuid(),
-  // Amount in whole rupees the user wants to top up. Stored as paise when sent
-  // to Dodo (min ₹10, max ₹1,00,000 per single top-up).
-  amountInr: z.number().int().min(10).max(100_000),
+  // Min ₹500 is the floor that keeps our margin positive after Dodo fee + GST.
+  // Max ₹1,00,000 per single top-up for anti-fraud.
+  amountInr: z.number().int().min(500).max(100_000),
 });
 
 // POST /api/topup/session — create a Dodo Payments checkout session scoped to
@@ -42,6 +44,12 @@ export async function POST(req: Request) {
 
   const amountInPaise = body.amountInr * 100;
 
+  // Lock the FX rate at intent creation. Stamped into Dodo metadata so the
+  // webhook credits the exact USDG we promised here, regardless of how long
+  // the user takes to complete checkout or any rate movement in between.
+  const { rate } = await getInrPerUsd();
+  const breakdown = calculateTopupBreakdown(BigInt(amountInPaise), rate);
+
   try {
     const session = await dodo.checkoutSessions.create({
       product_cart: [
@@ -56,6 +64,15 @@ export async function POST(req: Request) {
         agent_id: agent.id,
         user_id: user.id,
         amount_inr_paise: String(amountInPaise),
+        rate_snapshot: rate.toString(),
+      },
+      // Lock down the checkout surface so the final charge cannot diverge from
+      // the amount + currency we already validated server-side. The webhook
+      // amount-mismatch guard is the ultimate backstop, but disabling these at
+      // Dodo level means no user ever gets to the "paid then refused" state.
+      feature_flags: {
+        allow_discount_code: false,
+        allow_currency_selection: false,
       },
     });
 
@@ -63,6 +80,7 @@ export async function POST(req: Request) {
     return apiOk({
       checkoutUrl: session.checkout_url,
       sessionId: session.session_id,
+      breakdown: serializeBreakdown(breakdown),
     });
   } catch (err) {
     console.error("[topup/session] dodo createSession", err);

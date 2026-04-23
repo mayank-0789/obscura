@@ -599,7 +599,7 @@ RETURNING id
 - No TOCTOU window under concurrent signs. Two parallel signs will serialize at the row lock.
 - The increment is **optimistic** — we increment before the tx lands on-chain. If the tx fails later (facilitator error, blockhash expiry), the route reverts via `safeRevertCap`. If the server crashes between increment and revert, the spent counter is slightly ahead of reality until a v2 reconciler sweeps pending-that-never-landed transactions.
 
-**Monthly period reset**: NOT automated in v1. A cron would flip `spent_usdg = 0` at the start of each calendar month. For the hackathon it's fine to leave it; demos run over hours, not months.
+**Monthly period reset**: NOT automated in v1. A cron would flip `spent_usdg = 0` at the start of each calendar month. Left manual for now; short-lived demos run over hours, not months.
 
 ### Rate limits — Upstash-backed, gracefully optional
 
@@ -759,7 +759,7 @@ Real failures we've hit and how to spot them:
 | Dodo webhook returns 401 | `DODO_WEBHOOK_KEY` doesn't match Dodo's configured signing secret | Copy secret from Dodo dashboard → endpoint → signing secret, paste into env |
 | 10+ copies of merchant row for same user | Missed unique index on `merchants.owner_user_id` | Applied via migration `0002_violet_senator_kelly.sql` |
 
-### Settings a judge or reviewer can change without breaking anything
+### Settings a reviewer can change without breaking anything
 
 - `CYCLE_MS` on demo-agent `.env` (how often agent loops)
 - Prices in `demo-merchant-news/src/index.ts` (`pay.charge({ amount })`)

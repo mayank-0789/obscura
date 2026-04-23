@@ -33,7 +33,7 @@ app.get(
     res.json({
       id: req.params.id,
       headline: \`Article #\${req.params.id}\`,
-      body: "Lorem ipsum…",
+      body: "Full article text here…",
       settledSig: settlement?.transaction ?? null,
     });
   },

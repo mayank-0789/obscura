@@ -87,7 +87,7 @@ The middleware settles **before** your handler runs, so
 signature by the time you build your response. This adds ~300–600ms of
 facilitator round-trip to every paid request. For production workloads
 requiring sub-100ms p99, the x402 spec supports settle-after-handler —
-but synchronous settle is the right default for hackathon / v1.
+but synchronous settle is the right default for v1.
 
 Next: [Settlement receipts](/docs/merchants/receipts) — reading the
 settlement object.

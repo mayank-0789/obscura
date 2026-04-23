@@ -81,10 +81,10 @@ export default function DocsIndexPage() {
               GitHub
             </div>
             <a
-              href="https://github.com/payrail/payrail"
+              href="https://github.com/mayank-0789/payrail"
               className="text-emerald-400 hover:underline"
             >
-              github.com/payrail/payrail ↗
+              github.com/mayank-0789/payrail ↗
             </a>
             <p className="mt-1 text-[13px] text-zinc-500">
               Monorepo. SDKs live under{" "}

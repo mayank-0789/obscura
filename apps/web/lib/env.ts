@@ -41,6 +41,10 @@ export const env = createEnv({
     // Decimals for STABLECOIN_MINT. USDC + USDG both use 6 on Solana; override
     // via env if we ever onboard a mint with different precision.
     STABLECOIN_DECIMALS: z.coerce.number().int().min(0).max(18).default(6),
+    // Shared-secret for operator-only admin endpoints (e.g. Helius reconcile).
+    // Optional: when missing, admin endpoints return 503 disabled. Set it to a
+    // long random string and scope access via an external cron / curl.
+    ADMIN_API_TOKEN: z.string().min(32).optional(),
   },
 
   client: {
@@ -71,6 +75,7 @@ export const env = createEnv({
     TREASURY_PUBLIC_KEY: process.env.TREASURY_PUBLIC_KEY,
     STABLECOIN_MINT: process.env.STABLECOIN_MINT,
     STABLECOIN_DECIMALS: process.env.STABLECOIN_DECIMALS,
+    ADMIN_API_TOKEN: process.env.ADMIN_API_TOKEN,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     NEXT_PUBLIC_PRIVY_APP_ID: process.env.NEXT_PUBLIC_PRIVY_APP_ID,
     NEXT_PUBLIC_SOLANA_CLUSTER: process.env.NEXT_PUBLIC_SOLANA_CLUSTER,
