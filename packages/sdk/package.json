@@ -1,13 +1,13 @@
 {
   "name": "@payrail-app/sdk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Pay-per-call SDK for AI agents — wraps fetch() to handle x402 payments via Payrail on Solana.",
   "license": "MIT",
   "author": "Payrail",
-  "homepage": "https://payrail.sh",
+  "homepage": "https://github.com/mayank-0789/payrail",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/payrail/payrail.git",
+    "url": "git+https://github.com/mayank-0789/payrail.git",
     "directory": "packages/sdk"
   },
   "keywords": [

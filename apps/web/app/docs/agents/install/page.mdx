@@ -15,30 +15,21 @@ asks for payment.
 
 - **Node 18 or later.** The SDK uses the native `fetch` API. On older
   runtimes, inject a polyfill via the `fetch` constructor option.
-- **A Payrail account.** Sign in with Google or email at
-  [payrail.sh](https://payrail.sh). The signup flow provisions an agent
-  on your first top-up — see [Quickstart](/docs/agents/quickstart).
+- **A Payrail account.** [Sign in](/onboarding) with Google or email.
+  The signup flow provisions an agent on your first top-up — see
+  [Quickstart](/docs/agents/quickstart).
 
 ## Install the SDK
 
-During the private beta the SDK is distributed via GitHub Releases. We'll
-publish to npm at launch.
-
 <CodeBlock lang="bash" filename="terminal">
-{`npm install https://github.com/mayank-0789/payrail/releases/download/v0.1.0/payrail-sdk-0.1.0.tgz
+{`npm install @payrail-app/sdk
 
 # or pnpm:
-pnpm add https://github.com/mayank-0789/payrail/releases/download/v0.1.0/payrail-sdk-0.1.0.tgz
+pnpm add @payrail-app/sdk
 
 # or yarn:
-yarn add https://github.com/mayank-0789/payrail/releases/download/v0.1.0/payrail-sdk-0.1.0.tgz`}
+yarn add @payrail-app/sdk`}
 </CodeBlock>
-
-<Callout kind="tip" title="Post-launch">
-  Once published to npm the one-liner becomes{" "}
-  <code>npm install @payrail-app/sdk</code>. Everything else in these docs
-  stays identical.
-</Callout>
 
 ## Verify
 

@@ -2,7 +2,7 @@
 
 > **The payment rail for AI agents.** Fund with UPI or card via Dodo Payments. Agents spend stablecoins autonomously on Solana via the X402 protocol.
 
-🌐 [payrail.sh](https://payrail.sh) · Solana × Dodo Payments
+🌐 [github.com/mayank-0789/payrail](https://github.com/mayank-0789/payrail) · Solana × Dodo Payments
 
 ---
 
@@ -140,14 +140,13 @@ pnpm build --filter=@payrail-app/sdk
 - Authenticated product surface: dashboard, agent detail, top-up (Linear-style split view)
 - Flow A — fiat top-up: Dodo checkout → webhook → treasury → agent wallet
 - `/api/x402/sign` — atomic cap check, Privy delegated sign, PAYMENT-SIGNATURE encoding
-- `@payrail-app/sdk` v0.1.0 — client SDK (publish-ready, dry-run verified)
-- `@payrail-app/merchant-sdk` v0.1.0 — Express middleware (publish-ready, dry-run verified)
+- `@payrail-app/sdk` v0.1.0 — client SDK (live on npm)
+- `@payrail-app/merchant-sdk` v0.1.0 — Express middleware (live on npm)
 
 **Pending (post-packaging work):**
-- Deploy `apps/web` to Vercel (payrail.sh)
+- Deploy `apps/web` to Railway
 - Build + deploy demo merchant apps (`apps/demo-merchant-*`)
 - Wire the activity feed UI to real `transactions` rows
-- Publish the two SDKs to npm
 
 ---
 

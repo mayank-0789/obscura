@@ -1,13 +1,13 @@
 {
   "name": "@payrail-app/merchant-sdk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Express middleware for API sellers to accept x402 payments on Solana via PayAI facilitator.",
   "license": "MIT",
   "author": "Payrail",
-  "homepage": "https://payrail.sh",
+  "homepage": "https://github.com/mayank-0789/payrail",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/payrail/payrail.git",
+    "url": "git+https://github.com/mayank-0789/payrail.git",
     "directory": "packages/merchant-sdk"
   },
   "keywords": [

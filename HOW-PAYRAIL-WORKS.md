@@ -173,7 +173,7 @@ The `@payrail-app/sdk` (for agents) is a 3-line-integration drop-in replacement 
 
 ```
                           ┌──────────────────────────┐
-                          │   payrail.sh (backend)   │
+                          │   Payrail backend        │
                           │                          │
   ┌─────────────────┐     │  ┌────────────────────┐  │
   │ Priya's agent   │     │  │ /api/x402/sign     │  │
@@ -273,7 +273,7 @@ This is a Turborepo monorepo. Three things matter most to a developer reading th
 
 ### Priya (agent developer)
 
-1. Visits `payrail.sh`, clicks sign in, picks Google. **Privy** creates a Solana wallet scoped to her user. She never sees the wallet's private key; Privy holds it.
+1. Visits the Payrail app, clicks sign in, picks Google. **Privy** creates a Solana wallet scoped to her user. She never sees the wallet's private key; Privy holds it.
 2. On the onboarding page, picks **"Agent developer"**. Her user row gets `role='user'`.
 3. Lands on `/dashboard`. Clicks **"+ New agent"**, names it `news-summarizer`, sets a monthly cap of ₹500. Payrail mints a **separate** Solana wallet for this agent via Privy (with Payrail configured as the delegated signer via `additionalSigners: [{ signerId: <auth-key-id> }]`). The wallet's pubkey is stored in `agents.public_key`.
 4. Payrail generates a one-time API key: `pk_f1b2lk5tkbrljkyzww51q1jl0no9`. Its SHA-256 hash is stored in `agent_api_keys.key_hash`. The plaintext is shown **exactly once** on screen. Priya copies it into her `.env`.
@@ -288,7 +288,7 @@ This is a Turborepo monorepo. Three things matter most to a developer reading th
 
 ### Amit (API provider)
 
-1. Same Google sign-in at `payrail.sh`. Privy wallet created for his user account.
+1. Same Google sign-in at the Payrail app. Privy wallet created for his user account.
 2. On onboarding, picks **"API provider"**. His user row gets `role='merchant'`. Payrail simultaneously:
    - Mints a **payout wallet** for him via Privy (also with delegated-signer configuration — important for v2 cash-out flow).
    - Inserts a `merchants` row with his payout pubkey.
@@ -343,7 +343,7 @@ The HTTP response looks exactly like the x402 spec example above.
 The SDK notices `res.status === 402`, extracts the `PAYMENT-REQUIRED` header, and POSTs to Payrail's backend:
 
 ```
-POST https://payrail.sh/api/x402/sign
+POST {PAYRAIL_BASE_URL}/api/x402/sign
 Authorization: Bearer pk_f1b2lk5tkbrljkyzww51q1jl0no9
 Content-Type: application/json
 
@@ -468,7 +468,7 @@ The SDK receives the final 200, returns the JSON to Priya's code. End-to-end lat
 While Priya's agent was receiving its 200, the Solana transaction was confirming on-chain. Helius (which we registered with Amit's payout wallet) sees the transfer and POSTs to Payrail's webhook:
 
 ```
-POST https://payrail.sh/api/webhooks/helius
+POST {PAYRAIL_BASE_URL}/api/webhooks/helius
 Authorization: <HELIUS_WEBHOOK_AUTH_TOKEN>
 
 [{

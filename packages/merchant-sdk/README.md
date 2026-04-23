@@ -6,7 +6,13 @@ The facilitator co-signs as the fee-payer, so **your users never need SOL** — 
 
 ## Install
 
-During the private beta, install from GitHub (we'll publish to npm at launch). See the [merchant quickstart](https://payrail.sh/docs/merchants/quickstart) for the install command that matches your package manager.
+```bash
+npm install @payrail-app/merchant-sdk
+# or: pnpm add @payrail-app/merchant-sdk
+# or: yarn add @payrail-app/merchant-sdk
+```
+
+`@solana/web3.js >= 1.98.4` is a peer dependency — install it alongside if your project doesn't already have it.
 
 ## Quickstart
 
@@ -98,7 +104,7 @@ client (agent)          your server            PayAI facilitator
 
 ## Support
 
-Docs: [payrail.sh/docs/merchants](https://payrail.sh/docs/merchants)  ·  Issues: [github.com/payrail/payrail/issues](https://github.com/payrail/payrail/issues)
+Issues: [github.com/mayank-0789/payrail/issues](https://github.com/mayank-0789/payrail/issues)
 
 ## License
 

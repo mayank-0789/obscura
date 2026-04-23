@@ -14,7 +14,7 @@ seed phrases — just an API key you paste into an env var.
 
 ## Create an agent + grab its API key
 
-1. Open [payrail.sh/dashboard](/dashboard) and sign in.
+1. Open the [dashboard](/dashboard) and sign in.
 2. Press <Kbd>⌘N</Kbd> (or click **+ New agent**). Name your agent, pick
    a monthly spend cap in rupees, submit.
 3. A green banner appears with your agent's plaintext API key (format
@@ -42,7 +42,7 @@ const agent = new Payrail({
 });
 
 const res = await agent.fetch(
-  "https://demo-merchant-news.payrail.sh/article/42",
+  "https://your-merchant.example.com/article/42",
 );
 console.log(await res.json());`}
 </CodeBlock>

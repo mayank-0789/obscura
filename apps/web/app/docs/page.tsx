@@ -49,14 +49,13 @@ export default function DocsIndexPage() {
           </Bullet>
           <Bullet>
             <strong className="text-zinc-100">A Payrail account.</strong>{" "}
-            Sign in with Google at{" "}
             <Link
               href="/onboarding"
               className="text-emerald-400 hover:underline"
             >
-              payrail.sh
+              Sign in
             </Link>{" "}
-            and pick a role. Agents get a custodied Solana wallet; merchants
+            with Google and pick a role. Agents get a custodied Solana wallet; merchants
             get a managed payout wallet. Either way, you never hold a
             keypair yourself.
           </Bullet>
@@ -99,7 +98,7 @@ export default function DocsIndexPage() {
               href="/dashboard"
               className="text-emerald-400 hover:underline"
             >
-              payrail.sh/dashboard
+              /dashboard
             </Link>
             <p className="mt-1 text-[13px] text-zinc-500">
               Create agents, top up, grab API keys, watch spend.
