@@ -14,8 +14,7 @@ export function serializeAgent(
   return {
     id: agent.id,
     name: agent.name,
-    publicKey: agent.publicKey,
-    privyWalletId: agent.privyWalletId,
+    etaAddress: agent.etaAddress,
     status: agent.status,
     createdAt: agent.createdAt.toISOString(),
     budget: budget

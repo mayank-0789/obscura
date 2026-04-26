@@ -32,7 +32,7 @@ export async function GET(req: Request) {
   const ctx = await merchantAuthGuard(req);
   if (ctx instanceof Response) return ctx;
 
-  const topic = merchantPaymentTopic(ctx.merchant.payoutWallet);
+  const topic = merchantPaymentTopic(ctx.merchant.etaAddress);
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream<Uint8Array>({

@@ -17,7 +17,7 @@ const QuerySchema = z.object({
 // GET /api/merchants/me/transactions?limit=50&cursor=<opaque>
 //
 // Returns confirmed x402 spend rows where counterparty matches the
-// authenticated merchant's payoutWallet. Cursor-based pagination on
+// authenticated merchant's etaAddress. Cursor-based pagination on
 // (created_at DESC, id DESC).
 export async function GET(req: Request) {
   const ctx = await merchantAuthGuard(req);
@@ -40,7 +40,7 @@ export async function GET(req: Request) {
   }
 
   const { rows, nextCursor } = await getMerchantTransactions({
-    payoutWallet: ctx.merchant.payoutWallet,
+    etaAddress: ctx.merchant.etaAddress,
     limit: parsed.data.limit,
     cursor,
   });

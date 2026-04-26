@@ -19,8 +19,8 @@ import {
 // Race safety: double-POST from same user is handled by (a) a 1-per-10s rate
 // limit shared with /api/onboarding/role via the "create-merchant" key, and
 // (b) a DB unique index on merchants.owner_user_id that serializes concurrent
-// INSERTs. The losing caller re-reads the winner's row and orphans its own
-// freshly minted Privy wallet.
+// INSERTs. The losing caller re-reads the winner's row.
+// (Stage 8 stub currently throws before any wallet is minted — see lib/merchants.ts.)
 export async function POST(req: Request) {
   const user = await authGuard(req);
   if (user instanceof Response) return user;

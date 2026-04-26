@@ -19,7 +19,7 @@ export type MerchantStats = {
 };
 
 export async function getMerchantStats(
-  payoutWallet: string,
+  etaAddress: string,
 ): Promise<MerchantStats> {
   // Single aggregate query. Using raw SQL for the conditional SUM because
   // drizzle's CASE WHEN ergonomics around bigints are clunkier than a literal
@@ -34,7 +34,7 @@ export async function getMerchantStats(
     .from(transactions)
     .where(
       and(
-        eq(transactions.counterparty, payoutWallet),
+        eq(transactions.counterparty, etaAddress),
         eq(transactions.kind, "spend"),
         eq(transactions.status, "confirmed"),
       ),
@@ -92,13 +92,13 @@ export function decodeMerchantTxCursor(
  * predicate).
  */
 export async function getMerchantTransactions(input: {
-  payoutWallet: string;
+  etaAddress: string;
   limit: number;
   cursor?: MerchantTxCursor;
 }): Promise<{ rows: Transaction[]; nextCursor: string | null }> {
   const limit = Math.min(Math.max(input.limit, 1), 100);
   const whereClauses = [
-    eq(transactions.counterparty, input.payoutWallet),
+    eq(transactions.counterparty, input.etaAddress),
     eq(transactions.kind, "spend"),
     eq(transactions.status, "confirmed"),
   ];

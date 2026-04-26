@@ -11,16 +11,16 @@
     "db:push": "pnpm --filter @payrail-app/db exec drizzle-kit push",
     "db:studio": "pnpm --filter @payrail-app/db exec drizzle-kit studio",
     "db:migrate": "pnpm --filter @payrail-app/db exec drizzle-kit migrate",
-    "spike:privy-variants": "tsx scripts/spike-privy-variants.ts",
-    "stage1:setup": "tsx scripts/stage1-setup.ts",
-    "stage1:fund": "tsx scripts/stage1-fund.ts",
-    "stage2:provision-agent": "tsx scripts/stage2-provision-agent.ts"
+    "umbra:bootstrap-treasury": "tsx scripts/umbra-bootstrap-treasury.ts",
+    "umbra:wrap-treasury-sol": "tsx scripts/umbra-wrap-treasury-sol.ts",
+    "umbra:test-mixer-send": "tsx scripts/umbra-test-mixer-send.ts",
+    "umbra:claim-daemon": "tsx scripts/umbra-claim-daemon.ts",
+    "umbra:reconcile-pending": "tsx scripts/umbra-reconcile-pending.ts"
   },
   "devDependencies": {
     "@neondatabase/serverless": "^1.1.0",
     "@payrail-app/merchant-sdk": "workspace:*",
     "@payrail-app/sdk": "workspace:*",
-    "@privy-io/server-auth": "^1.32.5",
     "@solana/spl-token": "^0.4.14",
     "@solana/web3.js": "^1.98.4",
     "@types/express": "^5.0.6",
@@ -38,5 +38,12 @@
   "packageManager": "pnpm@10.28.2",
   "engines": {
     "node": ">=22"
+  },
+  "pnpm": {
+    "peerDependencyRules": {
+      "allowedVersions": {
+        "@umbra-privacy/web-zk-prover>@umbra-privacy/sdk": "4.0.0"
+      }
+    }
   }
 }

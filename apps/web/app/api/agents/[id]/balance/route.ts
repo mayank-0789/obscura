@@ -1,21 +1,27 @@
 import { and, eq } from "drizzle-orm";
-import { PublicKey, getAssociatedTokenAddress } from "@payrail-app/solana";
 import { db, agents } from "@/lib/db";
 import { authGuard } from "@/lib/auth";
 import { apiError, apiOk } from "@/lib/api";
 import { env } from "@/lib/env";
-import { getConnection, getStablecoinMint } from "@/lib/solana";
+import { getEncryptedBalance } from "@/lib/umbra";
 
-// GET /api/agents/[id]/balance — live on-chain stablecoin balance for this
-// agent's ATA. Returns base units + decimals so the client can format with
-// formatUsdg().
+// GET /api/agents/[id]/balance — the agent's encrypted-balance for the
+// configured stablecoin. Returns base units + decimals so the client can
+// format with formatUsdg().
 //
-// Error semantics:
-//   - ATA doesn't exist on-chain (agent never topped up) → 200 with 0 balance.
-//     That's the correct product answer; don't confuse the user.
-//   - Any other RPC failure → 503. The client's polling will retry; surfacing
-//     the distinction lets the UI show "refresh failed, retrying" vs. pretending
-//     the balance is genuinely zero.
+// Source: Umbra `getEncryptedBalanceQuerierFunction` over the agent's
+// shared-mode encrypted account. The decrypt happens locally in this process
+// using the agent's server-derived X25519 key — no Arcium MPC round-trip,
+// so the call returns in ~tens of ms (single RPC `getAccountInfo` plus a
+// Rescue cipher decrypt).
+//
+// Response semantics:
+//   - Agent registered + has deposits → 200 with the actual decrypted bigint
+//   - Agent registered + zero balance → 200 with amount="0"
+//   - Agent not yet umbra-active (recently created mid-flight, or registration
+//     never finalised) → 200 with amount="0" (querier returns null)
+//   - Server / SDK error reading the balance → 503 server_error
+//   - Agent not found / not yours → 404
 export async function GET(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
@@ -26,40 +32,27 @@ export async function GET(
   const { id } = await ctx.params;
 
   const [agent] = await db
-    .select({ publicKey: agents.publicKey })
+    .select({ id: agents.id, umbraStatus: agents.umbraStatus })
     .from(agents)
     .where(and(eq(agents.id, id), eq(agents.userId, user.id)))
     .limit(1);
   if (!agent) return apiError("not_found");
 
-  const mint = getStablecoinMint();
-  const owner = new PublicKey(agent.publicKey);
-  const ata = await getAssociatedTokenAddress(mint, owner);
+  // Fast path — if the agent isn't yet umbra-active, no balance to fetch.
+  // Returning zero is the correct product answer (a freshly-created agent
+  // pre-first-topup has no encrypted state) and avoids an SDK round-trip.
+  if (agent.umbraStatus !== "active") {
+    return apiOk({ amount: "0", decimals: env.STABLECOIN_DECIMALS });
+  }
 
   try {
-    const response = await getConnection().getTokenAccountBalance(ata);
+    const balance = await getEncryptedBalance("agent", agent.id);
     return apiOk({
-      amount: response.value.amount,
-      decimals: response.value.decimals,
+      amount: (balance ?? 0n).toString(),
+      decimals: env.STABLECOIN_DECIMALS,
     });
   } catch (err) {
-    if (isAtaNotFound(err)) {
-      return apiOk({ amount: "0", decimals: env.STABLECOIN_DECIMALS });
-    }
-    console.error("[agents/balance] helius error", err);
+    console.error(`[agents/balance] umbra read failed for agent=${agent.id}:`, err);
     return apiError("server_error");
   }
-}
-
-// Helius returns a specific error when the ATA doesn't exist yet. Different
-// RPC nodes phrase it differently, so match on substrings rather than exact
-// message. When this check yields false positives in practice, narrow it.
-function isAtaNotFound(err: unknown): boolean {
-  const message =
-    err instanceof Error ? err.message.toLowerCase() : String(err).toLowerCase();
-  return (
-    message.includes("could not find account") ||
-    message.includes("account not found") ||
-    message.includes("invalid param: could not find")
-  );
 }

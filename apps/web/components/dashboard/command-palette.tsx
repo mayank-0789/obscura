@@ -56,7 +56,7 @@ export function CommandPalette({
       kind: "agent",
       id: `agent-${a.id}`,
       label: a.name,
-      hint: shortPk(a.publicKey),
+      hint: shortPk(a.etaAddress),
       onRun: () => onSelectAgent(a.id),
     }));
     const all = [...base, ...agentItems];

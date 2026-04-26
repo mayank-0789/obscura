@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { usePrivy } from "@privy-io/react-auth";
+import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { Logo } from "@/components/marketing/logo";
 import { useSignout } from "@/hooks/use-signout";
@@ -19,19 +19,21 @@ import {
 
 export function OnboardingShell() {
   const router = useRouter();
-  const { ready, authenticated } = usePrivy();
+  const { status } = useSession();
+  const ready = status !== "loading";
+  const authenticated = status === "authenticated";
   const signOut = useSignout();
   // Mount sync explicitly here — SignInButton isn't rendered on this page, and
   // without it a brand-new signup could click a role card before
   // /api/auth/sync has created the users row (the backend then returns
   // user_not_synced → 404). Mounting here guarantees the sync fires as soon
-  // as Privy is ready on this route.
+  // as the session resolves.
   useSyncUser();
   const { data: me, isLoading: meLoading, isFetched: meFetched } = useUser();
   const setRole = useSetRole();
   const [pending, setPending] = useState<Role | null>(null);
 
-  // Guard: if Privy says we're not logged in, bounce to the landing page.
+  // Guard: if not signed in, bounce to the landing page.
   useEffect(() => {
     if (ready && !authenticated) {
       router.replace("/");

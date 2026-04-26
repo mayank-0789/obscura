@@ -8,12 +8,6 @@ import type {
   UnwrapWebhookEvent,
 } from "dodopayments/resources/webhooks/webhooks";
 import {
-  PublicKey,
-  transferSpl,
-  TransferAlreadyLanded,
-  TransferNeverLanded,
-} from "@payrail-app/solana";
-import {
   db,
   agents,
   transactions,
@@ -23,8 +17,15 @@ import {
 import { apiError, apiOk } from "@/lib/api";
 import { verifyDodoWebhook, WebhookVerifyError } from "@/lib/dodo/webhook";
 import { calculateTopupBreakdown } from "@/lib/pricing";
-import { getConnection, getStablecoinMint, getTreasury } from "@/lib/solana";
-import { env } from "@/lib/env";
+import { depositTreasuryToEncryptedAccount } from "@/lib/umbra";
+import { assertU64 } from "@umbra-privacy/sdk/types";
+
+// Sentinel written into transactions.memo while the Umbra deposit SDK call is
+// in-flight. Cleared on success. On a webhook retry, finding this memo on a
+// pending row means the prior attempt MAY have landed on-chain — without an
+// equivalent of TransferAlreadyLanded for the Umbra path, we can't tell, and
+// must refuse to re-issue rather than risk a double-credit.
+const DEPOSIT_IN_FLIGHT_MEMO = "umbra_deposit_in_flight";
 
 // Metadata we set on every checkout session. Validated with Zod so drift in
 // Dodo's payload shape surfaces as a clean error instead of a silent KeyError.
@@ -40,19 +41,27 @@ const PaymentMetadata = z.object({
 
 // POST /api/webhooks/dodo — receive payment events from Dodo and dispatch.
 //
-// Four layers of safety, in order:
+// Idempotency layers, in order:
 //   1. Signature verification.
 //   2. webhook_log UNIQUE (provider, event_id) — same delivery never
 //      double-processes.
-//   3. transactions row inserted BEFORE transferSpl with status='pending'. If
-//      the transfer lands but we crash before the confirmed-update, a retry
-//      finds the pending row and either claims the landed signature
-//      (TransferAlreadyLanded) or retries cleanly (TransferNeverLanded).
+//   3. transactions row inserted BEFORE the on-chain Umbra deposit, with
+//      status='pending'. The deposit path is bracketed by a memo flip:
+//      memo='umbra_deposit_in_flight' is written before the SDK call, and
+//      cleared (with status='confirmed' + the Arcium callback signature)
+//      after `callbackStatus='finalized'`. On retry, an in-flight memo with
+//      no callback_signature means we MAY have double-credit risk and we
+//      refuse to re-issue — an operator must verify the agent's encrypted
+//      balance and either clear the memo (mark confirmed, attaching the
+//      actual on-chain signature) or null it out and let the next retry
+//      proceed. Retry-safe by design, because the SDK's deposit is NOT
+//      naturally idempotent (no TransferAlreadyLanded equivalent the way the
+//      legacy SPL path had).
 //   4. Retries of a failed claim clear webhook_log.error and re-enter the
 //      same idempotent processing path. No row gets permanently stuck.
 //
 // Dispatched event types (everything else is acknowledged + markProcessed):
-//   - payment.succeeded  → credit the agent wallet with USDG
+//   - payment.succeeded  → credit the agent's Umbra encrypted account
 //   - payment.failed     → log (informational; Dodo never collected)
 //   - refund.succeeded   → log loudly. We have no user-facing refund flow,
 //                          so refunds can only arrive out-of-band (Dodo
@@ -61,19 +70,25 @@ const PaymentMetadata = z.object({
 //   - dispute.opened     → log loudly; same reasoning. No auto-action.
 export async function POST(req: Request) {
   const rawBody = await req.text();
+  const deliveryId = req.headers.get("webhook-id");
+  console.info(
+    `[dodo/webhook] ↓ delivery=${deliveryId ?? "(missing)"} bytes=${rawBody.length}`,
+  );
 
   let event;
   try {
     event = verifyDodoWebhook(rawBody, req.headers);
   } catch (err) {
     if (err instanceof WebhookVerifyError) {
-      console.warn("[dodo/webhook] signature verify failed", err.message);
+      console.warn("[dodo/webhook] signature verify FAILED", err.message);
       return apiError("invalid_signature");
     }
     throw err;
   }
+  console.info(
+    `[dodo/webhook] signature OK delivery=${deliveryId} type=${event.type}`,
+  );
 
-  const deliveryId = req.headers.get("webhook-id");
   if (!deliveryId) return apiError("bad_request");
 
   const claim = await claimEvent(deliveryId, rawBody);
@@ -82,9 +97,15 @@ export async function POST(req: Request) {
   try {
     await dispatchEvent(event);
     await markProcessed(claim.id);
+    console.info(
+      `[dodo/webhook] ✓ delivery=${deliveryId} type=${event.type} processed`,
+    );
     return apiOk({ ok: true });
   } catch (err) {
-    console.error("[dodo/webhook] processing failed", event.type, err);
+    console.error(
+      `[dodo/webhook] ✗ delivery=${deliveryId} type=${event.type} processing FAILED`,
+      err,
+    );
     await markErrored(claim.id, err);
     return apiError("server_error");
   }
@@ -179,22 +200,20 @@ async function markErrored(claimId: string, err: unknown) {
 async function creditAgentForPayment(event: PaymentSucceededWebhookEvent) {
   const metadata = PaymentMetadata.parse(event.data.metadata);
   const paymentId = event.data.payment_id;
+  console.info(
+    `[topup ${paymentId}] payment.succeeded agent=${metadata.agent_id} ` +
+      `paise=${metadata.amount_inr_paise} rate=${metadata.rate_snapshot}`,
+  );
 
   // Defense in depth — every money-relevant field from the webhook payload is
   // cross-checked against what we asked for at session creation. Any mismatch
   // throws, webhook_log.error captures it, no credit happens.
-  //
-  // Currency: must be INR. Session flags disable currency selection so this
-  // should never trip in practice; present to catch merchant-config drift.
   if (event.data.currency !== "INR") {
     throw new Error(
       `currency_mismatch: expected=INR actual=${event.data.currency}`,
     );
   }
 
-  // Amount: what Dodo collected must equal what we asked for. Catches the
-  // classic footgun where a Fixed-Price product silently ignores our `amount`,
-  // or a rogue discount code slipping through despite allow_discount_code=false.
   const expectedPaise = BigInt(metadata.amount_inr_paise);
   const actualPaise = BigInt(event.data.total_amount);
   if (expectedPaise !== actualPaise) {
@@ -203,25 +222,83 @@ async function creditAgentForPayment(event: PaymentSucceededWebhookEvent) {
         `(check Dodo product: Pay What You Want + no discount code)`,
     );
   }
+  console.info(
+    `[topup ${paymentId}] guards passed currency=INR paise=${expectedPaise}`,
+  );
 
   // Has this payment already been credited (or started crediting)?
   const [existingTx] = await db
-    .select({ id: transactions.id, status: transactions.status })
+    .select({
+      id: transactions.id,
+      status: transactions.status,
+      memo: transactions.memo,
+      callbackSignature: transactions.callbackSignature,
+    })
     .from(transactions)
     .where(eq(transactions.dodoPaymentId, paymentId))
     .limit(1);
 
   if (existingTx?.status === "confirmed") {
-    // Prior attempt completed. Webhook retry — no-op.
+    console.info(
+      `[topup ${paymentId}] tx ${existingTx.id} already confirmed — no-op`,
+    );
     return;
   }
 
+  // Defensive: nothing in this code path writes 'failed' today, but the enum
+  // allows it and a future reconciler/operator tool likely will. If we ever
+  // hit a failed row, refuse to silently re-issue — an operator must decide
+  // whether to retry (clear the row's status) or treat the top-up as lost.
+  if (existingTx?.status === "failed") {
+    throw new Error(
+      `pending tx ${existingTx.id} for payment_id=${paymentId} is marked ` +
+        `failed — operator must decide whether to retry or write off.`,
+    );
+  }
+
+  // Refuse to retry while a previous deposit may be mid-flight on-chain.
+  // The Umbra SDK has no "already landed" recovery analogous to the legacy
+  // TransferAlreadyLanded — re-issuing here would risk a second on-chain
+  // treasury → ETA deposit and a double-credit. An operator must decrypt the
+  // agent's encrypted balance and either clear the memo (mark confirmed,
+  // attaching the actual callback signature) or null it out and let the next
+  // retry proceed.
+  if (
+    existingTx?.memo === DEPOSIT_IN_FLIGHT_MEMO &&
+    !existingTx.callbackSignature
+  ) {
+    throw new Error(
+      `pending tx ${existingTx.id} for payment_id=${paymentId} found with ` +
+        `in-flight deposit memo on retry — manual reconciliation needed ` +
+        `(check encrypted balance for the agent before clearing).`,
+    );
+  }
+
+  // Load the agent. Must already be Umbra-registered — agent creation is
+  // eager-register, so any agent that exists has a usable encrypted account.
+  // If somehow umbraStatus is null (older row, manual seed, etc.) we refuse
+  // — depositing into an unregistered ETA fails on-chain anyway, and we
+  // don't want partially-credited DB state.
   const [agent] = await db
-    .select({ id: agents.id, publicKey: agents.publicKey })
+    .select({
+      id: agents.id,
+      etaAddress: agents.etaAddress,
+      umbraStatus: agents.umbraStatus,
+    })
     .from(agents)
     .where(eq(agents.id, metadata.agent_id))
     .limit(1);
   if (!agent) throw new Error(`agent ${metadata.agent_id} not found`);
+  if (agent.umbraStatus !== "active") {
+    throw new Error(
+      `agent ${agent.id} umbraStatus=${agent.umbraStatus ?? "null"} — ` +
+        `not registered on Umbra; cannot deposit`,
+    );
+  }
+  console.info(
+    `[topup ${paymentId}] agent loaded id=${agent.id} ` +
+      `etaAddress=${agent.etaAddress} umbraStatus=${agent.umbraStatus}`,
+  );
 
   const inrPaise = expectedPaise;
   const rate = Number(metadata.rate_snapshot);
@@ -229,10 +306,23 @@ async function creditAgentForPayment(event: PaymentSucceededWebhookEvent) {
   // charged amount. Produces the same USDG the user saw on the breakdown
   // card. `rate` here is the market rate; pricing applies the spread inside.
   const { usdgMicros } = calculateTopupBreakdown(inrPaise, rate);
+  // Validate the boundary value is a valid U64 once, here where it enters
+  // the system. assertU64 narrows the bigint to the branded U64 type so the
+  // Umbra SDK accepts it downstream without further validation.
+  assertU64(usdgMicros);
+  console.info(
+    `[topup ${paymentId}] breakdown ${inrPaise} paise @ rate=${rate} → ` +
+      `${usdgMicros} micros (~$${(Number(usdgMicros) / 1_000_000).toFixed(2)} USDC)`,
+  );
 
-  // Pre-insert a pending row so if we crash between transfer and update, the
-  // next attempt finds this row and doesn't create a duplicate — and on
-  // TransferAlreadyLanded we can still claim the signature.
+  // Pre-insert a pending row so a retry finds it and doesn't create a
+  // duplicate. Three meaningful states to recognise on retry:
+  //   - row pending, memo NULL, callback_signature NULL → safe to (re-)try
+  //                                                       the deposit.
+  //   - row pending, memo='umbra_deposit_in_flight', callback_signature NULL
+  //     → deposit SDK call is running OR crashed mid-call; refuse to retry
+  //       (see check above).
+  //   - row confirmed, callback_signature set → fully complete; no-op.
   const pendingTxId =
     existingTx?.id ??
     (
@@ -251,40 +341,63 @@ async function creditAgentForPayment(event: PaymentSucceededWebhookEvent) {
         })
         .returning({ id: transactions.id })
     )[0]!.id;
+  console.info(
+    `[topup ${paymentId}] pending tx ${existingTx ? "reused" : "inserted"} id=${pendingTxId}`,
+  );
 
-  let signature: string;
-  try {
-    const result = await transferSpl({
-      connection: getConnection(),
-      from: getTreasury(),
-      to: new PublicKey(agent.publicKey),
-      mint: getStablecoinMint(),
-      amount: usdgMicros,
-      decimals: env.STABLECOIN_DECIMALS,
-    });
-    signature = result.signature;
-  } catch (err) {
-    if (err instanceof TransferAlreadyLanded) {
-      // Prior attempt's tx DID land on-chain even though its confirmation
-      // timed out locally. Claim the signature and move on.
-      signature = err.signature;
-    } else if (err instanceof TransferNeverLanded) {
-      // Confirmed not-landed. Pending row stays. Dodo retries.
-      throw err;
-    } else {
-      // Any other error — keep pending row, surface to webhook handler.
-      throw err;
-    }
+  // Bracket the SDK call with an in-flight memo so a webhook retry that
+  // arrives while the deposit is still resolving (or after it resolved but
+  // before the confirmed-update lands) refuses to re-issue. Cleared on the
+  // success update below.
+  await db
+    .update(transactions)
+    .set({ memo: DEPOSIT_IN_FLIGHT_MEMO })
+    .where(eq(transactions.id, pendingTxId));
+  console.info(
+    `[topup ${paymentId}] in-flight memo set on tx ${pendingTxId} → calling Umbra deposit`,
+  );
+
+  // Treasury → agent encrypted account. The deposit *event* (sender,
+  // recipient, mint, gross amount) is publicly visible on-chain by design;
+  // the resulting encrypted balance value is hidden. See the architectural
+  // notes in lib/umbra.ts for why we accept this trade-off.
+  const result = await depositTreasuryToEncryptedAccount({
+    etaAddress: agent.etaAddress,
+    amountMicros: usdgMicros,
+  });
+
+  // The Arcium MPC callback tx is the canonical "deposit landed" signal —
+  // the queue tx alone only proves we asked. When callbackSignature is
+  // undefined (status "timed-out"/"pruned"), the on-chain queue tx may still
+  // finalize asynchronously and credit the agent; we therefore leave the
+  // in-flight memo set and throw, so the next retry (whether webhook
+  // redelivery or operator-driven) hits the in-flight refusal above and
+  // surfaces for manual reconciliation rather than blindly re-depositing.
+  if (!result.callbackSignature) {
+    throw new Error(
+      `umbra deposit callback ${result.callbackStatus ?? "missing"}: ` +
+        `queue=${result.queueSignature} — in-flight memo retained, ` +
+        `manual reconciliation needed`,
+    );
   }
 
   await db
     .update(transactions)
     .set({
       status: "confirmed",
-      solanaSig: signature,
+      solanaSig: String(result.callbackSignature),
+      queueSignature: String(result.queueSignature),
+      callbackSignature: String(result.callbackSignature),
+      callbackStatus: result.callbackStatus ?? null,
+      memo: null,
       confirmedAt: new Date(),
     })
     .where(eq(transactions.id, pendingTxId));
+  console.info(
+    `[topup ${paymentId}] ✓ tx ${pendingTxId} confirmed — ` +
+      `$${(Number(usdgMicros) / 1_000_000).toFixed(2)} USDC landed in encrypted account ` +
+      `${agent.etaAddress} callbackSig=${result.callbackSignature}`,
+  );
 }
 
 // payment.failed — Dodo never collected from the user (card declined, UPI
@@ -304,9 +417,8 @@ async function recordPaymentFailed(
 // user-facing refund flow, so refunds can only arrive out-of-band (Dodo
 // support ticket, bank chargeback). No ledger mutation, no on-chain
 // clawback — an operator sees the log and decides what to do (manual USDG
-// recovery via Privy if the agent hasn't spent the balance yet, or just
-// absorb the loss if they have). Revisit when we build a refund flow into
-// the product.
+// recovery via the agent's encrypted balance if it hasn't been spent yet,
+// or absorb the loss if it has). Revisit when we ship a refund flow.
 async function recordRefund(
   event: RefundSucceededWebhookEvent,
 ): Promise<void> {

@@ -12,8 +12,9 @@ import { customAlphabet } from "nanoid";
 // high-entropy so KDFs add nothing, a per-row salt adds storage for zero
 // defensive value).
 //
-// Distinct prefix (mk_ vs pk_) gives the dual-auth guard a zero-cost diagnostic
-// to route the header to merchant_api_keys vs treating it as a Privy JWT.
+// Distinct prefix (mk_ vs pk_) lets the dual-auth guard fast-route an mk_
+// Bearer token to merchant_api_keys; absent that prefix it falls through to
+// the cookie-based NextAuth session path.
 
 const ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz";
 const KEY_LENGTH = 28;

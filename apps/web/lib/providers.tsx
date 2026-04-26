@@ -1,13 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { PrivyProvider } from "@privy-io/react-auth";
+import { SessionProvider } from "next-auth/react";
+import type { Session } from "next-auth";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
-import { env } from "@/lib/env";
 
-// Root client providers: Privy (auth + wallets), TanStack Query (data), Sonner (toasts).
-export function Providers({ children }: { children: React.ReactNode }) {
+// Root client providers: NextAuth session, TanStack Query (data), Sonner (toasts).
+// `session` is fetched server-side in the root layout via `auth()` and passed
+// down so the first paint already knows the auth state — avoids a "session is
+// loading" flicker.
+export function Providers({
+  children,
+  session,
+}: {
+  children: React.ReactNode;
+  session: Session | null;
+}) {
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -16,25 +25,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <PrivyProvider
-      appId={env.NEXT_PUBLIC_PRIVY_APP_ID}
-      config={{
-        loginMethods: ["email", "google"],
-        appearance: {
-          theme: "dark",
-          accentColor: "#34d399",
-          showWalletLoginFirst: false,
-        },
-        embeddedWallets: {
-          solana: { createOnLogin: "users-without-wallets" },
-          showWalletUIs: true,
-        },
-      }}
-    >
+    <SessionProvider session={session}>
       <QueryClientProvider client={queryClient}>
         {children}
         <Toaster theme="dark" position="bottom-right" richColors />
       </QueryClientProvider>
-    </PrivyProvider>
+    </SessionProvider>
   );
 }

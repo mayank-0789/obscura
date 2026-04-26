@@ -393,9 +393,9 @@ const stackItems = [
   { name: "Solana", role: "L1 settlement" },
   { name: "x402", role: "HTTP micropayments" },
   { name: "Dodo Payments", role: "Fiat MoR" },
-  { name: "Privy", role: "Embedded wallets" },
+  { name: "Umbra", role: "Confidential balances + mixer" },
   { name: "Helius", role: "RPC" },
-  { name: "PayAI", role: "Facilitator" },
+  { name: "Arcium", role: "MPC compute" },
 ];
 
 function StackStrip() {
@@ -527,7 +527,7 @@ function FAQSection() {
 const userFaqs: QA[] = [
   {
     q: "Does my user need a crypto wallet?",
-    a: "No. Every agent gets its own embedded Solana wallet, provisioned on sign-up via Privy. Your users fund it with UPI or card. They never see a seed phrase or a browser extension.",
+    a: "No. Every agent gets a server-derived Umbra encrypted token account, provisioned on sign-up. Your users fund it with UPI or card. They never see a seed phrase or a browser extension.",
   },
   {
     q: "What stablecoin do agents actually hold?",
@@ -535,7 +535,7 @@ const userFaqs: QA[] = [
   },
   {
     q: "Who controls the money?",
-    a: "The operator. Agent wallets are Privy-custodied with a delegated signer scoped to the Payrail backend. Every outgoing signature runs through a spend-cap check before being broadcast. No cap, no signature.",
+    a: "The operator. Each agent's Umbra-side keypair is derived server-side from a master seed (HMAC-SHA-256, domain-separated per subject) and never leaves Payrail's backend. Every outgoing transfer runs through a spend-cap check before signing. No cap, no signature.",
   },
   {
     q: "What happens when an agent hits its monthly cap?",

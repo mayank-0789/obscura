@@ -5,7 +5,7 @@ import { getMerchantStats } from "@/lib/merchant-queries";
 import { getConnection, getStablecoinMint, getTreasury } from "@/lib/solana";
 
 // GET /api/merchants/me — current merchant + aggregate stats for the dashboard.
-// Auth: Privy session JWT OR Bearer mk_... (dual-mode via merchantAuthGuard).
+// Auth: NextAuth session cookie OR Bearer mk_... (dual-mode via merchantAuthGuard).
 export async function GET(req: Request) {
   const ctx = await merchantAuthGuard(req);
   if (ctx instanceof Response) return ctx;
@@ -24,21 +24,21 @@ export async function GET(req: Request) {
   void ensureAta({
     connection: getConnection(),
     payer: getTreasury(),
-    owner: new PublicKey(ctx.merchant.payoutWallet),
+    owner: new PublicKey(ctx.merchant.etaAddress),
     mint: getStablecoinMint(),
   }).catch((err) => {
     console.error(
-      `[merchants/me] ATA self-heal failed for ${ctx.merchant.payoutWallet}:`,
+      `[merchants/me] ATA self-heal failed for ${ctx.merchant.etaAddress}:`,
       err,
     );
   });
 
-  const stats = await getMerchantStats(ctx.merchant.payoutWallet);
+  const stats = await getMerchantStats(ctx.merchant.etaAddress);
   return apiOk({
     merchant: {
       id: ctx.merchant.id,
       name: ctx.merchant.name,
-      payoutWallet: ctx.merchant.payoutWallet,
+      etaAddress: ctx.merchant.etaAddress,
       createdAt: ctx.merchant.createdAt,
     },
     stats,

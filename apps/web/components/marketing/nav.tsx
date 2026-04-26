@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePrivy } from "@privy-io/react-auth";
+import { useSession } from "next-auth/react";
 import { Logo } from "./logo";
 import { SignInButton } from "../auth/sign-in-button";
 import { useUser } from "@/hooks/use-user";
@@ -77,10 +77,10 @@ export function Nav({
 //                        to the agent dashboard.
 // Renders null for unauthed users — SignInButton handles that flow.
 function AuthedDashboardLink() {
-  const { ready, authenticated } = usePrivy();
+  const { status } = useSession();
   const { data: me } = useUser();
 
-  if (!ready || !authenticated) return null;
+  if (status !== "authenticated") return null;
   // Don't render until we've loaded the user row — avoids flashing the
   // link with the wrong destination while role is still resolving.
   if (!me) return null;

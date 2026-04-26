@@ -24,7 +24,7 @@ export function MerchantAppShell({
   // Subscribe to the real-time payment stream for every merchant surface so
   // any of them reflect a new payment within ~1 frame of landing on-chain.
   useMerchantEvents();
-  const payoutWallet = data?.merchant.payoutWallet ?? null;
+  const payoutWallet = data?.merchant.etaAddress ?? null;
 
   const isMissingMerchant =
     error instanceof Error && error.message === "not_found";

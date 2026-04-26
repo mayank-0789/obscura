@@ -1,19 +1,19 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { usePrivy } from "@privy-io/react-auth";
+import { useSession } from "next-auth/react";
 import { useAuthedFetch } from "@/hooks/use-authed-fetch";
 import type { AgentDTO } from "@/types/agent";
 
 // Fetches a single agent by id. 404 surfaces as Error("not_found") so the
 // detail page can render a dedicated not-found UI instead of a generic error.
 export function useAgent(id: string) {
-  const { ready, authenticated } = usePrivy();
+  const { status } = useSession();
   const authedFetch = useAuthedFetch();
 
   return useQuery<AgentDTO>({
     queryKey: ["agents", id],
-    enabled: ready && authenticated && !!id,
+    enabled: status === "authenticated" && !!id,
     staleTime: 30_000,
     retry: (count, err) =>
       count < 1 && !(err instanceof Error && err.message === "not_found"),

@@ -3,10 +3,11 @@
  *
  * Wraps the native `fetch` with automatic x402 handling: when an HTTP call
  * receives a 402 with a `PAYMENT-REQUIRED` header, the SDK asks the Payrail
- * backend to sign a Solana payment via Privy delegated signing, then retries
- * the original request with a `PAYMENT-SIGNATURE` header. The agent's
- * wallet, the Solana chain, and the signing key never leave Payrail's
- * backend — the agent only holds an API key.
+ * backend to execute a confidential Umbra mixer transfer from the agent's
+ * encrypted balance to the merchant's, then retries the original request
+ * with a `PAYMENT-SIGNATURE` header carrying the on-chain proofs. The
+ * agent's encrypted balance, the signing key, and Umbra subject identity
+ * never leave Payrail's backend — the agent only holds an API key.
  *
  *   npm install @payrail-app/sdk
  *

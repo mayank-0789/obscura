@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Fraunces } from "next/font/google";
+import { auth } from "@/lib/auth-config";
 import { Providers } from "@/lib/providers";
 import "./globals.css";
 
@@ -27,17 +28,18 @@ export const metadata: Metadata = {
     "Fund your AI agent with UPI or card. It pays for APIs, tools, and compute autonomously — stablecoin settlement on Solana, no crypto wallet needed.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await auth();
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable}`}
       >
-        <Providers>{children}</Providers>
+        <Providers session={session}>{children}</Providers>
       </body>
     </html>
   );

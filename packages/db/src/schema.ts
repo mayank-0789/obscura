@@ -1,4 +1,4 @@
-// Payrail schema.
+// Payrail schema (post-Umbra pivot).
 // Conventions: UUIDs (pg defaultRandom), timestamptz, bigint for money.
 // USDG base units: $1 = 1_000_000 (6 decimals). INR paise: ₹1 = 100.
 // Soft deletes via status / revoked_at — avoid hard DELETEs.
@@ -33,8 +33,8 @@ export const agentStatus = pgEnum("agent_status", [
 export const budgetPeriod = pgEnum("budget_period", ["monthly", "daily"]);
 
 export const txKind = pgEnum("tx_kind", [
-  "topup", // fiat in → USDG in agent wallet
-  "spend", // USDG out → merchant
+  "topup", // fiat in → encrypted balance
+  "spend", // encrypted balance out → merchant
   "refund", // reverse of spend
   "payout", // merchant cash-out → bank (v2)
 ]);
@@ -47,19 +47,30 @@ export const apiStatus = pgEnum("api_status", ["active", "paused"]);
 
 export const webhookProvider = pgEnum("webhook_provider", [
   "dodo",
-  "privy",
   "helius",
 ]);
 
+// Umbra-side state for an account (agent or merchant). NULL = not yet
+// registered on Umbra. Once registered, transitions to 'active'. Reserved
+// 'deregistered' for forward-compat (Umbra doesn't expose deregistration today
+// but the protocol supports it).
+export const umbraAccountStatus = pgEnum("umbra_account_status", [
+  "active",
+  "deregistered",
+]);
+
 // -----------------------------------------------------------------------------
-// users — one row per Privy identity. `role` can be 'user' | 'merchant' | 'both'.
+// users — one row per authenticated Google identity. `role` can be 'user' |
+// 'merchant' | 'both'.
 // -----------------------------------------------------------------------------
 
 export const users = pgTable(
   "users",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    privyId: text("privy_id").notNull(),
+    // Stable per-user identifier from the auth provider (Google `sub` today,
+    // surfaced via NextAuth session). Indexed unique.
+    authId: text("auth_id").notNull(),
     email: text("email"),
     phone: text("phone"),
     role: userRole("role").notNull().default("user"),
@@ -71,13 +82,15 @@ export const users = pgTable(
       .defaultNow(),
   },
   (t) => [
-    uniqueIndex("users_privy_id_idx").on(t.privyId),
+    uniqueIndex("users_auth_id_idx").on(t.authId),
     index("users_email_idx").on(t.email),
   ],
 );
 
 // -----------------------------------------------------------------------------
-// agents — autonomous program owned by a user, with its own Privy Solana wallet.
+// agents — autonomous program owned by a user. Has a server-derived Umbra
+// keypair (HMAC over UMBRA_AGENT_SEED_SECRET + agent.id) registered on Umbra
+// at creation time. `eta_address` is the L1 Solana pubkey for that keypair.
 // -----------------------------------------------------------------------------
 
 export const agents = pgTable(
@@ -88,9 +101,13 @@ export const agents = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
-    privyWalletId: text("privy_wallet_id").notNull(),
-    publicKey: text("public_key").notNull(), // Solana pubkey (base58)
+    // Solana pubkey (base58) of the agent's Umbra-side keypair. The encrypted
+    // token account (ETA) is a PDA derived from this address + the mint.
+    etaAddress: text("eta_address").notNull(),
     status: agentStatus("status").notNull().default("active"),
+    // Umbra-side registration state. NULL until first registration succeeds.
+    umbraStatus: umbraAccountStatus("umbra_status"),
+    umbraRegisteredAt: timestamp("umbra_registered_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -100,7 +117,7 @@ export const agents = pgTable(
   },
   (t) => [
     index("agents_user_id_idx").on(t.userId),
-    uniqueIndex("agents_public_key_idx").on(t.publicKey),
+    uniqueIndex("agents_eta_address_idx").on(t.etaAddress),
   ],
 );
 
@@ -157,7 +174,7 @@ export const agentApiKeys = pgTable(
     agentId: uuid("agent_id")
       .notNull()
       .references(() => agents.id, { onDelete: "cascade" }),
-    keyHash: text("key_hash").notNull(), // argon2/bcrypt hash
+    keyHash: text("key_hash").notNull(), // SHA-256 of pk_<28-char nanoid>
     label: text("label"),
     lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
@@ -171,6 +188,11 @@ export const agentApiKeys = pgTable(
 // -----------------------------------------------------------------------------
 // transactions — every money event. Solana tx is source of truth; this is a
 // materialized view. Daily reconciliation cron ensures on-chain ↔ DB parity.
+//
+// Umbra ops use the queue+callback pattern: queueSignature is the tx that
+// asks the Arcium MPC to compute, callbackSignature is the canonical "result
+// landed on-chain" tx (only `callbackStatus = 'finalized'` is success).
+// solanaSig stays for plain SPL paths (treasury fund-up etc.).
 // -----------------------------------------------------------------------------
 
 export const transactions = pgTable(
@@ -192,8 +214,17 @@ export const transactions = pgTable(
     // Host of the paid resource for kind='spend' (e.g. "news.example.com").
     // NULL for topups/payouts. Populated from the x402 `resource.url`.
     merchantHost: text("merchant_host"),
-    // NULL while pending; set once confirmed.
+    // Plain SPL signature (legacy / non-Umbra paths). For Umbra ops we mirror
+    // callbackSignature here once it finalizes, so consumers that key on
+    // solanaSig keep working.
     solanaSig: text("solana_sig"),
+    // Umbra MPC queue signature — proves we asked. Set BEFORE callback lands.
+    queueSignature: text("queue_signature"),
+    // Umbra MPC callback signature — proves the encrypted-state update landed.
+    callbackSignature: text("callback_signature"),
+    // 'finalized' | 'pruned' | 'timed_out' (from Arcium). Only 'finalized' is
+    // success; pruned/timed_out are uncertain — verify on-chain before retry.
+    callbackStatus: text("callback_status"),
     dodoPaymentId: text("dodo_payment_id"),
     status: txStatus("status").notNull().default("pending"),
     memo: text("memo"),
@@ -207,11 +238,7 @@ export const transactions = pgTable(
     // Unique on solana_sig — multiple NULLs allowed (pending txs).
     uniqueIndex("transactions_solana_sig_idx").on(t.solanaSig),
     index("transactions_dodo_payment_id_idx").on(t.dodoPaymentId),
-    // Partial index for merchant earnings queries:
-    //   WHERE counterparty = ? AND status = 'confirmed' AND kind = 'spend'
-    //   ORDER BY created_at DESC
-    // Filters on kind='spend' to keep the index tight — topup/refund/payout
-    // rows are irrelevant to merchant dashboards.
+    // Partial index for merchant earnings queries.
     index("transactions_counterparty_confirmed_idx")
       .on(t.counterparty, t.status, t.createdAt.desc())
       .where(sql`${t.kind} = 'spend'`),
@@ -219,7 +246,9 @@ export const transactions = pgTable(
 );
 
 // -----------------------------------------------------------------------------
-// merchants — API providers. Own a Privy-managed Solana payout wallet.
+// merchants — API providers. Have a server-derived Umbra keypair registered on
+// Umbra at signup time. `eta_address` is where agents pay them (via ETA→ETA
+// confidential transfer in the x402 hot path).
 // -----------------------------------------------------------------------------
 
 export const merchants = pgTable(
@@ -230,9 +259,12 @@ export const merchants = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     name: text("name"),
-    payoutWallet: text("payout_wallet").notNull(), // Solana pubkey
-    privyWalletId: text("privy_wallet_id").notNull(),
+    // Solana pubkey of the merchant's Umbra-side keypair.
+    etaAddress: text("eta_address").notNull(),
     dodoAccountId: text("dodo_account_id"), // nullable until cash-out onboarded
+    // Umbra-side registration state. NULL until first registration succeeds.
+    umbraStatus: umbraAccountStatus("umbra_status"),
+    umbraRegisteredAt: timestamp("umbra_registered_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -241,11 +273,11 @@ export const merchants = pgTable(
       .defaultNow(),
   },
   (t) => [
-    // Unique — one merchant per user. Enforces 1:1 at the DB level so that a
+    // Unique — one merchant per user. Enforces 1:1 at the DB level so a
     // double-POST race on /api/merchants can't produce two rows; the losing
     // INSERT trips ON CONFLICT and we re-read the winner.
     uniqueIndex("merchants_owner_user_id_idx").on(t.ownerUserId),
-    uniqueIndex("merchants_payout_wallet_idx").on(t.payoutWallet),
+    uniqueIndex("merchants_eta_address_idx").on(t.etaAddress),
   ],
 );
 
@@ -299,7 +331,7 @@ export const merchantApis = pgTable(
 );
 
 // -----------------------------------------------------------------------------
-// webhook_log — idempotency for incoming webhooks (dodo, privy, helius).
+// webhook_log — idempotency for incoming webhooks (dodo, helius).
 // UNIQUE (provider, event_id) — second delivery of same event is a no-op.
 // -----------------------------------------------------------------------------
 

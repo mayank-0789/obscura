@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { usePrivy } from "@privy-io/react-auth";
+import { useSession } from "next-auth/react";
 import { useAuthedFetch } from "@/hooks/use-authed-fetch";
 import { parseApiError } from "@/lib/parse-api-error";
 
@@ -18,11 +18,11 @@ export type MerchantApi = {
 type ListResponse = { apis: MerchantApi[] };
 
 export function useMerchantApis() {
-  const { ready, authenticated } = usePrivy();
+  const { status } = useSession();
   const authedFetch = useAuthedFetch();
   return useQuery<ListResponse>({
     queryKey: ["merchant", "me", "apis"],
-    enabled: ready && authenticated,
+    enabled: status === "authenticated",
     staleTime: 30_000,
     retry: false,
     queryFn: async () => {

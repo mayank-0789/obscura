@@ -5,14 +5,14 @@ import { z } from "zod";
 export const env = createEnv({
   server: {
     DATABASE_URL: z.string().url(),
-    PRIVY_APP_ID: z.string().min(1),
-    PRIVY_APP_SECRET: z.string().min(1),
-    // Private half of the delegated-signing keypair. Loaded by the server Privy client.
-    PRIVY_AUTHORIZATION_KEY: z.string().optional(),
-    // Public ID of the same key — attached to every agent wallet at creation so the
-    // server can sign on its behalf without user prompts. Optional while bootstrapping;
-    // required before agent wallets can execute x402 payments.
-    PRIVY_AUTHORIZATION_KEY_ID: z.string().optional(),
+    // Auth.js (NextAuth v5). AUTH_SECRET signs the session cookie + JWT.
+    // Generate via `openssl rand -base64 32`.
+    AUTH_SECRET: z.string().min(32),
+    // Optional canonical URL — Auth.js infers from Vercel/Next env when unset.
+    AUTH_URL: z.string().url().optional(),
+    // Google OAuth credentials — console.cloud.google.com → APIs & Services → Credentials.
+    AUTH_GOOGLE_ID: z.string().min(1),
+    AUTH_GOOGLE_SECRET: z.string().min(1),
     // Upstash Redis (used for rate limiting). Both must be set to enable; when
     // either is missing, rate limiters short-circuit to "allow" so local dev works
     // without needing an Upstash account.
@@ -45,11 +45,22 @@ export const env = createEnv({
     // Optional: when missing, admin endpoints return 503 disabled. Set it to a
     // long random string and scope access via an external cron / curl.
     ADMIN_API_TOKEN: z.string().min(32).optional(),
+    // Umbra Privacy SDK — server-derived seed material. Used to deterministically
+    // derive every agent + merchant Umbra keypair via HMAC. Lose this and every
+    // encrypted balance is unrecoverable. Required.
+    UMBRA_AGENT_SEED_SECRET: z.string().min(32),
+    UMBRA_NETWORK: z.enum(["devnet", "mainnet", "localnet"]).default("devnet"),
+    // Override only when the WS endpoint diverges from HELIUS_RPC_URL (rare).
+    UMBRA_RPC_SUBSCRIPTIONS_URL: z.string().url().optional(),
+    // Umbra hosted services — required for the mixer (UTXO scan + claim relay).
+    // Direct deposit/withdraw paths don't need these, so they're optional in env
+    // and code paths that need them assert presence at call time.
+    UMBRA_INDEXER_URL: z.string().url().optional(),
+    UMBRA_RELAYER_URL: z.string().url().optional(),
   },
 
   client: {
     NEXT_PUBLIC_APP_URL: z.string().url(),
-    NEXT_PUBLIC_PRIVY_APP_ID: z.string().min(1),
     NEXT_PUBLIC_SOLANA_CLUSTER: z
       .enum(["mainnet-beta", "devnet"])
       .default("devnet"),
@@ -57,10 +68,10 @@ export const env = createEnv({
 
   runtimeEnv: {
     DATABASE_URL: process.env.DATABASE_URL,
-    PRIVY_APP_ID: process.env.PRIVY_APP_ID,
-    PRIVY_APP_SECRET: process.env.PRIVY_APP_SECRET,
-    PRIVY_AUTHORIZATION_KEY: process.env.PRIVY_AUTHORIZATION_KEY,
-    PRIVY_AUTHORIZATION_KEY_ID: process.env.PRIVY_AUTHORIZATION_KEY_ID,
+    AUTH_SECRET: process.env.AUTH_SECRET,
+    AUTH_URL: process.env.AUTH_URL,
+    AUTH_GOOGLE_ID: process.env.AUTH_GOOGLE_ID,
+    AUTH_GOOGLE_SECRET: process.env.AUTH_GOOGLE_SECRET,
     UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
     UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
     DODO_PAYMENTS_API_KEY: process.env.DODO_PAYMENTS_API_KEY,
@@ -76,28 +87,15 @@ export const env = createEnv({
     STABLECOIN_MINT: process.env.STABLECOIN_MINT,
     STABLECOIN_DECIMALS: process.env.STABLECOIN_DECIMALS,
     ADMIN_API_TOKEN: process.env.ADMIN_API_TOKEN,
+    UMBRA_AGENT_SEED_SECRET: process.env.UMBRA_AGENT_SEED_SECRET,
+    UMBRA_NETWORK: process.env.UMBRA_NETWORK,
+    UMBRA_RPC_SUBSCRIPTIONS_URL: process.env.UMBRA_RPC_SUBSCRIPTIONS_URL,
+    UMBRA_INDEXER_URL: process.env.UMBRA_INDEXER_URL,
+    UMBRA_RELAYER_URL: process.env.UMBRA_RELAYER_URL,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
-    NEXT_PUBLIC_PRIVY_APP_ID: process.env.NEXT_PUBLIC_PRIVY_APP_ID,
     NEXT_PUBLIC_SOLANA_CLUSTER: process.env.NEXT_PUBLIC_SOLANA_CLUSTER,
   },
 
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
   emptyStringAsUndefined: true,
 });
-
-// Delegated signing requires BOTH the private key and the key ID. Setting only
-// one silently breaks agent-wallet signing at x402 time. Fail loudly at boot
-// instead — but only on the server, and only when env validation wasn't
-// explicitly skipped (e.g. during `next build` in CI without secrets).
-if (
-  typeof window === "undefined" &&
-  !process.env.SKIP_ENV_VALIDATION
-) {
-  const hasKey = !!process.env.PRIVY_AUTHORIZATION_KEY;
-  const hasId = !!process.env.PRIVY_AUTHORIZATION_KEY_ID;
-  if (hasKey !== hasId) {
-    throw new Error(
-      "env: PRIVY_AUTHORIZATION_KEY and PRIVY_AUTHORIZATION_KEY_ID must both be set or both be absent.",
-    );
-  }
-}

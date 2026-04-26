@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback } from "react";
-import { usePrivy } from "@privy-io/react-auth";
 import { useSignout } from "@/hooks/use-signout";
 
 export class UnauthorizedError extends Error {
@@ -11,30 +10,20 @@ export class UnauthorizedError extends Error {
   }
 }
 
-// Auth-aware fetch. Injects `Authorization: Bearer <privy-token>` automatically;
-// any 401 (or missing token) is treated as session death and triggers a full
-// sign-out before the caller sees the error. Non-auth failures (4xx / 5xx)
-// pass through so the caller can handle domain-specific cases.
+// Auth-aware fetch. Under NextAuth the session is carried by an HttpOnly
+// cookie that the browser includes automatically on same-origin requests, so
+// we don't inject any Authorization header here. We DO still treat 401 as
+// session death and trigger a clean sign-out before the caller sees the
+// error — that contract is the point of going through this wrapper.
 //
-// Every hook that talks to our API uses this — it's the only way a new hook
-// can stay consistent with the app-wide "401 ⇒ sign out" contract.
+// Every hook that talks to our API uses this so the app-wide
+// "401 ⇒ sign out" behaviour stays consistent.
 export function useAuthedFetch() {
-  const { getAccessToken } = usePrivy();
   const signOut = useSignout();
 
   return useCallback(
     async (path: string, init?: RequestInit): Promise<Response> => {
-      // Catch SDK-side rejections (Privy token refresh failure, network flake)
-      // and treat them the same as "no token" — triggers a clean signout
-      // instead of bubbling an unhandled rejection into the React tree.
-      const token = await getAccessToken().catch(() => null);
-      if (!token) {
-        void signOut();
-        throw new UnauthorizedError();
-      }
-
       const headers = new Headers(init?.headers);
-      headers.set("Authorization", `Bearer ${token}`);
       if (init?.body && !headers.has("Content-Type")) {
         headers.set("Content-Type", "application/json");
       }
@@ -46,6 +35,6 @@ export function useAuthedFetch() {
       }
       return res;
     },
-    [getAccessToken, signOut],
+    [signOut],
   );
 }

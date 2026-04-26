@@ -249,7 +249,7 @@ async function confirmPendingTx(
         eq(transactions.amountUsdg, amount),
         eq(transactions.status, "pending"),
         eq(transactions.kind, "spend"),
-        eq(agents.publicKey, transfer.fromUserAccount),
+        eq(agents.etaAddress, transfer.fromUserAccount),
         gte(transactions.createdAt, windowStart),
       ),
     )
@@ -276,17 +276,16 @@ async function confirmPendingTx(
     .returning();
   if (!updated) return;
 
-  // Look up the canonical payout wallet from the merchants table and use it
-  // as the broker topic key. Belt-and-braces vs Helius ever normalizing the
-  // recipient differently than our stored form — an SSE subscriber subscribes
-  // with `merchant.payoutWallet` from its auth context, so the publish key
-  // must come from the same source of truth.
+  // Look up the canonical merchant ETA address and use it as the broker topic
+  // key. Belt-and-braces vs Helius normalizing the recipient differently than
+  // our stored form — an SSE subscriber subscribes using its auth context's
+  // `merchant.etaAddress`, so the publish key must come from the same source.
   const [merchantRow] = await db
-    .select({ payoutWallet: merchants.payoutWallet })
+    .select({ etaAddress: merchants.etaAddress })
     .from(merchants)
-    .where(eq(merchants.payoutWallet, updated.counterparty))
+    .where(eq(merchants.etaAddress, updated.counterparty))
     .limit(1);
-  const topicKey = merchantRow?.payoutWallet ?? updated.counterparty;
+  const topicKey = merchantRow?.etaAddress ?? updated.counterparty;
 
   eventBroker.publish(merchantPaymentTopic(topicKey), {
     kind: "payment",

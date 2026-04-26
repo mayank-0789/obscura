@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { usePrivy } from "@privy-io/react-auth";
+import { useSession } from "next-auth/react";
 import { useAuthedFetch } from "@/hooks/use-authed-fetch";
 
 // Stop polling after this long. If the webhook didn't land in 5 minutes, it's
@@ -28,7 +28,7 @@ export type TopupStatus =
 // instance mounted. After the timeout, the query returns state='timeout'
 // so the UI can show a retry prompt.
 export function useTopupStatus(paymentId: string | null) {
-  const { ready, authenticated } = usePrivy();
+  const { status } = useSession();
   const authedFetch = useAuthedFetch();
 
   // Capture mount time once — polling-cutoff should not reset on each refetch.
@@ -36,7 +36,7 @@ export function useTopupStatus(paymentId: string | null) {
 
   return useQuery<TopupStatus>({
     queryKey: ["topup-status", paymentId],
-    enabled: ready && authenticated && !!paymentId,
+    enabled: status === "authenticated" && !!paymentId,
     refetchInterval: (query) => {
       const state = query.state.data?.state;
       if (state === "confirmed" || state === "failed" || state === "timeout") {

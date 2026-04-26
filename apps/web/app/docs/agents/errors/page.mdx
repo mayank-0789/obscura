@@ -39,7 +39,7 @@ try {
         // The merchant sent a malformed 402 — not your fault.
         throw new Error("Merchant payment request was invalid.");
       case "signing_failed":
-        // Privy or Solana failed to sign. Safe to retry.
+        // Umbra or Solana failed to sign. Safe to retry.
         throw new Error("Payment signing failed — retry in a moment.");
       case "network_error":
         // Couldn't reach Payrail backend.
@@ -62,7 +62,7 @@ try {
     [<code key="c">missing_token</code>, "401", <>No Bearer token on the request to Payrail. The SDK sets this for you — only fires if <code>apiKey</code> is empty.</>],
     [<code key="c">invalid_token</code>, "401", "API key is unknown, revoked, or mis-formatted."],
     [<code key="c">invalid_challenge</code>, "400", "Merchant's 402 response is malformed or for the wrong network/mint."],
-    [<code key="c">signing_failed</code>, "500", "Privy or Solana failed to sign. Safe to retry once."],
+    [<code key="c">signing_failed</code>, "500", "Umbra or Solana failed to sign. Safe to retry once."],
     [<code key="c">bad_request</code>, "400", <>SDK-level constructor issue (e.g. missing <code>apiKey</code>) or a malformed sign-request body.</>],
     [<code key="c">server_error</code>, "500", "Unhandled Payrail backend error. Safe to retry once; contact support if persistent."],
     [<code key="c">no_payment_required_header</code>, "—", "Merchant returned 402 but without a PAYMENT-REQUIRED header (protocol violation on the merchant)."],

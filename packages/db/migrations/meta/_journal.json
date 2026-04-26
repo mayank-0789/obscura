@@ -5,22 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1776569269474,
-      "tag": "0000_magenta_killmonger",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1776676743225,
-      "tag": "0001_ordinary_wilson_fisk",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1776713325113,
-      "tag": "0002_violet_senator_kelly",
+      "when": 1777209727530,
+      "tag": "0000_tricky_wallop",
       "breakpoints": true
     }
   ]

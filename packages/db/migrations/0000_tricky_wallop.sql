@@ -4,8 +4,9 @@ CREATE TYPE "public"."budget_period" AS ENUM('monthly', 'daily');--> statement-b
 CREATE TYPE "public"."tx_direction" AS ENUM('in', 'out');--> statement-breakpoint
 CREATE TYPE "public"."tx_kind" AS ENUM('topup', 'spend', 'refund', 'payout');--> statement-breakpoint
 CREATE TYPE "public"."tx_status" AS ENUM('pending', 'confirmed', 'failed');--> statement-breakpoint
+CREATE TYPE "public"."umbra_account_status" AS ENUM('active', 'deregistered');--> statement-breakpoint
 CREATE TYPE "public"."user_role" AS ENUM('user', 'merchant', 'both');--> statement-breakpoint
-CREATE TYPE "public"."webhook_provider" AS ENUM('dodo', 'privy', 'helius');--> statement-breakpoint
+CREATE TYPE "public"."webhook_provider" AS ENUM('dodo', 'helius');--> statement-breakpoint
 CREATE TABLE "agent_api_keys" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"agent_id" uuid NOT NULL,
@@ -20,9 +21,10 @@ CREATE TABLE "agents" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
 	"name" text NOT NULL,
-	"privy_wallet_id" text NOT NULL,
-	"public_key" text NOT NULL,
+	"eta_address" text NOT NULL,
 	"status" "agent_status" DEFAULT 'active' NOT NULL,
+	"umbra_status" "umbra_account_status",
+	"umbra_registered_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -65,9 +67,10 @@ CREATE TABLE "merchants" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"owner_user_id" uuid NOT NULL,
 	"name" text,
-	"payout_wallet" text NOT NULL,
-	"privy_wallet_id" text NOT NULL,
+	"eta_address" text NOT NULL,
 	"dodo_account_id" text,
+	"umbra_status" "umbra_account_status",
+	"umbra_registered_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -81,7 +84,11 @@ CREATE TABLE "transactions" (
 	"amount_inr" bigint,
 	"rate_snapshot" numeric(10, 4),
 	"counterparty" text NOT NULL,
+	"merchant_host" text,
 	"solana_sig" text,
+	"queue_signature" text,
+	"callback_signature" text,
+	"callback_status" text,
 	"dodo_payment_id" text,
 	"status" "tx_status" DEFAULT 'pending' NOT NULL,
 	"memo" text,
@@ -91,7 +98,7 @@ CREATE TABLE "transactions" (
 --> statement-breakpoint
 CREATE TABLE "users" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"privy_id" text NOT NULL,
+	"auth_id" text NOT NULL,
 	"email" text,
 	"phone" text,
 	"role" "user_role" DEFAULT 'user' NOT NULL,
@@ -130,16 +137,17 @@ ALTER TABLE "x402_nonces" ADD CONSTRAINT "x402_nonces_merchant_api_id_merchant_a
 ALTER TABLE "x402_nonces" ADD CONSTRAINT "x402_nonces_agent_id_agents_id_fk" FOREIGN KEY ("agent_id") REFERENCES "public"."agents"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "agent_api_keys_agent_id_idx" ON "agent_api_keys" USING btree ("agent_id");--> statement-breakpoint
 CREATE INDEX "agents_user_id_idx" ON "agents" USING btree ("user_id");--> statement-breakpoint
-CREATE UNIQUE INDEX "agents_public_key_idx" ON "agents" USING btree ("public_key");--> statement-breakpoint
+CREATE UNIQUE INDEX "agents_eta_address_idx" ON "agents" USING btree ("eta_address");--> statement-breakpoint
 CREATE UNIQUE INDEX "budgets_agent_id_idx" ON "budgets" USING btree ("agent_id");--> statement-breakpoint
 CREATE INDEX "merchant_api_keys_merchant_id_idx" ON "merchant_api_keys" USING btree ("merchant_id");--> statement-breakpoint
 CREATE INDEX "merchant_apis_merchant_id_idx" ON "merchant_apis" USING btree ("merchant_id");--> statement-breakpoint
-CREATE INDEX "merchants_owner_user_id_idx" ON "merchants" USING btree ("owner_user_id");--> statement-breakpoint
-CREATE UNIQUE INDEX "merchants_payout_wallet_idx" ON "merchants" USING btree ("payout_wallet");--> statement-breakpoint
+CREATE UNIQUE INDEX "merchants_owner_user_id_idx" ON "merchants" USING btree ("owner_user_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "merchants_eta_address_idx" ON "merchants" USING btree ("eta_address");--> statement-breakpoint
 CREATE INDEX "transactions_agent_id_created_at_idx" ON "transactions" USING btree ("agent_id","created_at");--> statement-breakpoint
 CREATE UNIQUE INDEX "transactions_solana_sig_idx" ON "transactions" USING btree ("solana_sig");--> statement-breakpoint
 CREATE INDEX "transactions_dodo_payment_id_idx" ON "transactions" USING btree ("dodo_payment_id");--> statement-breakpoint
-CREATE UNIQUE INDEX "users_privy_id_idx" ON "users" USING btree ("privy_id");--> statement-breakpoint
+CREATE INDEX "transactions_counterparty_confirmed_idx" ON "transactions" USING btree ("counterparty","status","created_at" DESC NULLS LAST) WHERE "transactions"."kind" = 'spend';--> statement-breakpoint
+CREATE UNIQUE INDEX "users_auth_id_idx" ON "users" USING btree ("auth_id");--> statement-breakpoint
 CREATE INDEX "users_email_idx" ON "users" USING btree ("email");--> statement-breakpoint
 CREATE UNIQUE INDEX "webhook_log_provider_event_idx" ON "webhook_log" USING btree ("provider","event_id");--> statement-breakpoint
 CREATE INDEX "webhook_log_unprocessed_idx" ON "webhook_log" USING btree ("processed_at");--> statement-breakpoint

@@ -7,9 +7,9 @@ import {
   type Merchant,
   type User,
 } from "@/lib/db";
-import { privy } from "@/lib/privy-server";
+import { auth } from "@/lib/auth-config";
 import { apiError } from "@/lib/api";
-import { AuthError, loadUserByPrivyId } from "@/lib/auth";
+import { AuthError, loadUserByAuthId } from "@/lib/auth";
 import {
   hashMerchantApiKey,
   MERCHANT_KEY_PREFIX,
@@ -31,7 +31,7 @@ export class MerchantAuthError extends Error {
 /**
  * Context produced by `requireMerchant` / `merchantAuthGuard`.
  *
- * `user` is only present when the caller authenticated via Privy session JWT
+ * `user` is only present when the caller authenticated via session cookie
  * (i.e. a logged-in browser). mk_ Bearer callers have no associated session,
  * so `user` is null — if a downstream handler needs the owning user it can
  * query by `merchant.ownerUserId`.
@@ -45,23 +45,21 @@ export type MerchantContext = {
 /**
  * Dual-mode auth for merchant-scoped endpoints. Accepts either:
  *   - `Authorization: Bearer mk_...`  → look up merchant_api_keys
- *   - `Authorization: Bearer <JWT>`    → verify Privy token, load user, load
- *                                        merchant by ownerUserId
+ *   - NextAuth session cookie          → resolve user, load merchant by ownerUserId
  *
- * We route by token prefix (mk_ vs. anything else) — zero-cost diagnostic,
- * no ambiguity, no speculative Privy verify on a clearly-mk_ token.
+ * Routing: if a Bearer header is present we take that path; otherwise we
+ * fall back to NextAuth's `auth()` which reads the session cookie.
  */
 export async function requireMerchant(req: Request): Promise<MerchantContext> {
   const token = req.headers
     .get("authorization")
     ?.replace(/^Bearer\s+/i, "")
     .trim();
-  if (!token) throw new MerchantAuthError("missing_token");
 
-  if (token.startsWith(MERCHANT_KEY_PREFIX)) {
+  if (token && token.startsWith(MERCHANT_KEY_PREFIX)) {
     return resolveByApiKey(token);
   }
-  return resolveBySessionJwt(token);
+  return resolveBySession();
 }
 
 async function resolveByApiKey(token: string): Promise<MerchantContext> {
@@ -98,20 +96,17 @@ async function resolveByApiKey(token: string): Promise<MerchantContext> {
   return { merchant: row.merchant, user: null, authMode: "api_key" };
 }
 
-async function resolveBySessionJwt(token: string): Promise<MerchantContext> {
-  let privyUserId: string;
-  try {
-    const result = await privy.verifyAuthToken(token);
-    privyUserId = result.userId;
-  } catch {
-    throw new MerchantAuthError("invalid_token");
+async function resolveBySession(): Promise<MerchantContext> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new MerchantAuthError("missing_token");
   }
 
   // Delegated to lib/auth so merchant-auth inherits any future checks
   // (banned-user, soft-delete) added to the shared user resolver.
   let user: User;
   try {
-    user = await loadUserByPrivyId(privyUserId);
+    user = await loadUserByAuthId(session.user.id);
   } catch (err) {
     if (err instanceof AuthError && err.code === "user_not_synced") {
       throw new MerchantAuthError("user_not_synced");

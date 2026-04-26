@@ -35,7 +35,7 @@ export function MerchantDashboardShell() {
 
         <div className="space-y-6">
           <PayoutWalletCard
-            payoutWallet={merchant?.payoutWallet ?? null}
+            payoutWallet={merchant?.etaAddress ?? null}
             provisionedAt={merchant?.createdAt ?? null}
           />
 
@@ -48,7 +48,7 @@ export function MerchantDashboardShell() {
           />
 
           <QuickstartSnippetCard
-            payoutWallet={merchant?.payoutWallet ?? null}
+            payoutWallet={merchant?.etaAddress ?? null}
           />
         </div>
       </div>

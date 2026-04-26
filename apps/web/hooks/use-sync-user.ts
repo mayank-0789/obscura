@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { usePrivy } from "@privy-io/react-auth";
+import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { useAuthedFetch, UnauthorizedError } from "@/hooks/use-authed-fetch";
 
-// Idempotent POST to /api/auth/sync whenever a Privy session becomes ready.
-// Redirects are handled by useLogin's onComplete — this hook only cares about
+// Idempotent POST to /api/auth/sync whenever a NextAuth session becomes ready.
+// Redirects are handled by the post-login flow — this hook only cares about
 // DB state. 401 is already handled inside useAuthedFetch (force sign-out),
 // so we only need to toast for transient non-auth failures.
 //
@@ -15,12 +15,12 @@ import { useAuthedFetch, UnauthorizedError } from "@/hooks/use-authed-fetch";
 // otherwise re-fire sync). The upsert is DB-idempotent; this just spares a
 // round-trip.
 export function useSyncUser() {
-  const { ready, authenticated } = usePrivy();
+  const { status } = useSession();
   const authedFetch = useAuthedFetch();
   const syncedRef = useRef(false);
 
   useEffect(() => {
-    if (!ready || !authenticated) {
+    if (status !== "authenticated") {
       syncedRef.current = false;
       return;
     }
@@ -49,5 +49,5 @@ export function useSyncUser() {
     return () => {
       cancelled = true;
     };
-  }, [ready, authenticated, authedFetch]);
+  }, [status, authedFetch]);
 }

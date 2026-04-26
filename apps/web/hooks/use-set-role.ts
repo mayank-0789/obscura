@@ -10,7 +10,7 @@ type SetRoleResponse = {
   user: User;
   merchant: {
     id: string;
-    payoutWallet: string;
+    etaAddress: string;
     name: string | null;
     createdAt: string;
   } | null;

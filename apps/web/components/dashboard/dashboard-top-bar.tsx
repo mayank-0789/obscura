@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { usePrivy } from "@privy-io/react-auth";
+import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { Logo } from "@/components/marketing/logo";
 import { useSignout } from "@/hooks/use-signout";
@@ -29,18 +29,14 @@ export function DashboardTopBar({
   onOpenPalette,
 }: Props) {
   const router = useRouter();
-  const { user } = usePrivy();
+  const { data: session } = useSession();
   const signOut = useSignout();
   const { data: me } = useUser();
   const setRole = useSetRole();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const identity =
-    user?.email?.address ??
-    user?.google?.email ??
-    user?.phone?.number ??
-    (user ? `${user.id.slice(0, 10)}…` : "");
+  const identity = session?.user?.email ?? "";
 
   // Surface the "add the other side" affordance inside the authed product.
   // This is the replacement for the landing-page intent scheme: if a user

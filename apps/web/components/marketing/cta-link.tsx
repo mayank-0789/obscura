@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { usePrivy, useLogin } from "@privy-io/react-auth";
+import { useSession, signIn } from "next-auth/react";
 import { useUser } from "@/hooks/use-user";
 import { LAST_ROLE_KEY, type Role } from "@/lib/onboarding";
 
@@ -10,7 +10,7 @@ type Props = {
   // Which side of the rail this CTA is selling. Only consulted for
   // already-authenticated users — to decide which dashboard to jump to.
   // Unauthed clicks just open the login flow; post-login routing is
-  // role-based, not intent-based.
+  // role-based (handled by /onboarding).
   dashboard: "agent" | "merchant";
   children: React.ReactNode;
   variant?: "primary" | "secondary" | "inline";
@@ -18,23 +18,18 @@ type Props = {
   className?: string;
 };
 
-// Landing-page CTA. Behavior:
+// Landing-page CTA. Behaviour:
 //
-//   unauthed                       → Privy login. SignInButton's onComplete
-//                                    routes based on /me + ONBOARDED_KEY
-//                                    only — the CTA identity is NOT
-//                                    preserved across the login boundary.
-//                                    Fresh signups always see /onboarding.
+//   unauthed                       → NextAuth Google sign-in with
+//                                    callbackUrl=/onboarding. The onboarding
+//                                    page handles role/ONBOARDED routing.
 //
 //   authed + role covers dashboard → direct-nav to matching dashboard.
 //
 //   authed + role doesn't cover    → direct-nav to matching dashboard
 //                                    ANYWAY. The dashboard handles "you
 //                                    don't have a merchant row yet" with
-//                                    a register CTA (see MerchantAppShell's
-//                                    MissingMerchantState + the agent-side
-//                                    empty state). Single code path, no
-//                                    CTA-click-with-hidden-consequence.
+//                                    a register CTA.
 //
 //   authed + /me still loading     → short pending state; a fast second
 //                                    click waits for data.
@@ -46,20 +41,19 @@ export function CtaLink({
   className = "",
 }: Props) {
   const router = useRouter();
-  const { ready, authenticated } = usePrivy();
+  const { status } = useSession();
   const { data: me, isFetched: meFetched } = useUser();
-  const { login } = useLogin();
   const role = me?.user.role as Role | undefined;
   const [pending, setPending] = useState(false);
 
   const handleClick = () => {
     if (pending) return;
-    if (!ready) return;
+    if (status === "loading") return;
 
-    if (!authenticated) {
+    if (status !== "authenticated") {
       setPending(true);
       setTimeout(() => setPending(false), 3000);
-      login();
+      void signIn("google", { callbackUrl: "/onboarding" });
       return;
     }
 

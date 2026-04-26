@@ -2,7 +2,7 @@ import "server-only";
 
 // In-process pub/sub broker used to fan out real-time payment events from the
 // Helius webhook handler to any SSE streams currently subscribed to a given
-// merchant's payout wallet.
+// merchant's ETA address.
 //
 // ⚠ Single-instance only. In a multi-replica deployment (horizontal scaling
 // across Vercel regions / multiple Node pods), the webhook lands on instance
@@ -66,6 +66,6 @@ type GlobalWithBroker = { [GLOBAL_KEY]?: EventBroker };
 const g = globalThis as unknown as GlobalWithBroker;
 export const eventBroker: EventBroker = g[GLOBAL_KEY] ?? (g[GLOBAL_KEY] = new EventBroker());
 
-export function merchantPaymentTopic(payoutWallet: string): string {
-  return `merchant:${payoutWallet}:payment`;
+export function merchantPaymentTopic(etaAddress: string): string {
+  return `merchant:${etaAddress}:payment`;
 }

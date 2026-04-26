@@ -1,46 +1,48 @@
 // POST /api/x402/sign — the heart of Payrail's agent-spending loop.
 //
 // Called by @payrail-app/sdk when an agent's fetch() receives a 402 from a paid
-// API. The SDK forwards the PAYMENT-REQUIRED header (base64 JSON from the
-// merchant) + the original URL; we authenticate the caller via the agent's
-// API key, enforce the monthly spend cap, build the Solana payment
-// transaction, sign it via Privy delegated signing, and hand back the
-// PAYMENT-SIGNATURE header that the SDK will put on the retried request.
+// API. We authenticate the caller via the agent's API key, enforce the monthly
+// spend cap, and execute the confidential transfer from the agent's ETA into
+// the merchant's ETA via the Umbra mixer (Path B). Returns a base64-encoded
+// "umbra" payment header carrying the on-chain proofs the merchant verifies
+// before serving the resource.
 //
 // Auth model: Bearer <agent-api-key>. Separate from user-JWT routes — the
 // caller here is an agent's process, not a human with a session.
 //
-// Atomicity: the cap check + spend-increment run as a single UPDATE WHERE
-// RETURNING. Zero rows back = over cap. This is the only race-safe pattern;
-// a read-then-write would let concurrent signs blow through the cap.
+// Atomicity: cap check + spend-increment run as a single UPDATE WHERE
+// RETURNING. Zero rows back = over cap. Race-safe even under concurrency; a
+// read-then-write would let parallel signs blow through the cap.
 //
-// What this route does NOT do: broadcast the tx. We only sign. The signed tx
-// rides back to the merchant in the PAYMENT-SIGNATURE header, the merchant
-// forwards it to the PayAI facilitator, and the facilitator broadcasts +
-// settles. Consequence: we increment spent_usdg optimistically; in the rare
-// case the merchant/facilitator fails to settle, the spent counter is ahead
-// of the real on-chain debit. A reconciler cron (v2) will scan pending
-// transactions and decrement the counter if the tx never lands.
+// Mixer protocol divergence vs. classic x402:
+//   - Classic x402-solana hands the merchant a signed SPL transfer; merchant
+//     forwards to a facilitator that broadcasts it. Settlement is synchronous.
+//   - Mixer (Path B) deducts from the agent's encrypted balance and inserts a
+//     UTXO commitment in the on-chain mixer tree, addressed to the merchant.
+//     The merchant's claim daemon picks it up later. Settlement is async, and
+//     the recipient's wallet is unobservable from the deposit tx.
+//
+// We pay this latency cost (proof gen + Arcium MPC callback ≈ 10–25s) in
+// exchange for two privacy properties no classic rail offers: on-chain link
+// between sender ETA and recipient ETA is broken by the mixer, and the
+// transferred amount is encrypted. The merchant only sees the queue signature
+// + the destination address it recognises as its own.
 
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, budgets, transactions } from "@/lib/db";
 import { apiError, apiOk } from "@/lib/api";
 import { agentAuthGuard } from "@/lib/agent-auth";
-import { privy } from "@/lib/privy-server";
 import { env } from "@/lib/env";
-import { getConnection } from "@/lib/solana";
-import { buildUnsignedX402PaymentTx } from "@/lib/x402-tx";
+import { createReceiverClaimableUtxo } from "@/lib/umbra";
 import { PublicKey } from "@payrail-app/solana";
-import { createPaymentPayload } from "x402-solana";
 import type { PaymentRequired, PaymentRequirements } from "x402-solana";
-import type { VersionedTransaction } from "@solana/web3.js";
 
 const SignBody = z.object({
   // base64-encoded JSON of PaymentRequired from the merchant's 402 response.
   paymentRequiredHeader: z.string().min(1),
   // Original URL the agent tried to GET — used for display/auditing + the
-  // PaymentPayload's resource field (x402 v2 spec).
+  // payment payload's `resource` field.
   resourceUrl: z.string().url(),
 });
 
@@ -49,6 +51,37 @@ const CLUSTER_CAIP2: Record<string, string> = {
   devnet: "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1",
   "mainnet-beta": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
 };
+
+// In-flight request tracking. Single-process Map; for multi-instance
+// deployments swap to Redis with the same key shape. Keeps two protections:
+//
+//   1. Idempotency — if a client times out mid-prove (~20s) and retries the
+//      same intent, the second call sees the first in `inFlightFingerprints`
+//      and returns a clean 409 instead of double-debiting the cap and
+//      double-submitting to Umbra.
+//   2. Per-agent concurrency cap — bounds how many parallel proves we'll
+//      start for one agent. Without this, a misbehaving agent could spin up
+//      N concurrent provers and exhaust CPU + RPC connection pools.
+//
+// The fingerprint deliberately omits time so a fast retry collapses with the
+// original. Eviction happens in `finally` blocks below.
+const inFlightFingerprints = new Set<string>();
+const inFlightPerAgent = new Map<string, number>();
+const PER_AGENT_INFLIGHT_LIMIT = 3;
+
+function signFingerprint(
+  agentId: string,
+  resourceUrl: string,
+  requirements: PaymentRequirements,
+): string {
+  return [
+    agentId,
+    resourceUrl,
+    requirements.amount,
+    requirements.payTo,
+    requirements.asset,
+  ].join("|");
+}
 
 export async function POST(req: Request) {
   const ctx = await agentAuthGuard(req);
@@ -70,11 +103,55 @@ export async function POST(req: Request) {
 
   const amount = BigInt(requirements.amount);
 
+  // Idempotency + concurrency guards BEFORE any DB write. We track a stable
+  // fingerprint of the spend intent (no timestamp); a duplicate request from
+  // a flaky client collapses on this check. A third unrelated parallel
+  // request from the same agent gets rate_limited rather than starting a
+  // fourth ZK prove and exhausting CPU.
+  const fingerprint = signFingerprint(agent.id, body.resourceUrl, requirements);
+  if (inFlightFingerprints.has(fingerprint)) {
+    return apiError(
+      "conflict",
+      "duplicate spend request already in flight; do not retry",
+    );
+  }
+  const currentInFlight = inFlightPerAgent.get(agent.id) ?? 0;
+  if (currentInFlight >= PER_AGENT_INFLIGHT_LIMIT) {
+    return apiError(
+      "rate_limited",
+      `agent has ${currentInFlight} spends in flight; max ${PER_AGENT_INFLIGHT_LIMIT}`,
+    );
+  }
+  inFlightFingerprints.add(fingerprint);
+  inFlightPerAgent.set(agent.id, currentInFlight + 1);
+  try {
+    return await performSign({
+      agent,
+      budget,
+      body,
+      requirements,
+      amount,
+    });
+  } finally {
+    inFlightFingerprints.delete(fingerprint);
+    const next = (inFlightPerAgent.get(agent.id) ?? 1) - 1;
+    if (next <= 0) inFlightPerAgent.delete(agent.id);
+    else inFlightPerAgent.set(agent.id, next);
+  }
+}
+
+async function performSign(input: {
+  agent: { id: string; etaAddress: string };
+  budget: { id: string };
+  body: z.infer<typeof SignBody>;
+  requirements: PaymentRequirements;
+  amount: bigint;
+}): Promise<Response> {
+  const { agent, budget, body, requirements, amount } = input;
+
   // Lazy period reset (replaces the monthly-cron the schema originally
   // assumed). Idempotent: only touches budgets whose period has elapsed, and
   // concurrent resets converge on the same (spentUsdg=0, periodStart=now).
-  // Kept as a separate statement from the cap check below so the cap check
-  // stays the same race-safe single UPDATE — reset first, then enforce.
   await db
     .update(budgets)
     .set({
@@ -88,12 +165,6 @@ export async function POST(req: Request) {
 
   // Atomic cap check + increment. Zero rows back means the would-be post-update
   // value exceeds cap_usdg — no TOCTOU window even under concurrency.
-  //
-  // We use update().returning() + insert().returning() as two separate
-  // statements rather than db.batch() because the cap check must stand alone
-  // (succeed or fail atomically) and the pending-row insert is a pure write
-  // that doesn't depend on further data from the update. Wrapping both in a
-  // batch would add a round-trip without buying correctness.
   const [updatedBudget] = await db
     .update(budgets)
     .set({ spentUsdg: sql`${budgets.spentUsdg} + ${amount}` })
@@ -106,9 +177,9 @@ export async function POST(req: Request) {
     return apiError("over_cap", `amount ${amount} would exceed monthly cap`);
   }
 
-  // Record the intent as a pending transaction BEFORE signing. If the insert
-  // throws, the budget has already been incremented — we MUST compensate or
-  // leak money. safeDbOp makes revertCap failures loud but non-blocking.
+  // Record the intent as a pending transaction BEFORE the SDK call. If the
+  // insert throws, the budget has already been incremented — we MUST
+  // compensate or leak money.
   const merchantHost = safeHost(body.resourceUrl);
   let pendingTxId: string;
   try {
@@ -135,26 +206,74 @@ export async function POST(req: Request) {
     return apiError("server_error");
   }
 
-  // Build + sign. Any failure past this point reverts the cap and marks the
-  // transactions row failed, so budget.spent_usdg stays consistent with
-  // reality even if the sign throws.
+  // Hot path: deduct from agent's ETA, drop a UTXO commitment in the mixer
+  // tree, addressed to the merchant's ETA. Latency is dominated by Groth16
+  // prove (~10–30s) + Arcium MPC callback. SDK retries the transaction
+  // forwarder under the hood; if anything escapes here it's a hard failure.
   try {
-    const signedTx = await buildAndSignPaymentTx(
-      new PublicKey(agent.publicKey),
-      agent.privyWalletId,
-      requirements,
-    );
-    const paymentSignatureHeader = createPaymentPayload(
-      signedTx,
-      requirements,
-      body.resourceUrl,
-    );
+    const result = await createReceiverClaimableUtxo({
+      fromSubject: "agent",
+      fromSubjectId: agent.id,
+      recipientEtaAddress: requirements.payTo,
+      amountMicros: amount,
+    });
+
+    const finalized = result.callbackStatus === "finalized";
+    await db
+      .update(transactions)
+      .set({
+        queueSignature: result.queueSignature,
+        callbackSignature: result.callbackSignature ?? null,
+        callbackStatus: result.callbackStatus ?? null,
+        // Mirror callback signature to solana_sig so callers that key on
+        // solana_sig (e.g. merchant earnings queries) keep working unchanged.
+        solanaSig: result.callbackSignature ?? null,
+        status: finalized ? "confirmed" : "pending",
+        confirmedAt: finalized ? sql`now()` : null,
+      })
+      .where(eq(transactions.id, pendingTxId));
+
+    // If the MPC callback didn't finalise, the deposit is in an uncertain
+    // state: the queue tx already landed (sender's encrypted balance is
+    // already debited, or about to be once Arcium completes the MPC), so we
+    // CANNOT revert the cap counter without diverging from on-chain truth and
+    // letting the agent double-spend. Instead: leave the cap incremented,
+    // mark the tx pending with the queue signature for later reconciliation,
+    // and refuse to issue the payment header. A reconciliation job (or the
+    // operator, manually) decides whether the MPC eventually completed and
+    // either confirms or fails the row.
+    if (!finalized) {
+      console.warn(
+        `[x402/sign] tx=${pendingTxId} agent=${agent.id} ` +
+          `callbackStatus=${result.callbackStatus ?? "(none)"} ` +
+          `queueSig=${result.queueSignature} — refusing to issue payment ` +
+          "header; cap remains incremented (on-chain debit may have landed)",
+      );
+      // Generic message — don't name our infrastructure (Umbra/Arcium MPC)
+      // in errors that flow to third-party SDK callers. The detailed reason
+      // is in the server log above; the agent-side caller doesn't benefit
+      // from the specifics and we don't want to advertise infra to scrapers.
+      return apiError(
+        "signing_failed",
+        "payment is in flight; do not retry until reconciliation completes",
+      );
+    }
+
+    const paymentSignatureHeader = encodePaymentHeader({
+      scheme: "umbra-mixer-v1",
+      network: env.NEXT_PUBLIC_SOLANA_CLUSTER,
+      asset: requirements.asset,
+      amount: requirements.amount,
+      recipientEtaAddress: requirements.payTo,
+      resource: body.resourceUrl,
+      proofSignature: result.createProofAccountSignature,
+      queueSignature: result.queueSignature,
+      callbackSignature: result.callbackSignature,
+    });
     return apiOk({ paymentSignatureHeader });
   } catch (err) {
-    // Log the real error server-side; do NOT leak err.message to the caller —
-    // Privy errors can contain wallet IDs, app IDs, and stack fragments.
     console.error(
-      `[x402/sign] sign failed for agent=${agent.id} tx=${pendingTxId}:`,
+      `[x402/sign] umbra mixer failed for agent=${agent.id} tx=${pendingTxId}:`,
       err,
     );
     await safeRevertCap(budget.id, amount);
@@ -193,8 +312,8 @@ function decodePaymentRequirements(
 
 // Lightweight sanity check BEFORE we touch the database. Returns an error
 // message string on failure, or null if valid. All pubkey validation happens
-// here so malformed merchant input can't reach `new PublicKey(...)` where it
-// would surface as a generic "Non-base58 character" deeper in the flow.
+// here so malformed merchant input can't reach `new PublicKey(...)` deeper in
+// the flow.
 function validateRequirements(r: PaymentRequirements): string | null {
   if (r.asset !== env.STABLECOIN_MINT) {
     return "asset mint does not match configured stablecoin";
@@ -202,14 +321,6 @@ function validateRequirements(r: PaymentRequirements): string | null {
   if (!isValidPubkey(r.asset)) return "asset is not a valid Solana pubkey";
   if (!r.payTo) return "payTo missing";
   if (!isValidPubkey(r.payTo)) return "payTo is not a valid Solana pubkey";
-
-  const feePayer = r.extra?.feePayer;
-  if (!feePayer || typeof feePayer !== "string") {
-    return "extra.feePayer missing (facilitator)";
-  }
-  if (!isValidPubkey(feePayer)) {
-    return "extra.feePayer is not a valid Solana pubkey";
-  }
 
   let amt: bigint;
   try {
@@ -230,41 +341,29 @@ function isValidPubkey(s: string): boolean {
   }
 }
 
-async function buildAndSignPaymentTx(
-  agentPubkey: PublicKey,
-  privyWalletId: string,
-  requirements: PaymentRequirements,
-): Promise<VersionedTransaction> {
-  const connection = getConnection();
+// Stable JSON envelope for the umbra-mixer payment scheme. The merchant SDK
+// decodes this header, fetches `queueSignature` (and `callbackSignature` if
+// present) via `getTransaction`, and verifies on-chain that:
+//   1. The tx came from a registered Umbra subject
+//   2. It targets the merchant's own etaAddress
+//   3. The mint matches `asset`
+// `amount` is *not* on-chain (it's encrypted); merchants treat it as the
+// agent's claim of payment, with the actual credit settling when the claim
+// daemon claims the UTXO into the merchant's encrypted balance.
+type UmbraPaymentEnvelope = {
+  scheme: "umbra-mixer-v1";
+  network: string;
+  asset: string;
+  amount: string;
+  recipientEtaAddress: string;
+  resource: string;
+  proofSignature: string;
+  queueSignature: string;
+  callbackSignature?: string;
+};
 
-  const unsigned = await buildUnsignedX402PaymentTx({
-    connection,
-    agentPubkey,
-    requirements,
-  });
-
-  const { signedTransaction } = await privy.walletApi.solana.signTransaction({
-    walletId: privyWalletId,
-    transaction: unsigned,
-  });
-
-  // Privy's SDK returns `Transaction | VersionedTransaction`; we passed in v0
-  // so we should receive v0 back. Defensive narrowing also verifies a real
-  // signature was produced — a return value without signatures would mean the
-  // sign call silently no-op'd (shouldn't happen with delegated keys, but
-  // guard against SDK regressions and mis-configuration).
-  if (!signedTransaction || !("version" in signedTransaction)) {
-    throw new Error(
-      "Privy returned unexpected signed-transaction shape (not a VersionedTransaction)",
-    );
-  }
-  if (
-    !Array.isArray(signedTransaction.signatures) ||
-    signedTransaction.signatures.length === 0
-  ) {
-    throw new Error("Privy returned a VersionedTransaction without signatures");
-  }
-  return signedTransaction;
+function encodePaymentHeader(envelope: UmbraPaymentEnvelope): string {
+  return Buffer.from(JSON.stringify(envelope), "utf8").toString("base64");
 }
 
 async function safeRevertCap(

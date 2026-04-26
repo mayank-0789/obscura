@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { count, desc, eq } from "drizzle-orm";
-import { privy } from "@/lib/privy-server";
 import {
   db,
   agents,
@@ -11,14 +10,18 @@ import {
 } from "@/lib/db";
 import { authGuard } from "@/lib/auth";
 import { apiError, apiOk } from "@/lib/api";
-import { env } from "@/lib/env";
 import { quoteInrToUsdg } from "@/lib/fx";
 import { generateAgentApiKey } from "@/lib/agent-keys";
 import { serializeAgent } from "@/lib/agent-serialize";
 import { checkLimit } from "@/lib/ratelimit";
+import {
+  deriveAgentEtaAddress,
+  fundSubjectAddressIfNeeded,
+  registerSubjectOnUmbra,
+} from "@/lib/umbra";
 
-// Hard ceiling on agents per user. Protects Privy wallet quota + keeps a single
-// account from ballooning the DB. Raise as we learn real usage patterns.
+// Hard ceiling on agents per user. Keeps a single account from ballooning the
+// DB. Raise as we learn real usage patterns.
 const AGENTS_PER_USER_LIMIT = 50;
 
 const CreateAgentBody = z.object({
@@ -44,8 +47,25 @@ export async function GET(req: Request) {
   });
 }
 
-// POST /api/agents — create an agent: Privy Solana wallet + agents row +
-// budgets row + first API key. Returns the plaintext key exactly once.
+// POST /api/agents — create an agent end-to-end:
+//   1. Derive the Umbra-side keypair from the new agent's UUID + the env-stored
+//      master seed. Pure derivation, no I/O.
+//   2. Lazy-fund the derived address with SOL from treasury so it can pay its
+//      own Umbra registration fees (~3 txs, ~0.01 SOL). Idempotent.
+//   3. Eager-register on Umbra (`confidential: true, anonymous: false`). ~3-5s
+//      end-to-end. Eager (not lazy at first top-up) so the recipient-pre-reg
+//      gotcha never bites: by the time anyone tries to deposit/transfer to
+//      this agent, it's already a valid Umbra subject.
+//   4. Atomic batch insert: agents row (with eta_address + umbra_status='active'
+//      + umbra_registered_at), budgets row, first API key.
+//
+// Failure modes:
+//   - Lazy fund fails (RPC error) → 500. Try again; idempotent.
+//   - Register fails → 500. SOL has landed at the eta_address but no DB rows
+//     exist yet — orphan SOL, recoverable manually if it ever matters.
+//   - DB batch fails → 500. Agent registered on Umbra but no DB row.
+//     Acceptable orphan at this scale; reconcile by re-running creation with
+//     the same UUID (deterministic eta_address, register is idempotent).
 export async function POST(req: Request) {
   const user = await authGuard(req);
   if (user instanceof Response) return user;
@@ -53,24 +73,27 @@ export async function POST(req: Request) {
   const body = await parseBody(req);
   if (body instanceof Response) return body;
 
-  // Rate limit ahead of any billable side effects (Privy wallet, DB writes).
   const allowed = await checkLimit("create-agent", user.id, 5, "1 h");
   if (!allowed) return apiError("rate_limited");
 
-  // Count check before the Privy call — we don't want to create a wallet only
-  // to reject the insert. The read-then-insert is racy: two parallel creates
-  // may both pass the check and land, briefly exceeding the cap. The
-  // practical overshoot is bounded by the rate limit (5 creates/hour/user)
-  // and the cap is generous (50), so worst case is ~6 extra. Acceptable for
-  // v1; if this ever starts mattering, migrate to an atomic UPDATE-RETURNING
-  // on a users.agent_count column or a dedicated agent_quota table.
   const [{ value: agentCount } = { value: 0 }] = await db
     .select({ value: count() })
     .from(agents)
     .where(eq(agents.userId, user.id));
   if (agentCount >= AGENTS_PER_USER_LIMIT) return apiError("agent_limit_reached");
 
-  const wallet = await createAgentWallet(user.privyId);
+  // Pre-generate the agent UUID so we can derive the eta_address before any
+  // I/O happens. This UUID is the canonical input to the HMAC seed-derivation
+  // — same agentId always produces the same eta_address, so re-running this
+  // route with the same UUID would land on the same on-chain account.
+  const agentId = crypto.randomUUID();
+  const etaAddress = deriveAgentEtaAddress(agentId);
+  console.info(
+    `[agents/create] user=${user.id} agent=${agentId} ` +
+      `etaAddress=${etaAddress} → setting up Umbra account`,
+  );
+
+  const wallet = await createAgentWallet({ agentId, etaAddress });
   if (wallet instanceof Response) return wallet;
 
   const capInrPaise = BigInt(body.monthlyCapInr) * 100n;
@@ -79,13 +102,18 @@ export async function POST(req: Request) {
 
   try {
     const agent = await insertAgentRows({
+      agentId,
       user,
       name: body.name,
-      wallet,
+      etaAddress: wallet.etaAddress,
+      umbraRegisteredAt: wallet.umbraRegisteredAt,
       capInrPaise,
       capUsdg,
       apiKeyHash: apiKey.hash,
     });
+    console.info(
+      `[agents/create] ✓ agent=${agentId} eta=${etaAddress} created`,
+    );
 
     return apiOk(
       {
@@ -101,15 +129,6 @@ export async function POST(req: Request) {
       { status: 201 },
     );
   } catch (err) {
-    // Privy wallet exists but the DB rows don't. We can't compensate by
-    // deleting the wallet — @privy-io/server-auth doesn't expose a delete
-    // method; wallets are permanent once minted. At current scale the cost
-    // of an occasional orphan (free-tier Privy quota) is negligible.
-    //
-    // TODO(reconciler): add `scripts/reconcile-privy-wallets.ts` that pages
-    // Privy's `walletApi.list({ chainType: 'solana' })` and diffs against
-    // agents.privy_wallet_id + merchants.privy_wallet_id, archiving any
-    // wallet with no matching row. Run weekly once mainnet volume grows.
     console.error("[agents/create] db insert", err);
     return apiError("server_error");
   }
@@ -123,37 +142,37 @@ async function parseBody(req: Request) {
   }
 }
 
-async function createAgentWallet(privyUserId: string) {
-  // Attach our delegated signer so the x402 hot path can sign for this wallet
-  // server-side. Verified via scripts/spike-privy-variants.ts (2026-04-20):
-  // `additionalSigners: [{ signerId: <auth-key-id> }]` is the parameter Privy
-  // honours at signTransaction time. The seemingly-equivalent
-  // `authorizationKeyIds: [...]` is silently ignored by the sign endpoint
-  // even though createWallet accepts it — see project_privy_delegated_signing.md.
-  if (!env.PRIVY_AUTHORIZATION_KEY_ID) {
-    console.error(
-      "[agents/create] PRIVY_AUTHORIZATION_KEY_ID is not set; agents would be un-signable",
-    );
-    return apiError("server_error");
-  }
-
+// Funds the agent's derived eta_address with SOL (lazy) and registers it on
+// Umbra (eager). Returns the registration timestamp for persistence; the
+// caller pairs it with the eta_address into the agents row.
+//
+// Returns either `{ etaAddress, umbraRegisteredAt }` on success or a
+// `Response` (apiError) on failure — same pattern as authGuard. Errors are
+// logged with full context server-side; the client gets a generic
+// `server_error` to avoid leaking SDK details.
+async function createAgentWallet(input: {
+  agentId: string;
+  etaAddress: string;
+}): Promise<{ etaAddress: string; umbraRegisteredAt: Date } | Response> {
   try {
-    const wallet = await privy.walletApi.createWallet({
-      chainType: "solana",
-      owner: { userId: privyUserId },
-      additionalSigners: [{ signerId: env.PRIVY_AUTHORIZATION_KEY_ID }],
-    });
-    return { id: wallet.id, address: wallet.address };
+    await fundSubjectAddressIfNeeded(input.etaAddress);
+    await registerSubjectOnUmbra("agent", input.agentId);
+    return { etaAddress: input.etaAddress, umbraRegisteredAt: new Date() };
   } catch (err) {
-    console.error("[agents/create] privy createWallet", err);
+    console.error(
+      `[agents/create] umbra setup failed for agent=${input.agentId}:`,
+      err,
+    );
     return apiError("server_error");
   }
 }
 
 async function insertAgentRows(input: {
+  agentId: string;
   user: User;
   name: string;
-  wallet: { id: string; address: string };
+  etaAddress: string;
+  umbraRegisteredAt: Date;
   capInrPaise: bigint;
   capUsdg: bigint;
   apiKeyHash: string;
@@ -162,30 +181,25 @@ async function insertAgentRows(input: {
   // which does not implement transaction() — it throws at runtime. batch()
   // is supported and hits Neon's atomic /sql/transaction endpoint, so all
   // three inserts commit together or none do.
-  //
-  // Pre-generating the agent id keeps the child inserts independent of the
-  // parent's RETURNING — batch doesn't let us await a query's result and
-  // then build the next, so every row needs its keys known up front.
-  const agentId = crypto.randomUUID();
-
   const [inserted] = await db.batch([
     db
       .insert(agents)
       .values({
-        id: agentId,
+        id: input.agentId,
         userId: input.user.id,
         name: input.name,
-        privyWalletId: input.wallet.id,
-        publicKey: input.wallet.address,
+        etaAddress: input.etaAddress,
+        umbraStatus: "active",
+        umbraRegisteredAt: input.umbraRegisteredAt,
       })
       .returning(),
     db.insert(budgets).values({
-      agentId,
+      agentId: input.agentId,
       capInr: input.capInrPaise,
       capUsdg: input.capUsdg,
     }),
     db.insert(agentApiKeys).values({
-      agentId,
+      agentId: input.agentId,
       keyHash: input.apiKeyHash,
       label: "Initial key",
     }),

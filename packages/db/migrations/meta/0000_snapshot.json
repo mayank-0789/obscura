@@ -1,5 +1,5 @@
 {
-  "id": "98703222-e3da-4f45-b97e-ff2344b32406",
+  "id": "4ea5ae0a-4a63-4f39-a65c-c03a5bad44af",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -114,14 +114,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "privy_wallet_id": {
-          "name": "privy_wallet_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "public_key": {
-          "name": "public_key",
+        "eta_address": {
+          "name": "eta_address",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -133,6 +127,19 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'active'"
+        },
+        "umbra_status": {
+          "name": "umbra_status",
+          "type": "umbra_account_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "umbra_registered_at": {
+          "name": "umbra_registered_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -165,11 +172,11 @@
           "method": "btree",
           "with": {}
         },
-        "agents_public_key_idx": {
-          "name": "agents_public_key_idx",
+        "agents_eta_address_idx": {
+          "name": "agents_eta_address_idx",
           "columns": [
             {
-              "expression": "public_key",
+              "expression": "eta_address",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -520,14 +527,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "payout_wallet": {
-          "name": "payout_wallet",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "privy_wallet_id": {
-          "name": "privy_wallet_id",
+        "eta_address": {
+          "name": "eta_address",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -535,6 +536,19 @@
         "dodo_account_id": {
           "name": "dodo_account_id",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "umbra_status": {
+          "name": "umbra_status",
+          "type": "umbra_account_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "umbra_registered_at": {
+          "name": "umbra_registered_at",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
         },
@@ -564,16 +578,16 @@
               "nulls": "last"
             }
           ],
-          "isUnique": false,
+          "isUnique": true,
           "concurrently": false,
           "method": "btree",
           "with": {}
         },
-        "merchants_payout_wallet_idx": {
-          "name": "merchants_payout_wallet_idx",
+        "merchants_eta_address_idx": {
+          "name": "merchants_eta_address_idx",
           "columns": [
             {
-              "expression": "payout_wallet",
+              "expression": "eta_address",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -661,8 +675,32 @@
           "primaryKey": false,
           "notNull": true
         },
+        "merchant_host": {
+          "name": "merchant_host",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "solana_sig": {
           "name": "solana_sig",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "queue_signature": {
+          "name": "queue_signature",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "callback_signature": {
+          "name": "callback_signature",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "callback_status": {
+          "name": "callback_status",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -752,6 +790,34 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "transactions_counterparty_confirmed_idx": {
+          "name": "transactions_counterparty_confirmed_idx",
+          "columns": [
+            {
+              "expression": "counterparty",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"transactions\".\"kind\" = 'spend'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -786,8 +852,8 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "privy_id": {
-          "name": "privy_id",
+        "auth_id": {
+          "name": "auth_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -828,11 +894,11 @@
         }
       },
       "indexes": {
-        "users_privy_id_idx": {
-          "name": "users_privy_id_idx",
+        "users_auth_id_idx": {
+          "name": "users_auth_id_idx",
           "columns": [
             {
-              "expression": "privy_id",
+              "expression": "auth_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1131,6 +1197,14 @@
         "failed"
       ]
     },
+    "public.umbra_account_status": {
+      "name": "umbra_account_status",
+      "schema": "public",
+      "values": [
+        "active",
+        "deregistered"
+      ]
+    },
     "public.user_role": {
       "name": "user_role",
       "schema": "public",
@@ -1145,7 +1219,6 @@
       "schema": "public",
       "values": [
         "dodo",
-        "privy",
         "helius"
       ]
     }

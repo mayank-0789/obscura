@@ -8,8 +8,8 @@ const entries = [
   { label: "status", value: "402 Payment Required" },
   { label: "quote", value: "0.0080 USDC" },
   { label: "budget", value: "₹4.20 of ₹850 this month" },
-  { label: "signer", value: "Privy · wallet_a1f2…c8d3" },
-  { label: "broadcast", value: "Helius · devnet" },
+  { label: "sender ETA", value: "DXfU…PBwa · encrypted" },
+  { label: "mixer", value: "Umbra · UTXO inserted" },
   { label: "settle", value: "sig 5k2…f8a" },
   { label: "response", value: "200 OK · 412 bytes" },
 ];

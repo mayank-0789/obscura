@@ -8,8 +8,8 @@ import {
   type Role,
 } from "@/lib/onboarding";
 
-// Centralised post-authentication routing decision. Called by SignInButton
-// after a Privy login completes.
+// Centralised post-authentication routing decision. Called by post-login
+// surfaces (e.g. /onboarding) after a NextAuth Google sign-in resolves.
 //
 // Rules (no magic, no intent stashing):
 //   1. Role unresolved (fresh signup mid-sync, /me still loading) → /onboarding.

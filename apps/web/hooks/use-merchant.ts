@@ -1,14 +1,14 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { usePrivy } from "@privy-io/react-auth";
+import { useSession } from "next-auth/react";
 import { useAuthedFetch } from "@/hooks/use-authed-fetch";
 
 export type MerchantMeResponse = {
   merchant: {
     id: string;
     name: string | null;
-    payoutWallet: string;
+    etaAddress: string;
     createdAt: string;
   };
   stats: {
@@ -29,12 +29,12 @@ export type MerchantMeResponse = {
 // merchant record" and show a register CTA. Retrying would re-hit the same
 // 404 and just delay the UI's recovery path.
 export function useMerchant() {
-  const { ready, authenticated } = usePrivy();
+  const { status } = useSession();
   const authedFetch = useAuthedFetch();
 
   return useQuery<MerchantMeResponse>({
     queryKey: ["merchant", "me"],
-    enabled: ready && authenticated,
+    enabled: status === "authenticated",
     refetchInterval: 10_000,
     staleTime: 5_000,
     retry: false,

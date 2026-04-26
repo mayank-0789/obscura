@@ -15,7 +15,12 @@ type ErrorCode =
   | "agent_inactive"
   | "invalid_challenge"
   | "over_cap"
-  | "signing_failed";
+  | "signing_failed"
+  // Duplicate request collapsed by /api/x402/sign in-flight de-dup. Distinct
+  // from rate_limited so SDK retry policy can treat them differently:
+  // rate_limited = back off; conflict = the original is still working, do
+  // NOT issue a fresh request for the same intent.
+  | "conflict";
 
 const STATUS: Record<ErrorCode, number> = {
   missing_token: 401,
@@ -35,6 +40,7 @@ const STATUS: Record<ErrorCode, number> = {
   invalid_challenge: 400,
   over_cap: 402,
   signing_failed: 500,
+  conflict: 409,
 };
 
 export function apiError(code: ErrorCode, message?: string) {

@@ -44,6 +44,18 @@ export function TopupForm() {
 
   const { breakdown, rateSource, loading: quoteLoading } = useTopupQuote(amountInr);
 
+  // Surfaces a one-line message below the amount input when the value is
+  // out-of-range. Empty string is treated as "user is mid-edit" — no error
+  // until they actually type a number outside the bounds.
+  const amountError =
+    amountInr === ""
+      ? null
+      : typeof amountInr === "number" && amountInr < MIN_INR
+        ? `Minimum ₹${MIN_INR.toLocaleString("en-IN")}`
+        : typeof amountInr === "number" && amountInr > MAX_INR
+          ? `Maximum ₹${MAX_INR.toLocaleString("en-IN")}`
+          : null;
+
   const canSubmit =
     !!selectedAgent &&
     selectedAgent.status === "active" &&
@@ -180,7 +192,11 @@ export function TopupForm() {
                         )
                       }
                       disabled={createSession.isPending}
-                      className="w-full rounded-md border border-zinc-800 bg-zinc-950 py-2.5 pl-8 pr-3.5 text-[14px] font-medium text-zinc-100 focus:border-emerald-400/60 focus:outline-none focus:ring-2 focus:ring-emerald-400/20"
+                      className={`w-full rounded-md border bg-zinc-950 py-2.5 pl-8 pr-3.5 text-[14px] font-medium text-zinc-100 focus:outline-none focus:ring-2 ${
+                        amountError
+                          ? "border-amber-500/60 focus:border-amber-500/60 focus:ring-amber-500/20"
+                          : "border-zinc-800 focus:border-emerald-400/60 focus:ring-emerald-400/20"
+                      }`}
                     />
                   </div>
                 </label>
@@ -201,9 +217,16 @@ export function TopupForm() {
                     </button>
                   ))}
                 </div>
-                <p className="mt-3 text-[11.5px] text-zinc-500">
-                  Min ₹{MIN_INR} · Max ₹{MAX_INR.toLocaleString("en-IN")}
-                </p>
+                {amountError ? (
+                  <p className="mt-3 text-[12px] text-amber-300">
+                    {amountError}
+                  </p>
+                ) : (
+                  <p className="mt-3 text-[11.5px] text-zinc-500">
+                    Min ₹{MIN_INR.toLocaleString("en-IN")} · Max ₹
+                    {MAX_INR.toLocaleString("en-IN")}
+                  </p>
+                )}
               </div>
 
               {/* Breakdown */}

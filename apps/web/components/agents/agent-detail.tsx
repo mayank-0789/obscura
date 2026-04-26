@@ -40,7 +40,7 @@ export function AgentDetail({ id }: { id: string }) {
 }
 
 function Content({ agent }: { agent: AgentDTO }) {
-  const solscanUrl = solscanAccountUrl(agent.publicKey);
+  const solscanUrl = solscanAccountUrl(agent.etaAddress);
   const isActive = agent.status === "active";
   const budget = agent.budget;
 
@@ -99,11 +99,11 @@ function Content({ agent }: { agent: AgentDTO }) {
           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
             <button
               type="button"
-              onClick={() => copy(agent.publicKey)}
+              onClick={() => copy(agent.etaAddress)}
               className="inline-flex items-center gap-1.5 font-mono text-[12px] text-zinc-400 transition hover:text-zinc-200"
-              title={agent.publicKey}
+              title={agent.etaAddress}
             >
-              {shortPk(agent.publicKey)}
+              {shortPk(agent.etaAddress)}
               <svg
                 viewBox="0 0 12 12"
                 className="h-3 w-3 text-zinc-600"
@@ -174,12 +174,12 @@ function Content({ agent }: { agent: AgentDTO }) {
         />
         <div className="mt-4 overflow-hidden rounded-lg border border-zinc-800">
           <CredRow
-            label="Wallet"
-            hint="Solana public key · funds land here"
-            value={agent.publicKey}
+            label="Encrypted account"
+            hint="Solana pubkey of the agent's Umbra-side keypair · payments land here as encrypted balance"
+            value={agent.etaAddress}
             trailing={
               <div className="flex items-center gap-2">
-                <GhostButton onClick={() => copy(agent.publicKey)}>
+                <GhostButton onClick={() => copy(agent.etaAddress)}>
                   Copy
                 </GhostButton>
                 <a
@@ -205,16 +205,6 @@ function Content({ agent }: { agent: AgentDTO }) {
                 title="Key rotation ships in v2"
               >
                 Rotate · soon
-              </GhostButton>
-            }
-          />
-          <CredRow
-            label="Privy wallet ID"
-            hint="Used for delegated signing · not sensitive"
-            value={agent.privyWalletId}
-            trailing={
-              <GhostButton onClick={() => copy(agent.privyWalletId)}>
-                Copy
               </GhostButton>
             }
           />

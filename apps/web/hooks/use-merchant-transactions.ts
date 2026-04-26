@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { usePrivy } from "@privy-io/react-auth";
+import { useSession } from "next-auth/react";
 import { useAuthedFetch } from "@/hooks/use-authed-fetch";
 
 export type MerchantTransaction = {
@@ -30,14 +30,14 @@ type Options = {
 // page will pass limit=50 + cursor for pagination. Polls at the same 10s
 // cadence as useMerchant so stats and feed stay visually in sync.
 export function useMerchantTransactions(options: Options = {}) {
-  const { ready, authenticated } = usePrivy();
+  const { status } = useSession();
   const authedFetch = useAuthedFetch();
   const limit = options.limit ?? 10;
   const cursor = options.cursor;
 
   return useQuery<MerchantTransactionsResponse>({
     queryKey: ["merchant", "me", "transactions", { limit, cursor }],
-    enabled: ready && authenticated,
+    enabled: status === "authenticated",
     refetchInterval: 10_000,
     staleTime: 5_000,
     retry: false,

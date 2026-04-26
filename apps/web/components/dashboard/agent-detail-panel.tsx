@@ -16,7 +16,7 @@ import { RecentSpendsList } from "./recent-spends-list";
 export function AgentDetailPanel({ agent }: { agent: AgentDTO }) {
   const { data: balance } = useAgentBalance(agent.id);
   const spends = useAgentTransactions(agent.id, { limit: 10 });
-  const solscanUrl = solscanAccountUrl(agent.publicKey);
+  const solscanUrl = solscanAccountUrl(agent.etaAddress);
   const isActive = agent.status === "active";
 
   const budget = agent.budget;
@@ -49,9 +49,9 @@ export function AgentDetailPanel({ agent }: { agent: AgentDTO }) {
             target="_blank"
             rel="noopener noreferrer"
             className="mt-2 inline-flex items-center gap-1.5 font-mono text-[12px] text-zinc-400 transition hover:text-emerald-400"
-            title={agent.publicKey}
+            title={agent.etaAddress}
           >
-            {shortPk(agent.publicKey)}
+            {shortPk(agent.etaAddress)}
             <span aria-hidden="true" className="text-zinc-600">↗</span>
           </a>
         </div>

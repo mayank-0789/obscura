@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { usePrivy } from "@privy-io/react-auth";
+import { useSession } from "next-auth/react";
 import { useAuthedFetch } from "@/hooks/use-authed-fetch";
 
 export type AgentTransaction = {
@@ -33,14 +33,14 @@ export function useAgentTransactions(
   agentId: string,
   options: Options = {},
 ) {
-  const { ready, authenticated } = usePrivy();
+  const { status } = useSession();
   const authedFetch = useAuthedFetch();
   const limit = options.limit ?? 10;
   const cursor = options.cursor;
 
   return useQuery<AgentTransactionsResponse>({
     queryKey: ["agents", agentId, "transactions", { limit, cursor }],
-    enabled: ready && authenticated && !!agentId,
+    enabled: status === "authenticated" && !!agentId,
     refetchInterval: 10_000,
     staleTime: 5_000,
     retry: false,

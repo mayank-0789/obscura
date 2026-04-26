@@ -8,7 +8,6 @@ import {
   useState,
 } from "react";
 import { useAgents } from "@/hooks/use-agents";
-import { useUser } from "@/hooks/use-user";
 import type { CreateAgentResult } from "@/hooks/use-create-agent";
 import { DashboardTopBar } from "./dashboard-top-bar";
 import { AgentsSidebar } from "./agents-sidebar";
@@ -47,7 +46,6 @@ type Props = {
  */
 export function AppShell({ selectedAgentId, onSelectAgent, children }: Props) {
   const { data: agents } = useAgents();
-  const { data: me } = useUser();
 
   const [createOpen, setCreateOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -134,7 +132,7 @@ export function AppShell({ selectedAgentId, onSelectAgent, children }: Props) {
           selectedId={selectedAgentId}
           onSelect={onSelectAgent}
           onNewAgent={() => setCreateOpen(true)}
-          walletAddress={me?.solanaAddress ?? null}
+          walletAddress={null}
         />
 
         <main className="min-w-0 flex-1 overflow-y-auto bg-[#0a0a0a]">

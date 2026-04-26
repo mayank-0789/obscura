@@ -1,25 +1,24 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { usePrivy } from "@privy-io/react-auth";
+import { useSession } from "next-auth/react";
 import type { User } from "@payrail-app/db";
 import { useAuthedFetch } from "@/hooks/use-authed-fetch";
 
 export type MeResponse = {
   user: User;
-  solanaAddress: string | null;
 };
 
-// Fetches user + wallet from /api/me. Retries 404 (sync race) up to 3× with
-// backoff. 401 is handled by useAuthedFetch — it forces a sign-out, so we
-// don't retry or render stale state here.
+// Fetches user from /api/me. Retries 404 (sync race) up to 3× with backoff.
+// 401 is handled by useAuthedFetch — it forces a sign-out, so we don't retry
+// or render stale state here.
 export function useUser() {
-  const { ready, authenticated } = usePrivy();
+  const { status } = useSession();
   const authedFetch = useAuthedFetch();
 
   return useQuery<MeResponse>({
     queryKey: ["me"],
-    enabled: ready && authenticated,
+    enabled: status === "authenticated",
     staleTime: 60_000,
     retry: (count, err) =>
       err instanceof Error && err.message === "user_not_synced" && count < 3,

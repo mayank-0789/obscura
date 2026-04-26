@@ -2,41 +2,36 @@
 
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { usePrivy } from "@privy-io/react-auth";
+import { useSession } from "next-auth/react";
 
 // Subscribes to the merchant's real-time payment stream at
 // /api/merchants/me/events. When a `payment` SSE frame lands, invalidates
 // every `["merchant", "me", ...]` React Query so stats + tx feed refresh
 // immediately (faster than the 10s polling baseline).
 //
-// Why not the browser's `EventSource`? EventSource doesn't support custom
-// Authorization headers, which our `merchantAuthGuard` requires. We read the
-// stream manually via fetch + ReadableStream instead — one file, no polyfill,
-// full control over auth and reconnect.
+// Why not the browser's `EventSource`? Same-origin EventSource would carry
+// cookies, but our `merchantAuthGuard` also accepts `mk_` API keys — keeping
+// the manual `fetch` + ReadableStream pipe gives us a single auth path and
+// full control over reconnect logic later.
 //
 // Lifecycle:
-//   - Connects once when Privy is ready + authenticated.
-//   - On unmount / auth change, aborts the fetch, which closes the stream
-//     server-side (the SSE route listens to req.signal abort).
-//   - No explicit reconnect loop yet — the 10s polling is the fallback if
-//     the connection drops. A client-side retry could be added in v2.
+//   - Connects once when the NextAuth session is authenticated.
+//   - On unmount / session change, aborts the fetch — server SSE route reads
+//     req.signal and closes its writer.
+//   - No explicit reconnect loop yet; 10s polling is the fallback.
 export function useMerchantEvents() {
   const queryClient = useQueryClient();
-  const { ready, authenticated, getAccessToken } = usePrivy();
+  const { status } = useSession();
 
   useEffect(() => {
-    if (!ready || !authenticated) return;
+    if (status !== "authenticated") return;
     const controller = new AbortController();
     let cancelled = false;
 
     void (async () => {
-      const token = await getAccessToken().catch(() => null);
-      if (!token || cancelled) return;
-
       let res: Response;
       try {
         res = await fetch("/api/merchants/me/events", {
-          headers: { Authorization: `Bearer ${token}` },
           signal: controller.signal,
           cache: "no-store",
         });
@@ -48,8 +43,7 @@ export function useMerchantEvents() {
       }
 
       if (!res.ok || !res.body) {
-        // 401/403/404 → polling will keep the UI usable. Don't spam logs;
-        // auth issues are already surfaced by other queries.
+        // 401/403/404 → polling will keep the UI usable. Don't spam logs.
         return;
       }
 
@@ -63,9 +57,6 @@ export function useMerchantEvents() {
           if (done) break;
           buffer += decoder.decode(value, { stream: true });
 
-          // SSE frames are separated by a blank line (\n\n). Each frame is
-          // a set of `event: <name>` / `data: <payload>` / `: <comment>`
-          // lines.
           let sep: number;
           while ((sep = buffer.indexOf("\n\n")) !== -1) {
             const frame = buffer.slice(0, sep);
@@ -84,17 +75,13 @@ export function useMerchantEvents() {
       cancelled = true;
       controller.abort();
     };
-  }, [ready, authenticated, getAccessToken, queryClient]);
+  }, [status, queryClient]);
 }
 
 function handleFrame(
   frame: string,
   queryClient: ReturnType<typeof useQueryClient>,
 ): void {
-  // Per SSE spec, a frame without `event:` defaults to type "message" and a
-  // frame's data is the concatenation of every `data:` line (separated by
-  // "\n"). We parse both for forward-compatibility even though today we
-  // only branch on `eventType`.
   let eventType = "message";
   const dataLines: string[] = [];
   for (const line of frame.split("\n")) {
@@ -105,13 +92,9 @@ function handleFrame(
       dataLines.push(line.slice(5).trimStart());
     }
   }
-  // dataLines collected but unused today — reserved for future event types
-  // that carry structured bodies (e.g. per-transaction optimistic patches).
   void dataLines;
 
   if (eventType === "payment") {
-    // Broad invalidate — covers /me, /me/transactions, /me/apis, /me/keys.
-    // All cheap queries on the merchant surface, so the coarse key is fine.
     void queryClient.invalidateQueries({ queryKey: ["merchant", "me"] });
   }
 }

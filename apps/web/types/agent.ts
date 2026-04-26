@@ -8,8 +8,9 @@ export type BudgetPeriod = "monthly" | "daily";
 export type AgentDTO = {
   id: string;
   name: string;
-  publicKey: string;
-  privyWalletId: string;
+  // Solana pubkey (base58) of the agent's Umbra-side keypair. The encrypted
+  // token account (ETA) lives at a PDA derived from this address + the mint.
+  etaAddress: string;
   status: AgentStatus;
   createdAt: string;
   budget: {

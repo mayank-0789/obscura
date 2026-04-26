@@ -4,7 +4,7 @@ import { db, merchants } from "@/lib/db";
 import { env } from "@/lib/env";
 import { reconcileMerchantPayoutAddresses } from "@/lib/helius";
 
-// POST /api/admin/helius/reconcile — ensure every merchant.payout_wallet is
+// POST /api/admin/helius/reconcile — ensure every merchant.eta_address is
 // registered on the shared Helius webhook. Safety net for the GET→modify→PUT
 // race in registerMerchantPayoutAddress (two concurrent signups can clobber
 // each other) and any other drift. Run from cron or manually via curl.
@@ -29,9 +29,9 @@ export async function POST(req: Request) {
   }
 
   const rows = await db
-    .select({ payoutWallet: merchants.payoutWallet })
+    .select({ etaAddress: merchants.etaAddress })
     .from(merchants);
-  const wallets = rows.map((r) => r.payoutWallet);
+  const wallets = rows.map((r) => r.etaAddress);
 
   try {
     const result = await reconcileMerchantPayoutAddresses(wallets);

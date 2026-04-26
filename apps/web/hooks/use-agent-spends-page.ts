@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { usePrivy } from "@privy-io/react-auth";
+import { useSession } from "next-auth/react";
 import { useAuthedFetch } from "@/hooks/use-authed-fetch";
 import type { AgentTransactionsResponse } from "@/hooks/use-agent-transactions";
 
@@ -15,7 +15,7 @@ export function useAgentSpendsPage(agentId: string, pageSize = 50) {
     undefined,
   ]);
   const currentCursor = cursorStack[cursorStack.length - 1];
-  const { ready, authenticated } = usePrivy();
+  const { status } = useSession();
   const authedFetch = useAuthedFetch();
 
   const query = useQuery<AgentTransactionsResponse>({
@@ -25,7 +25,7 @@ export function useAgentSpendsPage(agentId: string, pageSize = 50) {
       "transactions",
       { limit: pageSize, cursor: currentCursor },
     ],
-    enabled: ready && authenticated && !!agentId,
+    enabled: status === "authenticated" && !!agentId,
     refetchInterval: 10_000,
     staleTime: 5_000,
     retry: false,

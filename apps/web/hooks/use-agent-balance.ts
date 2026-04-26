@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { usePrivy } from "@privy-io/react-auth";
+import { useSession } from "next-auth/react";
 import { useAuthedFetch } from "@/hooks/use-authed-fetch";
 
 export type AgentBalance = {
@@ -9,16 +9,17 @@ export type AgentBalance = {
   decimals: number;
 };
 
-// Polls the on-chain stablecoin balance for an agent via Helius. Refetches
-// every 10s so top-ups feel "live" shortly after the webhook credits the
-// wallet — no manual refresh needed.
+// Polls the on-chain stablecoin balance for an agent. Refetches every 10s so
+// top-ups feel "live" shortly after the webhook credits the wallet. Backend
+// implementation will swap to encrypted-balance reads in a later stage of
+// the Umbra pivot; this hook's contract stays the same.
 export function useAgentBalance(agentId: string | undefined) {
-  const { ready, authenticated } = usePrivy();
+  const { status } = useSession();
   const authedFetch = useAuthedFetch();
 
   return useQuery<AgentBalance>({
     queryKey: ["agent-balance", agentId],
-    enabled: ready && authenticated && !!agentId,
+    enabled: status === "authenticated" && !!agentId,
     refetchInterval: 10_000,
     staleTime: 5_000,
     queryFn: async () => {
