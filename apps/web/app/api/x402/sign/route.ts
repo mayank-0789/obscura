@@ -1,6 +1,6 @@
 // POST /api/x402/sign — the heart of Payrail's agent-spending loop.
 //
-// Called by @payrail-app/sdk when an agent's fetch() receives a 402 from a paid
+// Called by @obscura-app/sdk when an agent's fetch() receives a 402 from a paid
 // API. We authenticate the caller via the agent's API key, enforce the monthly
 // spend cap, and execute the confidential transfer from the agent's ETA into
 // the merchant's ETA via the Umbra mixer (Path B). Returns a base64-encoded
@@ -34,8 +34,8 @@ import { db, budgets, transactions } from "@/lib/db";
 import { apiError, apiOk } from "@/lib/api";
 import { agentAuthGuard } from "@/lib/agent-auth";
 import { env } from "@/lib/env";
-import { createReceiverClaimableUtxo } from "@/lib/umbra";
-import { PublicKey } from "@payrail-app/solana";
+import { createReceiverClaimableUtxo, getEncryptedBalance } from "@/lib/umbra";
+import { PublicKey } from "@obscura-app/solana";
 import type { PaymentRequired, PaymentRequirements } from "x402-solana";
 
 const SignBody = z.object({
@@ -162,6 +162,42 @@ async function performSign(input: {
     .where(
       sql`${budgets.agentId} = ${agent.id} AND ${budgets.period} = 'monthly' AND now() - ${budgets.periodStart} >= interval '1 month'`,
     );
+
+  // Encrypted-balance pre-check. Reading the balance is fast (decrypt locally
+  // with the agent's X25519 key — no MPC round-trip), so doing it BEFORE the
+  // atomic cap UPDATE saves us from a wasted ~20s mixer prove + cap revert
+  // when the agent simply doesn't have the funds. Note this is racy w.r.t.
+  // concurrent spends — multiple parallel calls with combined amounts above
+  // the balance can all pass the pre-check, then the slowest one fails at
+  // the SDK call. That's acceptable: the worst case is "we did the work we
+  // would have done anyway." The pre-check optimizes the COMMON case
+  // (single-flight, balance too low) without weakening correctness.
+  try {
+    const balance = await getEncryptedBalance("agent", agent.id);
+    // `null` from getEncryptedBalance means: the per-mint encrypted balance
+    // account either doesn't exist on-chain yet OR is in a non-shared state
+    // we can't decrypt locally. Either way, the agent has no usable funds
+    // — treat as zero and block. (umbraStatus='active' on the agent row is
+    // a separate signal: the user-account PDA exists; the per-mint balance
+    // gets created lazily on first deposit. So an active agent with a null
+    // balance = "registered but no topup yet".)
+    const effective = balance ?? 0n;
+    if (effective < amount) {
+      return apiError(
+        "insufficient_funds",
+        `agent balance ${effective} < amount ${amount}; top up before retrying`,
+      );
+    }
+  } catch (err) {
+    // Pre-check FAILURE (RPC error) is non-fatal — proceed and let the
+    // actual SDK call surface whatever's wrong. We don't want a flaky
+    // balance read to block legit spends. Log loudly so we notice if it
+    // persists.
+    console.warn(
+      `[x402/sign] balance pre-check failed for agent=${agent.id} (proceeding):`,
+      err,
+    );
+  }
 
   // Atomic cap check + increment. Zero rows back means the would-be post-update
   // value exceeds cap_usdg — no TOCTOU window even under concurrency.

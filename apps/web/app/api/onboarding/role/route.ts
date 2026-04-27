@@ -63,11 +63,17 @@ export async function POST(req: Request) {
 
   let merchantRow = existingMerchant;
   let merchantCreated = false;
+  // Plaintext shown once on first creation. Onboarding UI doesn't surface it
+  // today (the merchant dashboard's API-key panel is the canonical place to
+  // mint + reveal keys), but plumbing it through keeps parity with
+  // POST /api/merchants and lets a future onboarding flow show it inline.
+  let merchantApiKey: string | null = null;
   if (needsMerchant) {
     try {
       const result = await provisionMerchant(user);
       merchantRow = result.merchant;
       merchantCreated = result.created;
+      merchantApiKey = result.apiKey?.plaintext ?? null;
     } catch (err) {
       if (err instanceof MerchantProvisionError) {
         console.error("[onboarding/role] provision failed:", err.code);
@@ -91,7 +97,12 @@ export async function POST(req: Request) {
 
   if (!updated) return apiError("server_error");
   return apiOk(
-    { user: updated, merchant: merchantRow, merchantCreated },
+    {
+      user: updated,
+      merchant: merchantRow,
+      merchantCreated,
+      apiKey: merchantApiKey,
+    },
     { status: merchantCreated ? 201 : 200 },
   );
 }

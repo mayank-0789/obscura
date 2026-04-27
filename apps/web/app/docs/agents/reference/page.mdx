@@ -6,7 +6,7 @@ export default function ({ children }) {
 
 # API reference
 
-Every export from `@payrail-app/sdk`, one section per symbol.
+Every export from `@obscura-app/sdk`, one section per symbol.
 
 ## `class Payrail`
 
@@ -14,7 +14,7 @@ The agent-side client. Wraps `fetch` and handles the x402 payment
 handshake transparently.
 
 <CodeBlock lang="ts">
-{`import { Payrail } from "@payrail-app/sdk";
+{`import { Payrail } from "@obscura-app/sdk";
 
 const agent = new Payrail(options: PayrailOptions);`}
 </CodeBlock>
@@ -43,7 +43,7 @@ Throws `PayrailError` on any failure — see [Error handling](/docs/agents/error
 Typed error thrown by `agent.fetch()`.
 
 <CodeBlock lang="ts">
-{`import { PayrailError } from "@payrail-app/sdk";
+{`import { PayrailError } from "@obscura-app/sdk";
 
 try {
   await agent.fetch(url);

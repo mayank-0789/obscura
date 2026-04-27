@@ -1,5 +1,5 @@
 {
-  "name": "@payrail-app/solana",
+  "name": "@obscura-app/solana",
   "version": "0.0.0",
   "private": true,
   "main": "./src/index.ts",
@@ -8,7 +8,6 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
-    "@solana/spl-token": "^0.4.14",
     "@solana/web3.js": "^1.98.4"
   },
   "devDependencies": {

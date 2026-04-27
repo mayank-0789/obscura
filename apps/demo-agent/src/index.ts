@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { Payrail, PayrailError } from "@payrail-app/sdk";
+import { Payrail, PayrailError } from "@obscura-app/sdk";
 
 // Demo agent — a "news reader" that autonomously buys headlines + articles
 // from the demo merchant via Payrail. Loops forever (Ctrl-C to stop).
@@ -35,34 +35,38 @@ process.on("SIGINT", () => {
 async function runCycle() {
   cycle += 1;
   const startedAt = Date.now();
-  console.log(`\n${time()} 🤖 cycle #${cycle}`);
-  console.log(`           total spent: ${usdc(totalSpentMicros)}`);
+  console.log(`\n${time()} 🤖 cycle #${cycle}  ·  total spent ${usdc(totalSpentMicros)}`);
 
-  // 1. Scan cheap headlines to decide what to read this cycle.
-  console.log(`\n${time()} → GET /headlines        (scan)`);
+  // 1. Pull the cheap headline list. Same paid endpoint as everything else
+  //    here, just at the lowest tier — the agent uses this to decide what to
+  //    read in steps 2–3.
+  console.log(`\n${time()} → GET /headlines`);
+  const t0 = Date.now();
   const headlinesRes = await agent.fetch(`${MERCHANT_URL}/headlines`);
-  await logResult(headlinesRes, "/headlines", 5_000n);
+  await logResult(headlinesRes, "/headlines", 5_000n, t0);
   if (!headlinesRes.ok) return;
 
   const { headlines } = (await headlinesRes.json()) as {
     headlines: Headline[];
   };
-  console.log(`           ${headlines.length} headlines returned`);
+  console.log(`${pad()}${headlines.length} headlines returned`);
 
   // 2. Pick 1-2 articles that "look interesting" — randomised so the demo
   //    feed looks alive across cycles instead of stuck on one article.
   const picks = pickRandom(headlines, Math.random() < 0.3 ? 1 : 2);
   for (const pick of picks) {
-    console.log(`\n${time()} → GET /article/${pick.id}        ("${pick.headline.slice(0, 40)}…")`);
+    console.log(`\n${time()} → GET /article/${pick.id}    "${pick.headline.slice(0, 38)}…"`);
+    const tA = Date.now();
     const articleRes = await agent.fetch(`${MERCHANT_URL}/article/${pick.id}`);
-    await logResult(articleRes, "/article", 10_000n);
+    await logResult(articleRes, `/article/${pick.id}`, 10_000n, tA);
   }
 
   // 3. Occasionally splurge on the digest. ~1 in 4 cycles.
   if (Math.random() < 0.25) {
-    console.log(`\n${time()} → GET /digest          (premium briefing)`);
+    console.log(`\n${time()} → GET /digest    (premium briefing)`);
+    const tD = Date.now();
     const digestRes = await agent.fetch(`${MERCHANT_URL}/digest`);
-    await logResult(digestRes, "/digest", 15_000n);
+    await logResult(digestRes, "/digest", 15_000n, tD);
   }
 
   const elapsed = ((Date.now() - startedAt) / 1000).toFixed(1);
@@ -73,24 +77,31 @@ async function logResult(
   res: Response,
   label: string,
   priceMicros: bigint,
+  startedAt: number,
 ) {
+  const took = `${Date.now() - startedAt}ms`;
   if (res.ok) {
     totalSpentMicros += priceMicros;
+    // The merchant SDK echoes the umbra-mixer-v1 settlement envelope back as
+    // `X-Payment-Response` (base64 JSON). Extract the queue signature so we
+    // can show a short on-chain breadcrumb in the demo logs. Falls back to "?"
+    // if the merchant didn't set the header (older middleware) or the shape
+    // doesn't match.
     const sig = res.headers.get("x-payment-response");
     const sigShort = sig
       ? Buffer.from(sig, "base64")
           .toString()
-          .match(/"transaction":"([^"]+)"/)
+          .match(/"queueSignature":"([^"]+)"/)
           ?.[1]
           ?.slice(0, 12) ?? "?"
       : "?";
     console.log(
-      `           ← 200 OK · paid ${usdc(priceMicros)} · sig ${sigShort}…`,
+      `${pad()}← 200  paid ${usdc(priceMicros)}  queueSig ${sigShort}…  ${took}`,
     );
     return;
   }
   const bodyText = await res.text().catch(() => "");
-  console.log(`           ← ${res.status} ${res.statusText} · ${bodyText.slice(0, 120)}`);
+  console.log(`${pad()}← ${res.status} ${res.statusText}  ${took}  ${bodyText.slice(0, 100)}`);
 }
 
 async function main() {
@@ -98,7 +109,7 @@ async function main() {
   console.log(`   API key:   ${API_KEY!.slice(0, 8)}…${API_KEY!.slice(-4)}`);
   console.log(`   Payrail:   ${BASE_URL}`);
   console.log(`   Merchant:  ${MERCHANT_URL}`);
-  console.log(`   Cadence:   cycle every ${CYCLE_MS / 1000}s`);
+  console.log(`   Cadence:   one cycle every ${CYCLE_MS / 1000}s`);
   console.log(`   Stop:      Ctrl-C\n`);
   console.log("─".repeat(64));
 
@@ -110,6 +121,12 @@ async function main() {
         if (err.code === "over_cap") {
           console.log(
             `\n💸 budget cap reached — shutting down gracefully after ${cycle} cycles`,
+          );
+          process.exit(0);
+        }
+        if (err.code === "insufficient_funds") {
+          console.log(
+            `\n💸 insufficient encrypted balance — agent needs a top-up. Stopping after ${cycle} cycles.`,
           );
           process.exit(0);
         }
@@ -134,6 +151,12 @@ async function main() {
 
 function time(): string {
   return new Date().toTimeString().slice(0, 8);
+}
+
+// Indent that aligns sub-lines with the timestamped column above. Same
+// width as `HH:MM:SS · ` so wrapped output reads as a column.
+function pad(): string {
+  return "           ";
 }
 
 function usdc(micros: bigint): string {

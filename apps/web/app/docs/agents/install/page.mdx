@@ -6,7 +6,7 @@ export default function ({ children }) {
 
 # Install
 
-The `@payrail-app/sdk` package wraps `fetch()` and handles the x402 payment
+The `@obscura-app/sdk` package wraps `fetch()` and handles the x402 payment
 handshake on 402 responses. Your agent code stays a normal HTTP client —
 Payrail signs the on-chain transaction on your behalf when a paid API
 asks for payment.
@@ -22,13 +22,13 @@ asks for payment.
 ## Install the SDK
 
 <CodeBlock lang="bash" filename="terminal">
-{`npm install @payrail-app/sdk
+{`npm install @obscura-app/sdk
 
 # or pnpm:
-pnpm add @payrail-app/sdk
+pnpm add @obscura-app/sdk
 
 # or yarn:
-yarn add @payrail-app/sdk`}
+yarn add @obscura-app/sdk`}
 </CodeBlock>
 
 ## Verify
@@ -36,7 +36,7 @@ yarn add @payrail-app/sdk`}
 A minimal sanity check — this should print the installed version:
 
 <CodeBlock lang="bash" filename="terminal">
-{`node -e "console.log(require('@payrail-app/sdk/package.json').version)"`}
+{`node -e "console.log(require('@obscura-app/sdk/package.json').version)"`}
 </CodeBlock>
 
 You're ready. The [Quickstart](/docs/agents/quickstart) gets you to a

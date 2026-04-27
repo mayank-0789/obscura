@@ -1,7 +1,7 @@
 {
-  "name": "@payrail-app/merchant-sdk",
+  "name": "@obscura-app/merchant-sdk",
   "version": "0.1.1",
-  "description": "Express middleware for API sellers to accept x402 payments on Solana via PayAI facilitator.",
+  "description": "Express middleware for API sellers to accept confidential x402 payments on Solana via the Umbra mixer.",
   "license": "MIT",
   "author": "Payrail",
   "homepage": "https://github.com/mayank-0789/payrail",
@@ -43,9 +43,7 @@
     "clean": "rm -rf dist",
     "prepublishOnly": "pnpm run clean && pnpm run build"
   },
-  "dependencies": {
-    "x402-solana": "^2.0.4"
-  },
+  "dependencies": {},
   "peerDependencies": {
     "@solana/web3.js": ">=1.98.4"
   },

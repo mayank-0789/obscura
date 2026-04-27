@@ -20,7 +20,7 @@ const lines: Line[] = [
     n: 1,
     nodes: (
       <span className={tokens.com}>
-        {"// npm install @payrail-app/merchant-sdk"}
+        {"// npm install @obscura-app/merchant-sdk"}
       </span>
     ),
   },
@@ -46,7 +46,7 @@ const lines: Line[] = [
         <span className={tokens.id}>payrail</span>
         <span className={tokens.op}> {"}"} </span>
         <span className={tokens.kw}>from</span>{" "}
-        <span className={tokens.str}>&quot;@payrail-app/merchant-sdk&quot;</span>
+        <span className={tokens.str}>&quot;@obscura-app/merchant-sdk&quot;</span>
         <span className={tokens.op}>;</span>
       </>
     ),
@@ -168,7 +168,7 @@ export function MerchantCodeEditor() {
         </div>
         <div className="flex items-center gap-4 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-600">
           <span className="hidden sm:inline">
-            @payrail-app/merchant-sdk@0.1.0
+            @obscura-app/merchant-sdk@0.1.0
           </span>
           <span className="text-zinc-700">·</span>
           <span>Express · Node 22</span>

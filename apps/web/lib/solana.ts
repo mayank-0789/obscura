@@ -5,7 +5,7 @@ import {
   PublicKey,
   type Connection,
   type Keypair,
-} from "@payrail-app/solana";
+} from "@obscura-app/solana";
 import { env } from "@/lib/env";
 
 // Server-only Solana client singletons. Match the pattern used by lib/dodo/client

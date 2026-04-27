@@ -57,6 +57,13 @@ export const env = createEnv({
     // and code paths that need them assert presence at call time.
     UMBRA_INDEXER_URL: z.string().url().optional(),
     UMBRA_RELAYER_URL: z.string().url().optional(),
+    // Vercel Cron auth — every Vercel Cron firing arrives with
+    // `Authorization: Bearer <CRON_SECRET>`. Routes under /api/cron/* refuse
+    // any request whose token doesn't match. Optional in env — if unset,
+    // cron routes are GUARDED-OPEN (allow all) for local dev, with a warning
+    // log; in production set a long random string and configure it as
+    // `CRON_SECRET` in the Vercel project.
+    CRON_SECRET: z.string().min(16).optional(),
   },
 
   client: {
@@ -92,6 +99,7 @@ export const env = createEnv({
     UMBRA_RPC_SUBSCRIPTIONS_URL: process.env.UMBRA_RPC_SUBSCRIPTIONS_URL,
     UMBRA_INDEXER_URL: process.env.UMBRA_INDEXER_URL,
     UMBRA_RELAYER_URL: process.env.UMBRA_RELAYER_URL,
+    CRON_SECRET: process.env.CRON_SECRET,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     NEXT_PUBLIC_SOLANA_CLUSTER: process.env.NEXT_PUBLIC_SOLANA_CLUSTER,
   },

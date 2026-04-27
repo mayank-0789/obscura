@@ -39,7 +39,7 @@ and passes payment-bearing requests through after settling on-chain.
 
 <CodeBlock lang="ts" filename="server.ts">
 {`import express from "express";
-import { payrail } from "@payrail-app/merchant-sdk";
+import { payrail } from "@obscura-app/merchant-sdk";
 
 const pay = payrail({
   payoutWallet: process.env.PAYRAIL_PAYOUT_WALLET!,

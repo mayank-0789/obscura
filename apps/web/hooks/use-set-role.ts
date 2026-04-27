@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { User } from "@payrail-app/db";
+import type { User } from "@obscura-app/db";
 import { useAuthedFetch } from "@/hooks/use-authed-fetch";
 import { parseApiError } from "@/lib/parse-api-error";
 import type { Role } from "@/lib/onboarding";
@@ -15,6 +15,9 @@ type SetRoleResponse = {
     createdAt: string;
   } | null;
   merchantCreated: boolean;
+  // Plaintext initial merchant API key, returned exactly once on the
+  // creation hop (`merchantCreated: true`). null on idempotent re-call.
+  apiKey: string | null;
 };
 
 /**

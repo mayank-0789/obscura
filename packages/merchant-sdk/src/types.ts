@@ -1,21 +1,34 @@
 export type MerchantSdkConfig = {
-  /** Solana address (base58) where payments should land. */
-  payoutWallet: string;
-  /** Simple network name — "solana" or "solana-devnet". Defaults to devnet. */
+  /**
+   * The merchant's Umbra-side ETA address (Solana pubkey, base58). This is
+   * NOT a regular SPL wallet — it's the deterministic public key of the
+   * merchant's Umbra encrypted token account, registered server-side at
+   * merchant signup. Pay-out instructions in the 402 challenge use this as
+   * the recipient.
+   */
+  merchantEtaAddress: string;
+  /** "solana" (mainnet) or "solana-devnet". Defaults to devnet. */
   network?: "solana" | "solana-devnet";
   /** Stablecoin mint. Defaults to the canonical USDC for the selected network. */
   mint?: string;
   /** Stablecoin decimals. Defaults to 6 (USDC / USDG). */
   decimals?: number;
-  /** Facilitator URL. Defaults to PayAI's public devnet facilitator. */
-  facilitatorUrl?: string;
-  /** Override the RPC URL used for chain reads. */
+  /**
+   * Solana RPC URL for on-chain envelope verification. Helius works well;
+   * any provider that exposes `getTransaction` is fine. Defaults to
+   * `https://api.devnet.solana.com` for `solana-devnet` and the public
+   * mainnet endpoint for `solana` — both rate-limited; pass your own RPC
+   * for production load.
+   */
   rpcUrl?: string;
   /**
-   * PayAI JWT auth (optional — free tier needs neither). Set both to enable.
+   * Replay-protection window in milliseconds. Queue signatures presented
+   * by an agent SDK are tracked in-memory and rejected on duplicate within
+   * this window. Default 5 minutes — long enough to cover a slow client
+   * retry cycle, short enough that the in-memory map doesn't grow without
+   * bound on a busy merchant.
    */
-  apiKeyId?: string;
-  apiKeySecret?: string;
+  replayWindowMs?: number;
 };
 
 /**
@@ -35,4 +48,3 @@ export type ChargeConfig = {
   /** Override the SDK-default mint+decimals for this route only. */
   asset?: { address: string; decimals: number };
 };
-

@@ -9,7 +9,7 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
-    "@payrail-app/merchant-sdk": "workspace:*",
+    "@obscura-app/merchant-sdk": "workspace:*",
     "dotenv": "^17.4.2",
     "express": "^5.2.1"
   },

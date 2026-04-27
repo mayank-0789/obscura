@@ -1,4 +1,4 @@
-# @payrail-app/sdk
+# @obscura-app/sdk
 
 Pay-per-call SDK for AI agents. Wraps `fetch()` so any x402-enabled paid API becomes callable transparently — the SDK handles the payment handshake, signs the Solana transaction server-side via Payrail, and retries the request with a valid payment header.
 
@@ -7,15 +7,15 @@ Your agent never touches a private key, a blockchain library, or a wallet file. 
 ## Install
 
 ```bash
-npm install @payrail-app/sdk
-# or: pnpm add @payrail-app/sdk
-# or: yarn add @payrail-app/sdk
+npm install @obscura-app/sdk
+# or: pnpm add @obscura-app/sdk
+# or: yarn add @obscura-app/sdk
 ```
 
 ## Quickstart
 
 ```ts
-import { Payrail } from "@payrail-app/sdk";
+import { Payrail } from "@obscura-app/sdk";
 
 const agent = new Payrail({
   apiKey: process.env.PAYRAIL_KEY!,
@@ -49,7 +49,7 @@ Throws `PayrailError` on any sign-flow failure.
 ### `PayrailError`
 
 ```ts
-import { PayrailError } from "@payrail-app/sdk";
+import { PayrailError } from "@obscura-app/sdk";
 
 try {
   const res = await agent.fetch(url);
@@ -71,33 +71,36 @@ Full list of codes is in the exported `PayrailErrorCode` union.
 ## How it works
 
 ```
-your code              paid API              payrail              solana
-    │                     │                     │                    │
-    │ agent.fetch(url)    │                     │                    │
-    │────────────────────▶│                     │                    │
-    │ 402 + PAYMENT-REQD  │                     │                    │
-    │◀────────────────────│                     │                    │
-    │                     │                     │                    │
-    │ POST /api/x402/sign │                     │                    │
-    │──────────────────────────────────────────▶│                    │
-    │                     │       ┌─ cap check ─┤                    │
-    │                     │       ├─ privy sign ┤                    │
-    │ { paymentSignatureHeader }                │                    │
-    │◀──────────────────────────────────────────│                    │
-    │                     │                     │                    │
-    │ retry w/ sig        │                     │                    │
-    │────────────────────▶│                     │                    │
-    │                     │ verify + settle via PayAI facilitator   │
-    │                     ├────────────────────────────────────────▶│
-    │                     │            tx settled                    │
-    │                     │◀────────────────────────────────────────│
-    │ 200 + data          │                     │                    │
-    │◀────────────────────│                     │                    │
+your code              paid API              payrail              umbra/solana
+    │                     │                     │                       │
+    │ agent.fetch(url)    │                     │                       │
+    │────────────────────▶│                     │                       │
+    │ 402 + PAYMENT-REQD  │                     │                       │
+    │◀────────────────────│                     │                       │
+    │                     │                     │                       │
+    │ POST /api/x402/sign │                     │                       │
+    │──────────────────────────────────────────▶│                       │
+    │                     │       ┌─ cap check ─┤                       │
+    │                     │       ├─ mixer xfer ┼─────────────────────▶│
+    │                     │       │             │                       │
+    │                     │       │             │   queue + callback    │
+    │                     │       │             │◀──────────────────────│
+    │ { paymentSignatureHeader (umbra-mixer-v1) }                       │
+    │◀──────────────────────────────────────────│                       │
+    │                     │                     │                       │
+    │ retry w/ sig        │                     │                       │
+    │────────────────────▶│                     │                       │
+    │                     │ verify on-chain via RPC                     │
+    │                     ├────────────────────────────────────────────▶│
+    │                     │◀──── queue tx confirmed ────────────────────│
+    │ 200 + data          │                     │                       │
+    │◀────────────────────│                     │                       │
 ```
 
-- Signing is server-side via Privy delegated signers. No key material in your agent's process.
+- Signing is server-side via Payrail-derived keypairs (HMAC-SHA-256 of a master seed + the agent's UUID). No key material in your agent's process. No wallet popup.
 - Spend caps are enforced atomically on every sign call. No over-spend under concurrency.
-- The on-chain tx is co-signed by the PayAI facilitator as the fee payer. Your agent never needs SOL.
+- The actual transfer is a confidential Umbra mixer hop: agent's encrypted balance → on-chain UTXO → merchant's encrypted balance. The on-chain link between sender and recipient is broken by the mixer commitment. Amounts are encrypted at rest.
+- Neither your agent nor the merchant ever needs SOL — the Payrail backend pays for the deposit, the Umbra relayer pays for the claim.
 
 ## Environment
 

@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
-import type { User } from "@payrail-app/db";
+import type { User } from "@obscura-app/db";
 import { useAuthedFetch } from "@/hooks/use-authed-fetch";
 
 export type MeResponse = {

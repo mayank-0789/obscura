@@ -6,7 +6,7 @@ export default function ({ children }) {
 
 # Install
 
-The `@payrail-app/merchant-sdk` package gives you one Express-style
+The `@obscura-app/merchant-sdk` package gives you one Express-style
 middleware that handles x402 payment challenges + settlement. Any route
 it wraps becomes a paid endpoint: the middleware returns 402 until the
 client pays, verifies + settles on Solana via the PayAI facilitator,
@@ -23,13 +23,13 @@ then hands off to your downstream handler.
 ## Install the SDK
 
 <CodeBlock lang="bash" filename="terminal">
-{`npm install @payrail-app/merchant-sdk express
+{`npm install @obscura-app/merchant-sdk express
 
 # or pnpm:
-pnpm add @payrail-app/merchant-sdk express
+pnpm add @obscura-app/merchant-sdk express
 
 # or yarn:
-yarn add @payrail-app/merchant-sdk express`}
+yarn add @obscura-app/merchant-sdk express`}
 </CodeBlock>
 
 <Callout kind="tip" title="Peer dependency">
@@ -41,7 +41,7 @@ yarn add @payrail-app/merchant-sdk express`}
 ## Verify
 
 <CodeBlock lang="bash" filename="terminal">
-{`node -e "console.log(require('@payrail-app/merchant-sdk/package.json').version)"`}
+{`node -e "console.log(require('@obscura-app/merchant-sdk/package.json').version)"`}
 </CodeBlock>
 
 You're ready. The [Quickstart](/docs/merchants/quickstart) gets you a

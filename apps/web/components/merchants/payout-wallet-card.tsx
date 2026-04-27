@@ -77,7 +77,7 @@ export function PayoutWalletCard({
                   day: "numeric",
                 })
               : "—"}{" "}
-            · Paste this into your @payrail-app/merchant-sdk config.
+            · Paste this into your @obscura-app/merchant-sdk config.
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">

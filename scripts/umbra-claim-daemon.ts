@@ -98,6 +98,103 @@ function stateFileFor(subject: UmbraSubject, subjectId: string): string {
   return path.join(STATE_DIR, `${subject}-${subjectId}.json`);
 }
 
+function lockDirFor(subject: UmbraSubject, subjectId: string): string {
+  return path.join(STATE_DIR, `${subject}-${subjectId}.lock`);
+}
+
+// Acquires an exclusive cross-process lock for this (subject, subjectId).
+// Backed by `mkdir`, which is atomic on POSIX filesystems — only one caller
+// wins. Stale locks (process crashed mid-claim) are detected via the recorded
+// PID + timestamp; if the holder is dead OR the lock is older than
+// MAX_LOCK_AGE_MS, we steal it.
+//
+// Why this matters: cron fires every minute, but a busy claim can take 30–90s.
+// Without a lock, two daemons race on the same UTXOs — protocol-safe (the
+// SDK's nullifier check rejects double-spend at the circuit), but wasteful
+// (two ZK proves where one would have done).
+const MAX_LOCK_AGE_MS = 5 * 60 * 1000;
+
+interface LockMetadata {
+  pid: number;
+  startedAt: number;
+}
+
+function acquireLock(subject: UmbraSubject, subjectId: string): boolean {
+  if (!fs.existsSync(STATE_DIR)) fs.mkdirSync(STATE_DIR, { recursive: true });
+  const lockDir = lockDirFor(subject, subjectId);
+  const metaFile = path.join(lockDir, "meta.json");
+
+  try {
+    fs.mkdirSync(lockDir);
+  } catch (err) {
+    // EEXIST = another daemon has the lock. Inspect the metadata to decide
+    // whether to steal it.
+    if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err;
+    const stolen = stealStaleLock(lockDir, metaFile);
+    if (!stolen) return false;
+  }
+
+  const meta: LockMetadata = { pid: process.pid, startedAt: Date.now() };
+  fs.writeFileSync(metaFile, JSON.stringify(meta));
+  return true;
+}
+
+function stealStaleLock(lockDir: string, metaFile: string): boolean {
+  let meta: LockMetadata | null = null;
+  try {
+    meta = JSON.parse(fs.readFileSync(metaFile, "utf8")) as LockMetadata;
+  } catch {
+    // Corrupt metadata file = lock is in an indeterminate state. Steal it.
+    fs.rmSync(lockDir, { recursive: true, force: true });
+    fs.mkdirSync(lockDir);
+    return true;
+  }
+
+  if (Date.now() - meta.startedAt > MAX_LOCK_AGE_MS) {
+    console.log(
+      `[claim-daemon] stale lock (age=${Date.now() - meta.startedAt}ms, ` +
+        `pid=${meta.pid}) — stealing`,
+    );
+    fs.rmSync(lockDir, { recursive: true, force: true });
+    fs.mkdirSync(lockDir);
+    return true;
+  }
+
+  if (!isProcessAlive(meta.pid)) {
+    console.log(
+      `[claim-daemon] orphan lock (pid=${meta.pid} dead) — stealing`,
+    );
+    fs.rmSync(lockDir, { recursive: true, force: true });
+    fs.mkdirSync(lockDir);
+    return true;
+  }
+
+  return false;
+}
+
+function isProcessAlive(pid: number): boolean {
+  try {
+    // kill(pid, 0) probes whether a signal CAN be sent without actually
+    // delivering one. Throws ESRCH if the process is gone, EPERM if it
+    // exists but belongs to another user.
+    process.kill(pid, 0);
+    return true;
+  } catch (err) {
+    return (err as NodeJS.ErrnoException).code === "EPERM";
+  }
+}
+
+function releaseLock(subject: UmbraSubject, subjectId: string): void {
+  const lockDir = lockDirFor(subject, subjectId);
+  try {
+    fs.rmSync(lockDir, { recursive: true, force: true });
+  } catch (err) {
+    // Best-effort — a missing lock is fine; anything else is logged but
+    // not fatal (the next run will steal a stale lock anyway).
+    console.warn(`[claim-daemon] releaseLock warning:`, err);
+  }
+}
+
 function loadState(subject: UmbraSubject, subjectId: string): ScanState {
   const file = stateFileFor(subject, subjectId);
   if (!fs.existsSync(file)) {
@@ -139,6 +236,28 @@ async function main() {
     throw new Error("subjectId is required");
   }
   const subject = subjectArg as UmbraSubject;
+
+  // Acquire the lock BEFORE any side effects. If another daemon for this
+  // subject is still running, exit cleanly — cron will retry next tick.
+  if (!acquireLock(subject, subjectId)) {
+    console.log(
+      `[claim-daemon] ${subject}=${subjectId} — another instance is running, skipping`,
+    );
+    return;
+  }
+
+  try {
+    await runClaim({ subject, subjectId });
+  } finally {
+    releaseLock(subject, subjectId);
+  }
+}
+
+async function runClaim(args: {
+  subject: UmbraSubject;
+  subjectId: string;
+}): Promise<void> {
+  const { subject, subjectId } = args;
 
   const rpcUrl = envOrThrow("HELIUS_RPC_URL");
   const seedSecret = envOrThrow("UMBRA_AGENT_SEED_SECRET");

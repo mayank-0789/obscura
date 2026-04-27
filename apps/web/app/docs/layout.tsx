@@ -6,7 +6,7 @@ import { Footer } from "@/components/marketing/footer";
 export const metadata: Metadata = {
   title: "Docs · Payrail",
   description:
-    "Build AI agents that pay for APIs autonomously, and monetize APIs per-call. Quickstarts and reference for @payrail-app/sdk and @payrail-app/merchant-sdk.",
+    "Build AI agents that pay for APIs autonomously, and monetize APIs per-call. Quickstarts and reference for @obscura-app/sdk and @obscura-app/merchant-sdk.",
 };
 
 export default function DocsLayout({

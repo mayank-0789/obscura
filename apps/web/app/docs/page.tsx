@@ -24,14 +24,14 @@ export default function DocsIndexPage() {
         <QuickstartCard
           kicker="01 / For agent developers"
           title="Ship an agent that pays for APIs."
-          body="Install @payrail-app/sdk, drop in your agent's API key, point fetch at a paid endpoint. Payrail handles signing, spend caps, and retries on your behalf."
+          body="Install @obscura-app/sdk, drop in your agent's API key, point fetch at a paid endpoint. Payrail handles signing, spend caps, and retries on your behalf."
           href="/docs/agents/quickstart"
           cta="Read the agent quickstart"
         />
         <QuickstartCard
           kicker="02 / For API providers"
           title="Monetize any route in one line."
-          body="Install @payrail-app/merchant-sdk, wrap an Express route with pay.charge({ amount }). The PayAI facilitator verifies and settles payments on Solana. You get USDC in your payout wallet."
+          body="Install @obscura-app/merchant-sdk, wrap an Express route with pay.charge({ amount }). The PayAI facilitator verifies and settles payments on Solana. You get USDC in your payout wallet."
           href="/docs/merchants/quickstart"
           cta="Read the merchant quickstart"
         />

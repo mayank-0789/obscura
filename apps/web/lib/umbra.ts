@@ -4,7 +4,7 @@ import {
   Keypair,
   PublicKey,
   type Connection,
-} from "@payrail-app/solana";
+} from "@obscura-app/solana";
 import {
   LAMPORTS_PER_SOL,
   SystemProgram,

@@ -12,12 +12,16 @@ export type PayrailErrorCode =
   | "agent_inactive"
   | "invalid_challenge"
   | "over_cap"
+  | "insufficient_funds"
+  | "rate_limited"
+  | "conflict"
   | "signing_failed"
   | "bad_request"
   | "server_error"
   // SDK-side codes (thrown from this package)
   | "no_payment_required_header"
   | "network_error"
+  | "timeout"
   | "unknown";
 
 export class PayrailError extends Error {

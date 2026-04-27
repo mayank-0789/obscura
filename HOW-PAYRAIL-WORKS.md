@@ -165,7 +165,7 @@ x402 solves the *protocol* problem: how does an HTTP server charge per request a
 2. **Realtime earnings dashboard.** Every on-chain payment to Amit's wallet flows into his dashboard within ~2 seconds via Helius → SSE.
 3. **Fiat off-ramp** (v2): Amit withdraws accumulated USDC to INR via Dodo Payouts.
 
-The `@payrail-app/sdk` (for agents) is a 3-line-integration drop-in replacement for `x402-solana/client`. The `@payrail-app/merchant-sdk` (for merchants) is a 1-line-middleware drop-in replacement for `x402-solana/server`. Under the hood, both still use the x402 protocol — Payrail just hides the wallet-management gymnastics.
+The `@obscura-app/sdk` (for agents) is a 3-line-integration drop-in replacement for `x402-solana/client`. The `@obscura-app/merchant-sdk` (for merchants) is a 1-line-middleware drop-in replacement for `x402-solana/server`. Under the hood, both still use the x402 protocol — Payrail just hides the wallet-management gymnastics.
 
 ---
 
@@ -178,7 +178,7 @@ The `@payrail-app/sdk` (for agents) is a 3-line-integration drop-in replacement 
   ┌─────────────────┐     │  ┌────────────────────┐  │
   │ Priya's agent   │     │  │ /api/x402/sign     │  │
   │ code            │────▶│  │ — cap check        │  │
-  │ @payrail-app/sdk    │◀────│  │ — build Solana tx  │  │     ┌─────────────┐
+  │ @obscura-app/sdk    │◀────│  │ — build Solana tx  │  │     ┌─────────────┐
   └────────┬────────┘     │  │ — delegate to Privy│◀─┼────▶│  Privy      │
            │              │  └────────────────────┘  │     │  wallet API │
            │ HTTP         │                          │     └─────────────┘
@@ -187,7 +187,7 @@ The `@payrail-app/sdk` (for agents) is a 3-line-integration drop-in replacement 
   ┌─────────────────┐     │  │ /api/topup/...     │◀─┼────▶│  Dodo       │
   │ Amit's API      │     │  └────────────────────┘  │     │  Payments   │
   │ server          │     │                          │     └─────────────┘
-  │ @payrail-app/       │     │  ┌────────────────────┐  │
+  │ @obscura-app/       │     │  ┌────────────────────┐  │
   │   merchant-sdk  │     │  │ /api/webhooks/     │  │     ┌─────────────┐
   └────────┬────────┘     │  │   helius           │◀─┼─────│  Helius     │
            │              │  └────────────────────┘  │     │  webhooks   │
@@ -224,10 +224,10 @@ This is a Turborepo monorepo. Three things matter most to a developer reading th
 
 | Package | Purpose | Read this first |
 |---|---|---|
-| [`@payrail-app/sdk`](./packages/sdk/) | Client SDK agent devs install. Wraps `fetch()`, handles 402 → sign → retry. | [`packages/sdk/src/index.ts`](./packages/sdk/src/index.ts) |
-| [`@payrail-app/merchant-sdk`](./packages/merchant-sdk/) | Express-style middleware API providers install. Returns 402, verifies + settles via facilitator. | [`packages/merchant-sdk/src/express.ts`](./packages/merchant-sdk/src/express.ts) |
-| [`@payrail-app/solana`](./packages/solana/) | Shared Solana helpers (treasury keypair, SPL transfer, ATA init) used by the backend. | [`packages/solana/src/transfer.ts`](./packages/solana/src/transfer.ts) |
-| [`@payrail-app/db`](./packages/db/) | Drizzle schema for every table. | [`packages/db/src/schema.ts`](./packages/db/src/schema.ts) |
+| [`@obscura-app/sdk`](./packages/sdk/) | Client SDK agent devs install. Wraps `fetch()`, handles 402 → sign → retry. | [`packages/sdk/src/index.ts`](./packages/sdk/src/index.ts) |
+| [`@obscura-app/merchant-sdk`](./packages/merchant-sdk/) | Express-style middleware API providers install. Returns 402, verifies + settles via facilitator. | [`packages/merchant-sdk/src/express.ts`](./packages/merchant-sdk/src/express.ts) |
+| [`@obscura-app/solana`](./packages/solana/) | Shared Solana helpers (treasury keypair, SPL transfer, ATA init) used by the backend. | [`packages/solana/src/transfer.ts`](./packages/solana/src/transfer.ts) |
+| [`@obscura-app/db`](./packages/db/) | Drizzle schema for every table. | [`packages/db/src/schema.ts`](./packages/db/src/schema.ts) |
 
 ### Backend routes (the Payrail product itself)
 
@@ -258,8 +258,8 @@ This is a Turborepo monorepo. Three things matter most to a developer reading th
 
 | App | What it shows | Entry point |
 |---|---|---|
-| [`apps/demo-merchant-news`](./apps/demo-merchant-news/) | A merchant server using `@payrail-app/merchant-sdk` with 3 paid endpoints. | [`src/index.ts`](./apps/demo-merchant-news/src/index.ts) |
-| [`apps/demo-agent`](./apps/demo-agent/) | An agent using `@payrail-app/sdk` in a loop to hit the demo merchant. | [`src/index.ts`](./apps/demo-agent/src/index.ts) |
+| [`apps/demo-merchant-news`](./apps/demo-merchant-news/) | A merchant server using `@obscura-app/merchant-sdk` with 3 paid endpoints. | [`src/index.ts`](./apps/demo-merchant-news/src/index.ts) |
+| [`apps/demo-agent`](./apps/demo-agent/) | An agent using `@obscura-app/sdk` in a loop to hit the demo merchant. | [`src/index.ts`](./apps/demo-agent/src/index.ts) |
 
 **If you're a dev and you only read 4 files, read these:**
 1. [`apps/demo-agent/src/index.ts`](./apps/demo-agent/src/index.ts) — what an agent dev writes (3 lines)
@@ -297,7 +297,7 @@ This is a Turborepo monorepo. Three things matter most to a developer reading th
 3. Amit lands on `/merchants/dashboard`. Sees his payout wallet, a zero balance, no payments yet.
 4. He copies the payout wallet pubkey. In his Express server:
    ```ts
-   import { payrail } from "@payrail-app/merchant-sdk";
+   import { payrail } from "@obscura-app/merchant-sdk";
    const pay = payrail({
      payoutWallet: process.env.PAYOUT_WALLET,
      network: "solana-devnet",
@@ -322,7 +322,7 @@ const agent = new Payrail({
 const res = await agent.fetch("https://api.amitnews.com/article/42");
 ```
 
-`@payrail-app/sdk` fires a plain `fetch(url)`. No special headers. The SDK is a thin layer above `fetch` — agent code doesn't know Solana exists.
+`@obscura-app/sdk` fires a plain `fetch(url)`. No special headers. The SDK is a thin layer above `fetch` — agent code doesn't know Solana exists.
 
 **Code**: [`packages/sdk/src/index.ts`](./packages/sdk/src/index.ts) — the `Payrail.fetch()` method. It's a thin wrapper over global `fetch` that checks the response status, and only reacts if it's 402.
 
@@ -504,11 +504,11 @@ Priya's agent dashboard, polling every 10s, shows "Budget left ₹499.15 / ₹50
 | Actor | Responsibility |
 |---|---|
 | **Priya's agent code** | Calls `agent.fetch()`. That's it. |
-| **`@payrail-app/sdk`** | Catches 402, relays the header to Payrail backend, retries with the signed payment header. Never holds a key. |
+| **`@obscura-app/sdk`** | Catches 402, relays the header to Payrail backend, retries with the signed payment header. Never holds a key. |
 | **Payrail backend** | Authenticates API keys, enforces spend caps atomically, builds the Solana transaction, delegates signing to Privy, returns the signed tx. |
 | **Privy** | Custody layer. Holds the agent wallet's private key. Signs transactions on Payrail's authorization (delegated signer config). |
-| **Amit's server** | Hosts the paid endpoints. Just Express + `@payrail-app/merchant-sdk` middleware. |
-| **`@payrail-app/merchant-sdk`** | Returns 402 on missing payment. On retry, extracts the signature, forwards to PayAI for verify + settle, lets the request through on success. |
+| **Amit's server** | Hosts the paid endpoints. Just Express + `@obscura-app/merchant-sdk` middleware. |
+| **`@obscura-app/merchant-sdk`** | Returns 402 on missing payment. On retry, extracts the signature, forwards to PayAI for verify + settle, lets the request through on success. |
 | **PayAI facilitator** | Verifies transactions match requirements, co-signs as fee-payer, broadcasts to Solana, confirms landing. Eats SOL gas. |
 | **Solana** | Settlement layer. USDC actually moves from one account to another, in ~1-2 seconds, for ~$0.001 in fees. |
 | **Helius** | Watches the blockchain for transfers touching merchant payout wallets. Pushes webhook events to Payrail so dashboards stay live. |
@@ -837,7 +837,7 @@ If you're a developer who wants to actually understand this codebase (not just t
 
 ### Stop 1 (2 min) — What an agent dev writes
 
-Open [`apps/demo-agent/src/index.ts`](./apps/demo-agent/src/index.ts). This is a real, runnable agent that uses `@payrail-app/sdk` in a loop. Look at the imports and the `new Payrail(...)` + `agent.fetch(...)` calls. That's the entire Payrail integration. Everything else is demo dressing.
+Open [`apps/demo-agent/src/index.ts`](./apps/demo-agent/src/index.ts). This is a real, runnable agent that uses `@obscura-app/sdk` in a loop. Look at the imports and the `new Payrail(...)` + `agent.fetch(...)` calls. That's the entire Payrail integration. Everything else is demo dressing.
 
 ### Stop 2 (2 min) — What a merchant dev writes
 

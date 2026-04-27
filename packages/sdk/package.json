@@ -1,5 +1,5 @@
 {
-  "name": "@payrail-app/sdk",
+  "name": "@obscura-app/sdk",
   "version": "0.1.1",
   "description": "Pay-per-call SDK for AI agents — wraps fetch() to handle x402 payments via Payrail on Solana.",
   "license": "MIT",

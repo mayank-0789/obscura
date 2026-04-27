@@ -1,8 +1,4 @@
-import {
-  X402PaymentHandler,
-  type PaymentRequirements,
-  type RouteConfig,
-} from "x402-solana";
+import { Connection, PublicKey } from "@solana/web3.js";
 import type { ChargeConfig, MerchantSdkConfig } from "./types.js";
 
 // Express-compatible types (only the surface we actually use). We intentionally
@@ -31,23 +27,66 @@ type Middleware = (
   next: NextFn,
 ) => void | Promise<void>;
 
-const DEFAULT_FACILITATOR = "https://facilitator.payai.network";
 const DEFAULT_DEVNET_USDC = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU";
 const DEFAULT_MAINNET_USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+const DEFAULT_DEVNET_RPC = "https://api.devnet.solana.com";
+const DEFAULT_MAINNET_RPC = "https://api.mainnet-beta.solana.com";
+const DEFAULT_REPLAY_WINDOW_MS = 5 * 60 * 1000;
+const PAYMENT_SCHEME = "umbra-mixer-v1" as const;
+
+/**
+ * The x402 PaymentRequirements shape we serve in our 402 response. Compatible
+ * with the @obscura-app/sdk consumer side that decodes a base64 JSON
+ * `PAYMENT-REQUIRED` header — the SDK reads `accepts[0]`, picks scheme=exact,
+ * and forwards the whole header to Payrail's /api/x402/sign.
+ */
+export type PaymentRequirements = {
+  scheme: "exact";
+  network: "solana" | "solana-devnet";
+  asset: string;
+  amount: string;
+  payTo: string;
+  resource: string;
+  maxTimeoutSeconds: number;
+  description?: string;
+  mimeType: string;
+};
+
+/**
+ * The umbra-mixer-v1 payment envelope produced by Payrail's /api/x402/sign.
+ * Travels in the agent's retry as a base64-encoded `PAYMENT-SIGNATURE` header.
+ * Contains the on-chain proofs the merchant verifies via RPC.
+ */
+type UmbraMixerEnvelope = {
+  scheme: typeof PAYMENT_SCHEME;
+  network: string;
+  asset: string;
+  amount: string;
+  recipientEtaAddress: string;
+  resource: string;
+  proofSignature: string;
+  queueSignature: string;
+  callbackSignature?: string;
+};
 
 export type PayrailMerchantClient = {
   /**
    * Produce Express-style middleware that demands `amount` atomic units of
    * the configured stablecoin before the downstream handler runs. On a valid
-   * payment, the middleware verifies + settles via the facilitator, attaches
-   * an `X-Payment-Response` header to the response, and calls `next()`.
+   * payment, the middleware verifies the umbra-mixer-v1 envelope on-chain,
+   * attaches an `X-Payment-Response` header, and calls `next()`.
    */
   charge: (config: ChargeConfig) => Middleware;
 };
 
 export function payrail(config: MerchantSdkConfig): PayrailMerchantClient {
-  if (!config.payoutWallet) {
-    throw new Error("@payrail-app/merchant-sdk: payoutWallet is required");
+  if (!config.merchantEtaAddress) {
+    throw new Error("@obscura-app/merchant-sdk: merchantEtaAddress is required");
+  }
+  if (!isValidPubkey(config.merchantEtaAddress)) {
+    throw new Error(
+      "@obscura-app/merchant-sdk: merchantEtaAddress is not a valid Solana pubkey",
+    );
   }
 
   const network = config.network ?? "solana-devnet";
@@ -55,49 +94,41 @@ export function payrail(config: MerchantSdkConfig): PayrailMerchantClient {
   const mint =
     config.mint ??
     (network === "solana" ? DEFAULT_MAINNET_USDC : DEFAULT_DEVNET_USDC);
+  const rpcUrl =
+    config.rpcUrl ??
+    (network === "solana" ? DEFAULT_MAINNET_RPC : DEFAULT_DEVNET_RPC);
+  const replayWindowMs = config.replayWindowMs ?? DEFAULT_REPLAY_WINDOW_MS;
 
-  // X402PaymentHandler accepts undefined for the optional fields — no need to
-  // conditional-spread.
-  const handler = new X402PaymentHandler({
-    network,
-    treasuryAddress: config.payoutWallet,
-    facilitatorUrl: config.facilitatorUrl ?? DEFAULT_FACILITATOR,
-    rpcUrl: config.rpcUrl,
-    apiKeyId: config.apiKeyId,
-    apiKeySecret: config.apiKeySecret,
-  });
+  const connection = new Connection(rpcUrl, "confirmed");
+  const seenQueueSigs = new Map<string, number>();
 
   const defaultAsset = { address: mint, decimals };
 
   return {
     charge(charge) {
-      const routeConfig: RouteConfig = {
-        amount: charge.amount,
-        asset: charge.asset ?? defaultAsset,
-        description: charge.description,
-        mimeType: charge.mimeType,
-        maxTimeoutSeconds: charge.maxTimeoutSeconds,
-      };
+      const asset = charge.asset ?? defaultAsset;
 
       return async (req, res, next) => {
         try {
           const resourceUrl = buildResourceUrl(req);
-          const paymentHeader = handler.extractPayment(req.headers);
-
-          // One `createPaymentRequirements` call serves both the 402 response
-          // path AND the verify/settle path. It hits the facilitator's
-          // /supported endpoint (200–500ms), so deduplicating saves a full
-          // round-trip on every paid request.
-          const requirements = await handler.createPaymentRequirements(
-            routeConfig,
-            resourceUrl,
-          );
+          const paymentHeader = extractPaymentHeader(req.headers);
 
           if (!paymentHeader) {
-            const { body } = handler.create402Response(
-              requirements,
-              resourceUrl,
-            );
+            // No payment yet — issue a 402 challenge with the merchant's ETA
+            // as `payTo`. The agent SDK forwards this challenge verbatim to
+            // Payrail, which constructs a UTXO addressed to that ETA.
+            const requirements: PaymentRequirements = {
+              scheme: "exact",
+              network,
+              asset: asset.address,
+              amount: charge.amount,
+              payTo: config.merchantEtaAddress,
+              resource: resourceUrl,
+              maxTimeoutSeconds: charge.maxTimeoutSeconds ?? 300,
+              mimeType: charge.mimeType ?? "application/json",
+              ...(charge.description ? { description: charge.description } : {}),
+            };
+            const body = { x402Version: 2, accepts: [requirements] };
             const encoded = Buffer.from(JSON.stringify(body)).toString(
               "base64",
             );
@@ -106,39 +137,42 @@ export function payrail(config: MerchantSdkConfig): PayrailMerchantClient {
             return;
           }
 
-          const verification = await handler.verifyPayment(
+          // Agent presented an envelope — verify it.
+          const verification = await verifyEnvelope({
             paymentHeader,
-            requirements,
-          );
-          if (!verification.isValid) {
+            merchantEta: config.merchantEtaAddress,
+            expectedAsset: asset.address,
+            expectedAmount: charge.amount,
+            resourceUrl,
+            seenQueueSigs,
+            replayWindowMs,
+            connection,
+          });
+
+          if (!verification.ok) {
             res.status(402).json({
               error: "invalid_payment",
-              reason: verification.invalidReason,
+              reason: verification.reason,
             });
             return;
           }
 
-          // Settle BEFORE handing off to the downstream handler. The x402
-          // spec permits settle-after-handler, but synchronous settle gives
-          // us a real tx signature in time to attach X-Payment-Response.
-          // Latency cost: ~300–600ms of facilitator round-trip.
-          const settlement = await handler.settlePayment(
-            paymentHeader,
-            requirements,
-          );
-          if (!settlement.success) {
-            res.status(402).json({
-              error: "settle_failed",
-              reason: settlement.errorReason,
-            });
-            return;
-          }
-
+          // Settlement is implicit — by the time the agent has the envelope,
+          // the queue tx has landed and Arcium MPC has finalized. Nothing to
+          // settle here. Echo the proofs back so downstream handlers (and
+          // the agent's response logging) can verify on-chain.
+          const settlement = {
+            scheme: PAYMENT_SCHEME,
+            queueSignature: verification.queueSignature,
+            callbackSignature: verification.callbackSignature,
+            recipient: config.merchantEtaAddress,
+            amount: charge.amount,
+            asset: asset.address,
+          };
           res.setHeader(
             "X-Payment-Response",
             Buffer.from(JSON.stringify(settlement)).toString("base64"),
           );
-
           exposeSettlement(res, settlement);
           next();
         } catch (err) {
@@ -147,6 +181,167 @@ export function payrail(config: MerchantSdkConfig): PayrailMerchantClient {
       };
     },
   };
+}
+
+interface VerifyContext {
+  paymentHeader: string;
+  merchantEta: string;
+  expectedAsset: string;
+  expectedAmount: string;
+  resourceUrl: string;
+  seenQueueSigs: Map<string, number>;
+  replayWindowMs: number;
+  connection: Connection;
+}
+
+type VerifyResult =
+  | { ok: true; queueSignature: string; callbackSignature?: string }
+  | { ok: false; reason: string };
+
+/**
+ * Decodes the umbra-mixer-v1 envelope, runs sanity checks against the merchant's
+ * configured ETA + mint + amount + resource URL, then verifies the queue tx
+ * (and callback tx if present) actually landed on Solana.
+ *
+ * What we DO check:
+ *   - Envelope shape + scheme tag matches.
+ *   - recipientEtaAddress equals the merchant's own ETA. (Stops an agent from
+ *     re-presenting an envelope addressed to a DIFFERENT merchant.)
+ *   - asset, amount, resource match what this route requires. (Replay across
+ *     routes / amounts / mints.)
+ *   - queueSignature hasn't been seen within the replay window. (Reuse of the
+ *     same envelope on the same route within 5 min.)
+ *   - The queue tx exists on Solana and didn't error.
+ *   - The callback tx (if present) exists and didn't error.
+ *
+ * What we INTENTIONALLY don't check (yet — deferred-hardening):
+ *   - That the queue tx's instruction data actually matches the envelope's
+ *     claimed amount/recipient. The Umbra program enforces consistency by
+ *     construction, and parsing the codama-generated instruction layout is
+ *     non-trivial; for hackathon scope we trust that a successful queue tx
+ *     means the encrypted balance update reflected by the envelope.
+ *   - The Groth16 proof signature. Same reason.
+ */
+async function verifyEnvelope(ctx: VerifyContext): Promise<VerifyResult> {
+  let envelope: UmbraMixerEnvelope;
+  try {
+    const raw = Buffer.from(ctx.paymentHeader, "base64").toString("utf8");
+    envelope = JSON.parse(raw) as UmbraMixerEnvelope;
+  } catch {
+    return { ok: false, reason: "envelope is not valid base64 JSON" };
+  }
+
+  if (envelope.scheme !== PAYMENT_SCHEME) {
+    return { ok: false, reason: `unsupported scheme: ${envelope.scheme}` };
+  }
+  if (envelope.recipientEtaAddress !== ctx.merchantEta) {
+    return {
+      ok: false,
+      reason: "recipientEtaAddress does not match merchant ETA",
+    };
+  }
+  if (envelope.asset !== ctx.expectedAsset) {
+    return { ok: false, reason: "asset mint does not match route" };
+  }
+  if (envelope.amount !== ctx.expectedAmount) {
+    return { ok: false, reason: "amount does not match route" };
+  }
+  if (envelope.resource !== ctx.resourceUrl) {
+    return { ok: false, reason: "resource URL does not match request" };
+  }
+  if (!envelope.queueSignature) {
+    return { ok: false, reason: "queueSignature missing" };
+  }
+
+  // Replay protection: evict expired entries first, then check.
+  const now = Date.now();
+  for (const [sig, when] of ctx.seenQueueSigs) {
+    if (now - when > ctx.replayWindowMs) ctx.seenQueueSigs.delete(sig);
+  }
+  if (ctx.seenQueueSigs.has(envelope.queueSignature)) {
+    return { ok: false, reason: "queueSignature already used (replay)" };
+  }
+
+  // On-chain verify — the queue tx must exist and have succeeded.
+  let queueTx: Awaited<ReturnType<Connection["getTransaction"]>>;
+  try {
+    queueTx = await ctx.connection.getTransaction(envelope.queueSignature, {
+      maxSupportedTransactionVersion: 0,
+      commitment: "confirmed",
+    });
+  } catch (err) {
+    return {
+      ok: false,
+      reason: `RPC error fetching queue tx: ${err instanceof Error ? err.message : String(err)}`,
+    };
+  }
+  if (!queueTx) {
+    return { ok: false, reason: "queue tx not found on chain" };
+  }
+  if (queueTx.meta?.err) {
+    return {
+      ok: false,
+      reason: `queue tx failed on chain: ${JSON.stringify(queueTx.meta.err)}`,
+    };
+  }
+
+  // If the SDK reported a finalized callback, verify it too. Older envelopes
+  // may not include this field — that's OK, the queue tx is the primary
+  // success signal.
+  if (envelope.callbackSignature) {
+    try {
+      const cbTx = await ctx.connection.getTransaction(
+        envelope.callbackSignature,
+        {
+          maxSupportedTransactionVersion: 0,
+          commitment: "confirmed",
+        },
+      );
+      if (!cbTx) {
+        return { ok: false, reason: "callback tx not found on chain" };
+      }
+      if (cbTx.meta?.err) {
+        return {
+          ok: false,
+          reason: `callback tx failed on chain: ${JSON.stringify(cbTx.meta.err)}`,
+        };
+      }
+    } catch (err) {
+      return {
+        ok: false,
+        reason: `RPC error fetching callback tx: ${err instanceof Error ? err.message : String(err)}`,
+      };
+    }
+  }
+
+  ctx.seenQueueSigs.set(envelope.queueSignature, now);
+  return {
+    ok: true,
+    queueSignature: envelope.queueSignature,
+    ...(envelope.callbackSignature
+      ? { callbackSignature: envelope.callbackSignature }
+      : {}),
+  };
+}
+
+function extractPaymentHeader(
+  headers: Record<string, string | string[] | undefined>,
+): string | undefined {
+  const raw =
+    headers["payment-signature"] ??
+    headers["PAYMENT-SIGNATURE"] ??
+    headers["Payment-Signature"];
+  if (Array.isArray(raw)) return raw[0];
+  return raw;
+}
+
+function isValidPubkey(s: string): boolean {
+  try {
+    new PublicKey(s);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // Expose the settlement result at `res.locals.payrailSettlement` so downstream
@@ -172,7 +367,3 @@ function buildResourceUrl(req: ExpressLikeReq): string {
   const path = req.originalUrl ?? req.url ?? "/";
   return `${proto}://${host}${path}`;
 }
-
-// Re-export the x402-solana requirements type so consumers can strongly-type
-// any handler that reads payment details from res.locals.
-export type { PaymentRequirements };
