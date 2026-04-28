@@ -11,11 +11,17 @@
     "db:push": "pnpm --filter @obscura-app/db exec drizzle-kit push",
     "db:studio": "pnpm --filter @obscura-app/db exec drizzle-kit studio",
     "db:migrate": "pnpm --filter @obscura-app/db exec drizzle-kit migrate",
-    "dev:demo": "concurrently --names web,merchant --prefix-colors cyan,magenta --kill-others-on-fail \"pnpm --filter web dev\" \"pnpm --filter demo-merchant-news dev\""
+    "dev:demo": "concurrently --names web,merchant --prefix-colors cyan,magenta --kill-others-on-fail \"pnpm --filter web dev\" \"pnpm --filter demo-merchant-news dev\"",
+    "umbra:wrap-treasury-sol": "tsx scripts/wrap-treasury-sol.ts"
   },
   "devDependencies": {
+    "@solana/spl-token": "^0.4.13",
+    "@solana/web3.js": "^1.98.4",
+    "@types/node": "^22.15.3",
     "concurrently": "^9.2.1",
+    "dotenv": "^16.4.7",
     "prettier": "^3.7.4",
+    "tsx": "^4.20.7",
     "turbo": "^2.9.6",
     "typescript": "5.9.2"
   },
