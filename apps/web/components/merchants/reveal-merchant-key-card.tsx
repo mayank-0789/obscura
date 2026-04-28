@@ -80,7 +80,7 @@ export function RevealMerchantKeyCard({
       </div>
 
       <p className="mt-4 text-[12px] leading-[1.55] text-zinc-400">
-        This is the only time you&apos;ll see the plaintext key. Payrail
+        This is the only time you&apos;ll see the plaintext key. Obscura
         stores only a hash — if you lose it, generate a new one and revoke
         this one.
       </p>

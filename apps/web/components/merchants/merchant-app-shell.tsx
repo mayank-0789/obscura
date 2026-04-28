@@ -24,7 +24,7 @@ export function MerchantAppShell({
   // Subscribe to the real-time payment stream for every merchant surface so
   // any of them reflect a new payment within ~1 frame of landing on-chain.
   useMerchantEvents();
-  const payoutWallet = data?.merchant.etaAddress ?? null;
+  const merchantEtaAddress = data?.merchant.etaAddress ?? null;
 
   const isMissingMerchant =
     error instanceof Error && error.message === "not_found";
@@ -34,7 +34,7 @@ export function MerchantAppShell({
       <DashboardTopBar crumb="Merchant dashboard" />
 
       <div className="flex min-h-0 flex-1">
-        <MerchantSidebar payoutWallet={payoutWallet} />
+        <MerchantSidebar merchantEtaAddress={merchantEtaAddress} />
 
         <main className="min-w-0 flex-1 overflow-y-auto bg-[#0a0a0a]">
           {isMissingMerchant ? (

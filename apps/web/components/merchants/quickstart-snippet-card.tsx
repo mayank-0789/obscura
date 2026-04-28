@@ -4,27 +4,27 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { env } from "@/lib/env";
 
-// Renders a ready-to-paste SDK snippet with the merchant's actual pubkey
-// inlined. The goal: a merchant can copy this block into their server.ts
-// and it will "just work" against the network the dashboard is configured
-// for — no further editing.
+// Renders a ready-to-paste SDK snippet with the merchant's actual ETA
+// address inlined. The goal: a merchant can copy this block into their
+// server.ts and it will "just work" against the network the dashboard is
+// configured for — no further editing.
 export function QuickstartSnippetCard({
-  payoutWallet,
+  merchantEtaAddress,
 }: {
-  payoutWallet: string | null;
+  merchantEtaAddress: string | null;
 }) {
   const [copied, setCopied] = useState(false);
   const network =
     env.NEXT_PUBLIC_SOLANA_CLUSTER === "mainnet-beta"
       ? "solana"
       : "solana-devnet";
-  const walletDisplay = payoutWallet ?? "<your-payout-wallet>";
+  const etaDisplay = merchantEtaAddress ?? "<your-merchant-eta-address>";
 
   const snippet = `import express from "express";
-import { payrail } from "@obscura-app/merchant-sdk";
+import { obscura } from "@obscura-app/merchant-sdk";
 
-const pay = payrail({
-  payoutWallet: "${walletDisplay}",
+const pay = obscura({
+  merchantEtaAddress: "${etaDisplay}",
   network: "${network}",
 });
 
@@ -39,7 +39,7 @@ app.get(
 app.listen(3001);`;
 
   const handleCopy = async () => {
-    if (!payoutWallet) return;
+    if (!merchantEtaAddress) return;
     try {
       await navigator.clipboard.writeText(snippet);
       setCopied(true);
@@ -73,7 +73,7 @@ app.listen(3001);`;
           <button
             type="button"
             onClick={handleCopy}
-            disabled={!payoutWallet}
+            disabled={!merchantEtaAddress}
             className={`font-mono text-[11px] uppercase tracking-[0.18em] transition disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c0c0e] rounded ${
               copied
                 ? "text-emerald-400"

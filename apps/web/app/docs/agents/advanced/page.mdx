@@ -6,22 +6,22 @@ export default function ({ children }) {
 
 # Advanced usage
 
-The `Payrail` constructor accepts three options beyond `apiKey`. Together
-they cover local development, custom network stacks, and standard
+The `Obscura` constructor accepts six options. Together they cover local
+development, custom network stacks, retry/timeout tuning, and standard
 `RequestInit` pass-through.
 
-## Point at a different Payrail instance
+## Point at a different Obscura instance
 
-For local development, point at your own Payrail backend:
+For local development, point at your own Obscura backend:
 
 <CodeBlock lang="ts">
-{`const agent = new Payrail({
-  apiKey: process.env.PAYRAIL_KEY!,
+{`const agent = new Obscura({
+  apiKey: process.env.OBSCURA_KEY!,
   baseUrl: "http://localhost:3000",
 });`}
 </CodeBlock>
 
-Useful for end-to-end testing the full agent → Payrail → merchant loop
+Useful for end-to-end testing the full agent → Obscura → merchant loop
 against a local Next.js dev server without touching production infra.
 
 ## Use a custom fetch
@@ -31,16 +31,44 @@ On older Node, edge runtimes, or in tests, inject your own fetch:
 <CodeBlock lang="ts">
 {`import { fetch as undiciFetch } from "undici";
 
-const agent = new Payrail({
-  apiKey: process.env.PAYRAIL_KEY!,
-  baseUrl: process.env.PAYRAIL_BASE_URL!,
+const agent = new Obscura({
+  apiKey: process.env.OBSCURA_KEY!,
+  baseUrl: process.env.OBSCURA_BASE_URL!,
   fetch: undiciFetch as typeof fetch,
 });`}
 </CodeBlock>
 
 The SDK uses the injected fetch for every HTTP call it makes — both the
 outbound request to the merchant and the internal sign request to
-Payrail — so behavior stays consistent across runtimes.
+Obscura — so behavior stays consistent across runtimes.
+
+## Tune timeouts and retries
+
+The Umbra mixer transfer involves a Groth16 ZK proof + Arcium MPC
+callback round-trip — typically 10–25 seconds, P99 around 45 seconds
+on a cold prover cache. The SDK ships sensible defaults but exposes
+every knob.
+
+<CodeBlock lang="ts">
+{`const agent = new Obscura({
+  apiKey: process.env.OBSCURA_KEY!,
+  baseUrl: process.env.OBSCURA_BASE_URL!,
+  // Per-request timeout for /api/x402/sign. Default 60_000.
+  signTimeoutMs: 90_000,
+  // Auto-retry attempts on transient failures (network, 5xx, timeout,
+  // rate_limited). Default 2. Terminal errors never retry — see Errors.
+  signMaxRetries: 3,
+  // First retry backoff in ms; doubles each subsequent retry. Default 500.
+  signRetryBaseMs: 750,
+});`}
+</CodeBlock>
+
+<Callout kind="warn" title="Don't lower signTimeoutMs aggressively">
+  A timeout return doesn't mean the mixer transfer failed — it may
+  still complete server-side. Retrying after a short timeout risks
+  double-spending. If you must, verify the prior request's outcome
+  via the Obscura dashboard before reissuing.
+</Callout>
 
 ## Pass through init options
 
@@ -60,20 +88,20 @@ const res = await agent.fetch(url, {
 });`}
 </CodeBlock>
 
-Two subtleties worth knowing:
+Three subtleties worth knowing:
 
 1. **Headers survive the retry.** Internally the SDK merges its
    `PAYMENT-SIGNATURE` header into the `Headers` object you passed; it
    doesn't replace yours. So `Content-Type`, `Accept`, and any custom
    `X-` headers reach the merchant on the paid request.
-2. **Body is re-sent as-is.** The SDK buffers the request body on the
-   first call and replays it exactly on the paid retry. For `body:
-   ReadableStream`, you'll need a Stream that can be re-read — or use
-   `body: Buffer` / string / `URLSearchParams` instead.
+2. **Body is re-sent as-is.** The SDK forwards the same `init` to the
+   paid retry. If you pass `body: ReadableStream`, that stream needs to
+   be re-readable — pass `body: Buffer` / string / `URLSearchParams`
+   instead for safety.
 3. **AbortSignal cancels both hops.** The signal aborts whichever HTTP
    call is in flight — the initial 402 probe OR the paid retry.
 
 ## Full constructor reference
 
-See [API reference](/docs/agents/reference) for `PayrailOptions`,
-`PayrailError`, and every exported type.
+See [API reference](/docs/agents/reference) for `ObscuraOptions`,
+`ObscuraError`, and every exported type.

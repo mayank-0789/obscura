@@ -8,83 +8,98 @@ export default function ({ children }) {
 
 Every export from `@obscura-app/sdk`, one section per symbol.
 
-## `class Payrail`
+## `class Obscura`
 
 The agent-side client. Wraps `fetch` and handles the x402 payment
 handshake transparently.
 
 <CodeBlock lang="ts">
-{`import { Payrail } from "@obscura-app/sdk";
+{`import { Obscura } from "@obscura-app/sdk";
 
-const agent = new Payrail(options: PayrailOptions);`}
+const agent = new Obscura(options: ObscuraOptions);`}
 </CodeBlock>
 
-### `PayrailOptions`
+### `ObscuraOptions`
 
 <DocTable
   headers={["Option", "Type", "Required", "Default", "Description"]}
   rows={[
     [<code key="c">apiKey</code>, <code key="c">string</code>, "Yes", "—", <>Agent API key (<code>pk_…</code>) from the dashboard.</>],
-    [<code key="c">baseUrl</code>, <code key="c">string</code>, "Yes", "—", "URL of the Payrail backend that signs payments (the host of your deployed apps/web)."],
+    [<code key="c">baseUrl</code>, <code key="c">string</code>, "Yes", "—", "URL of the Obscura backend that signs payments (the host of your deployed apps/web)."],
     [<code key="c">fetch</code>, <code key="c">typeof globalThis.fetch</code>, "No", <>native <code>fetch</code></>, "Inject a custom fetch (undici, node-fetch, a mock in tests)."],
+    [<code key="c">signTimeoutMs</code>, <code key="c">number</code>, "No", <code key="c">60000</code>, "Per-request timeout for /api/x402/sign. Mixer round-trip cold-path P99 lands around 45s — leave headroom."],
+    [<code key="c">signMaxRetries</code>, <code key="c">number</code>, "No", <code key="c">2</code>, "Auto-retry attempts on transient failures. 0 disables retry. Terminal errors never retry."],
+    [<code key="c">signRetryBaseMs</code>, <code key="c">number</code>, "No", <code key="c">500</code>, "First retry backoff in ms; doubles each retry, capped at 8s."],
   ]}
 />
 
 ### `agent.fetch(url, init?)`
 
 Behaves like `fetch`. On a 402 response with a `PAYMENT-REQUIRED` header,
-signs via Payrail + retries the request with a `PAYMENT-SIGNATURE`
+signs via Obscura + retries the request with a `PAYMENT-SIGNATURE`
 header. Returns the final `Response`.
 
-Throws `PayrailError` on any failure — see [Error handling](/docs/agents/errors).
+Throws `ObscuraError` on any failure — see [Error handling](/docs/agents/errors).
 
-## `class PayrailError`
+## `class ObscuraError`
 
 Typed error thrown by `agent.fetch()`.
 
 <CodeBlock lang="ts">
-{`import { PayrailError } from "@obscura-app/sdk";
+{`import { ObscuraError } from "@obscura-app/sdk";
 
 try {
   await agent.fetch(url);
 } catch (err) {
-  if (err instanceof PayrailError) {
-    console.log(err.code);     // PayrailErrorCode
+  if (err instanceof ObscuraError) {
+    console.log(err.code);     // ObscuraErrorCode
     console.log(err.message);  // human string
+    console.log(err.status);   // HTTP status (only set for server-side codes)
   }
 }`}
 </CodeBlock>
 
-### `PayrailError.code: PayrailErrorCode`
+### `ObscuraError.code: ObscuraErrorCode`
 
 String literal union of every error the SDK can surface. See the
 [error-code table](/docs/agents/errors#every-error-code) for each
 code's meaning.
 
 <CodeBlock lang="ts">
-{`type PayrailErrorCode =
+{`type ObscuraErrorCode =
+  // Server-side (propagated from /api/x402/sign)
   | "missing_token"
   | "invalid_token"
   | "agent_inactive"
-  | "over_cap"
   | "invalid_challenge"
+  | "over_cap"
+  | "insufficient_funds"
+  | "rate_limited"
+  | "conflict"
   | "signing_failed"
   | "bad_request"
   | "server_error"
+  // SDK-side
   | "no_payment_required_header"
   | "network_error"
+  | "timeout"
   | "unknown";`}
 </CodeBlock>
 
 ## Protocol-level notes
 
-- **Signatures are bound to the challenge.** Each `PAYMENT-SIGNATURE` is
-  generated from the merchant's specific `PAYMENT-REQUIRED` payload.
-  Replaying a signature against a different challenge always fails
-  verification.
-- **Payrail is never in the request path for paid responses.** Only
-  `/api/x402/sign` sits between you and the merchant, and only during
-  the brief signing window. Your response data flows agent ↔ merchant
-  directly.
-- **SOL is never required on the agent side.** PayAI co-signs as
-  fee-payer. Your agent wallet only ever needs USDC.
+- **Confidential transfer.** Each `PAYMENT-SIGNATURE` is an
+  `umbra-mixer-v1` envelope: a base64-encoded JSON of
+  `{queueSignature, callbackSignature, recipientEtaAddress, asset,
+  amount, resource, scheme, network, proofSignature}`. The merchant
+  verifies it on-chain via Helius RPC before serving.
+- **Obscura is never in the response path.** Only `/api/x402/sign` sits
+  between you and the merchant, and only during the brief signing
+  window. Your response data flows agent ↔ merchant directly.
+- **Replay protection is built in.** Each `queueSignature` is bound to
+  a specific (resource URL, amount, asset, recipient ETA) tuple, and
+  the merchant SDK rejects re-presentation of the same signature
+  within a 5-minute window.
+- **No SOL on the agent side.** Obscura's backend submits the queue +
+  callback transactions and pays the network fee from a treasury
+  wallet. Your agent only ever needs the configured stablecoin.

@@ -8,15 +8,15 @@ export default function ({ children }) {
 
 The `@obscura-app/sdk` package wraps `fetch()` and handles the x402 payment
 handshake on 402 responses. Your agent code stays a normal HTTP client —
-Payrail signs the on-chain transaction on your behalf when a paid API
-asks for payment.
+Obscura signs the confidential on-chain transfer on your behalf when a
+paid API asks for payment.
 
 ## Requirements
 
 - **Node 18 or later.** The SDK uses the native `fetch` API. On older
   runtimes, inject a polyfill via the `fetch` constructor option.
-- **A Payrail account.** [Sign in](/onboarding) with Google or email.
-  The signup flow provisions an agent on your first top-up — see
+- **An Obscura account.** [Sign in](/onboarding) with Google. The signup
+  flow gives you a custodied agent wallet on first top-up — see
   [Quickstart](/docs/agents/quickstart).
 
 ## Install the SDK

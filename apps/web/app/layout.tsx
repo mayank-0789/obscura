@@ -23,7 +23,7 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Payrail — The payment rail for AI agents",
+  title: "Obscura — The payment rail for AI agents",
   description:
     "Fund your AI agent with UPI or card. It pays for APIs, tools, and compute autonomously — stablecoin settlement on Solana, no crypto wallet needed.",
 };

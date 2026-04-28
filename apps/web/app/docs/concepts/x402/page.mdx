@@ -29,14 +29,16 @@ PAYMENT-REQUIRED: <base64(body)>
 Content-Type: application/json
 
 {
-  "x402Version": 1,
+  "x402Version": 2,
   "accepts": [{
     "scheme": "exact",
     "network": "solana-devnet",
-    "maxAmountRequired": "10000",
-    "payTo": "<merchant-wallet>",
-    "asset": "<usdc-mint>",
-    "extra": { "feePayer": "<facilitator>", "validUntil": 1735689600 }
+    "asset": "<spl-mint>",
+    "amount": "10000",
+    "payTo": "<merchant-eta-address>",
+    "resource": "https://news.example.com/article/42",
+    "maxTimeoutSeconds": 300,
+    "mimeType": "application/json"
   }]
 }`}
 </CodeBlock>
@@ -46,7 +48,7 @@ Content-Type: application/json
 <CodeBlock lang="http" noCopy>
 {`GET /article/42 HTTP/1.1
 Host: news.example.com
-PAYMENT-SIGNATURE: <base64(payment)>`}
+PAYMENT-SIGNATURE: <base64(envelope)>`}
 </CodeBlock>
 
 **Response 2 — 200 + data + settlement receipt**
@@ -56,52 +58,71 @@ PAYMENT-SIGNATURE: <base64(payment)>`}
 X-Payment-Response: <base64(settlement)>
 Content-Type: application/json
 
-{ "id": "42", "body": "..." }`}
+{ "id": 42, "body": "..." }`}
 </CodeBlock>
 
 That's the whole protocol on the wire. Four messages. Three headers:
 `PAYMENT-REQUIRED` (quote), `PAYMENT-SIGNATURE` (proof-of-payment),
 `X-Payment-Response` (settlement receipt).
 
-## What makes it different
+## What makes x402 different
 
 - **HTTP-native.** Not a sidecar service, not a webhook callback — plain
   request/response. `curl` + `jq` can debug it.
 - **Chain-agnostic at the spec level.** The `accepts[].network` field
-  picks the chain. `x402-solana` is the Solana adapter; other chains
-  have sibling libraries.
-- **Two-step transactions.** The buyer signs a tx but doesn't submit.
-  The seller (or a delegated facilitator) submits. This guarantees
-  "no-data-no-pay" — a signed tx is worthless until the seller
-  broadcasts it, so if the seller never ships data, the payment doesn't
-  land.
+  picks the chain. Solana is one of several adapters.
+- **No-data-no-pay invariant.** A signed payment is bound to a specific
+  resource URL + amount + recipient. If the merchant never serves data,
+  the merchant also doesn't get a verifiable payment to claim.
+
+## How Obscura extends x402 with confidentiality
+
+Obscura's flavour of x402 swaps the classic "facilitator settles a
+signed SPL transfer" pattern for a confidential mixer transfer:
+
+- The **agent** never holds a Solana key — Obscura's backend signs on
+  its behalf inside `/api/x402/sign`.
+- The **transfer** is a deposit + commitment in the on-chain Umbra
+  mixer tree, not a direct SPL transfer. The amount is encrypted, and
+  the on-chain link between sender ETA and recipient ETA is broken by
+  the mixer.
+- The **payment header** is an `umbra-mixer-v1` envelope carrying the
+  queue + callback signatures. The merchant verifies these on-chain
+  via standard Solana RPC — no facilitator involvement.
 
 ## Why Solana
 
-- **Sub-cent transaction fees** (fraction of a lamport per transfer) —
-  the only chain where a $0.001 API call doesn't get eaten by gas.
-- **Fast confirmations.** Payrail's settle-before-handler path adds
-  ~400ms, which is livable because Solana's confirmation is ~400ms.
-  An Ethereum L1 version of this would add 12 seconds.
+- **Sub-cent transaction fees** (a fraction of a lamport per transfer)
+  — the only L1 where a $0.001 API call doesn't get eaten by gas.
+- **Fast confirmations.** The merchant's verification is two
+  `getTransaction` reads adding ~150–400ms; on Ethereum L1 the same
+  flow would add 12+ seconds per call.
 - **Fee-payer decoupling.** Solana lets a third party pay the network
-  fee. PayAI exploits this to let buyers pay in pure USDC — no SOL
-  balance required.
+  fee, which is what lets Obscura's backend fund the queue + callback
+  txns from a treasury — your agent only ever needs the configured
+  stablecoin.
 
 ## Replay protection
 
-Every x402 payment is bound to a specific challenge:
+Two defences in the Obscura flow:
 
-- The signed Solana transaction includes a `recentBlockhash` that
-  expires after ~150 blocks (~60 seconds).
-- The quote has a `validUntil` timestamp.
-- The facilitator checks a nonce to prevent replays within the window.
+- **Backend-side fingerprint dedupe.** `/api/x402/sign` rejects
+  duplicate spend intents (same agent + URL + amount + recipient ETA
+  + asset) while the original is in flight, returning `conflict` (409).
+- **Merchant-side replay window.** The merchant SDK caches each
+  `queueSignature` in-memory and rejects re-presentation of the same
+  signature within `replayWindowMs` (default 5 minutes).
 
-A signature stolen off the wire can't be re-used after a minute — and
-during that minute, the facilitator rejects the duplicate.
+Beyond that, the on-chain Umbra program enforces nullifier uniqueness:
+the same UTXO can't be claimed twice, and the same encrypted-balance
+deduction can't be replayed at the program level.
 
 ## Further reading
 
-- [x402-solana on npm](https://www.npmjs.com/package/x402-solana) — the
-  underlying library Payrail wraps for merchants.
-- [PayAI facilitator docs](https://payai.network) — the facilitator
-  sitting between merchants and Solana.
+- [`x402-solana` on npm](https://www.npmjs.com/package/x402-solana) —
+  the core x402-on-Solana types Obscura's backend re-uses for the
+  `PaymentRequirements` shape.
+- [How it works (agent)](/docs/agents/flow) — the full flow from the
+  agent SDK's perspective.
+- [How it works (merchant)](/docs/merchants/flow) — the verification
+  swimlane on the merchant side.

@@ -1,24 +1,24 @@
 import "dotenv/config";
-import { Payrail, PayrailError } from "@obscura-app/sdk";
+import { Obscura, ObscuraError } from "@obscura-app/sdk";
 
 // Demo agent — a "news reader" that autonomously buys headlines + articles
-// from the demo merchant via Payrail. Loops forever (Ctrl-C to stop).
+// from the demo merchant via Obscura. Loops forever (Ctrl-C to stop).
 //
-// The ENTIRE Payrail integration is the `new Payrail(...)` + `agent.fetch(...)`
+// The ENTIRE Obscura integration is the `new Obscura(...)` + `agent.fetch(...)`
 // pair below. Everything else (the loop, the pretty logger) is demo dressing.
 
-const API_KEY = process.env.PAYRAIL_KEY;
-const BASE_URL = process.env.PAYRAIL_BASE_URL ?? "http://localhost:3000";
+const API_KEY = process.env.OBSCURA_KEY;
+const BASE_URL = process.env.OBSCURA_BASE_URL ?? "http://localhost:3000";
 const MERCHANT_URL = process.env.MERCHANT_URL ?? "http://localhost:3001";
 const CYCLE_MS = Number(process.env.CYCLE_MS ?? 25_000);
 
 if (!API_KEY) {
-  console.error("❌ PAYRAIL_KEY missing in .env");
+  console.error("❌ OBSCURA_KEY missing in .env");
   process.exit(1);
 }
 
 // This is the whole integration. One line. The agent doesn't know Solana exists.
-const agent = new Payrail({ apiKey: API_KEY, baseUrl: BASE_URL });
+const agent = new Obscura({ apiKey: API_KEY, baseUrl: BASE_URL });
 
 type Headline = { id: number; headline: string };
 
@@ -105,9 +105,9 @@ async function logResult(
 }
 
 async function main() {
-  console.log("🤖  Payrail demo agent — news reader\n");
+  console.log("🤖  Obscura demo agent — news reader\n");
   console.log(`   API key:   ${API_KEY!.slice(0, 8)}…${API_KEY!.slice(-4)}`);
-  console.log(`   Payrail:   ${BASE_URL}`);
+  console.log(`   Obscura:   ${BASE_URL}`);
   console.log(`   Merchant:  ${MERCHANT_URL}`);
   console.log(`   Cadence:   one cycle every ${CYCLE_MS / 1000}s`);
   console.log(`   Stop:      Ctrl-C\n`);
@@ -117,7 +117,7 @@ async function main() {
     try {
       await runCycle();
     } catch (err) {
-      if (err instanceof PayrailError) {
+      if (err instanceof ObscuraError) {
         if (err.code === "over_cap") {
           console.log(
             `\n💸 budget cap reached — shutting down gracefully after ${cycle} cycles`,
@@ -131,7 +131,7 @@ async function main() {
           process.exit(0);
         }
         console.error(
-          `\n⚠ PayrailError (${err.code}${err.status ? `, status=${err.status}` : ""}): ${err.message}`,
+          `\n⚠ ObscuraError (${err.code}${err.status ? `, status=${err.status}` : ""}): ${err.message}`,
         );
       } else {
         console.error("\n⚠ cycle threw:", err);

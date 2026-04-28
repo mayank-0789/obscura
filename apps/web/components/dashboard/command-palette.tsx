@@ -214,7 +214,7 @@ export function CommandPalette({
               select
             </span>
           </div>
-          <span className="text-zinc-600">Payrail · ⌘K</span>
+          <span className="text-zinc-600">Obscura · ⌘K</span>
         </div>
       </div>
     </div>

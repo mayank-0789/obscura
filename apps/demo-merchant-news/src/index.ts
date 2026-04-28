@@ -1,30 +1,28 @@
 import "dotenv/config";
 import express, { type Request, type Response, type NextFunction } from "express";
-import { payrail } from "@obscura-app/merchant-sdk";
+import { obscura } from "@obscura-app/merchant-sdk";
 
 // The merchant's Umbra ETA address (Solana pubkey, base58). Derived
-// server-side at merchant signup; for the demo, run
-// `pnpm umbra:bootstrap-merchant <merchantId>` once to register the
-// deterministic test-merchant subject and copy its eta_address into
-// MERCHANT_ETA_ADDRESS in your .env.
+// server-side at merchant signup — copy it from your merchant dashboard
+// or from /api/merchants/me into MERCHANT_ETA_ADDRESS in your .env.
 const merchantEtaAddress = process.env.MERCHANT_ETA_ADDRESS;
 if (!merchantEtaAddress) {
   throw new Error("MERCHANT_ETA_ADDRESS env is required");
 }
 
-// STABLECOIN_MINT must match the Payrail backend's STABLECOIN_MINT env. On
+// STABLECOIN_MINT must match the Obscura backend's STABLECOIN_MINT env. On
 // devnet today we run the demo against WSOL (because Umbra's devnet doesn't
 // support arbitrary mints yet); on mainnet this flips to USDC/USDG. Decimals
 // follow the mint — WSOL=9, USDC/USDG=6.
 const stablecoinMint = process.env.STABLECOIN_MINT;
 if (!stablecoinMint) {
   throw new Error(
-    "STABLECOIN_MINT env is required (must match the Payrail backend's STABLECOIN_MINT)",
+    "STABLECOIN_MINT env is required (must match the Obscura backend's STABLECOIN_MINT)",
   );
 }
 const stablecoinDecimals = Number(process.env.STABLECOIN_DECIMALS ?? "6");
 
-const pay = payrail({
+const pay = obscura({
   merchantEtaAddress,
   network: "solana-devnet",
   mint: stablecoinMint,
@@ -49,8 +47,8 @@ app.use((req: Request, res: Response, next: NextFunction) => {
       console.log(`${time()} ← 402  ${req.path}            (payment required, ${elapsed})`);
     } else if (res.statusCode === 200) {
       const settlement = (
-        res.locals as { payrailSettlement?: { queueSignature: string } }
-      ).payrailSettlement;
+        res.locals as { obscuraSettlement?: { queueSignature: string } }
+      ).obscuraSettlement;
       const sig = settlement?.queueSignature?.slice(0, 12);
       const tail = sig ? `queueSig=${sig}…  ${elapsed}` : `${elapsed}`;
       console.log(`${time()} ← 200  ${req.path}            ${tail}`);
@@ -68,7 +66,7 @@ const ARTICLES = [
   { id: 47, headline: "Solana breaks 10k TPS again", tag: "infra" },
   { id: 48, headline: "Jupiter v3 launches routing engine", tag: "defi" },
   { id: 49, headline: "Helius launches Solana RPC pro tier", tag: "infra" },
-  { id: 50, headline: "Stripe acquires Privy for $400M", tag: "m&a" },
+  { id: 50, headline: "Coinbase acquires confidential payments startup", tag: "m&a" },
   { id: 51, headline: "USDG mint expands to 4 new chains", tag: "stables" },
 ];
 

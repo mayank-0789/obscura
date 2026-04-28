@@ -15,39 +15,40 @@ path to debugging a misbehaving integration.
 <CodeBlock lang="text" filename="" noCopy>
 {`1.  agent.fetch(url)                                   → [merchant]
 2.  402 Payment Required + PAYMENT-REQUIRED header     ← [merchant]
-3.  POST /api/x402/sign   Bearer pk_…                   → [payrail]
+3.  POST /api/x402/sign   Bearer pk_…                   → [obscura]
        (auth · cap check · Umbra mixer transfer · encode)
-4.  { paymentSignatureHeader }  // umbra-mixer-v1       ← [payrail]
+4.  { paymentSignatureHeader }  // umbra-mixer-v1       ← [obscura]
 5.  retry w/ PAYMENT-SIGNATURE                          → [merchant]
        (merchant verifies on-chain proofs in envelope)
 6.  200 + data + X-Payment-Response                     ← [merchant]`}
 </CodeBlock>
 
-## What Payrail does in step 3
+## What Obscura does in step 3
 
-The agent SDK forwards the merchant's 402 challenge to Payrail's
+The agent SDK forwards the merchant's 402 challenge to Obscura's
 `/api/x402/sign` endpoint, authenticated with your agent's API key.
 Our backend runs four steps before returning a payment header:
 
-1. **Authenticate.** Bearer token → `agent_api_keys.key_hash` lookup → load
-   the owning agent + its budget.
-2. **Cap check.** An atomic `UPDATE budgets SET spent_usdg = spent + amount
-   WHERE spent + amount <= cap` increments the counter only if the result
-   stays under the monthly cap. Zero rows back means the call would
-   overflow — we return `over_cap` (402) without spending.
+1. **Authenticate.** Bearer token → `agent_api_keys.key_hash` lookup →
+   load the owning agent + its budget.
+2. **Cap check.** An atomic `UPDATE budgets SET spent_usdg = spent +
+   amount WHERE spent + amount <= cap` increments the counter only if
+   the result stays under the monthly cap. Zero rows back means the
+   call would overflow — we return `over_cap` (402) without spending.
 3. **Confidential transfer.** Deduct from the agent's encrypted token
    account (ETA) and insert a UTXO commitment in the on-chain Umbra
    mixer tree, addressed to the merchant's ETA. The transferred amount
-   is encrypted; the on-chain link between sender ETA and recipient ETA
-   passes through the mixer commitment so observers can't pair them.
+   is encrypted; the on-chain link between sender ETA and recipient
+   ETA passes through the mixer commitment so observers can't pair them.
 4. **Encode.** Return a base64-encoded `umbra-mixer-v1` envelope
-   carrying the queue + callback signatures the merchant verifies
-   on-chain before serving the resource.
+   carrying `{queueSignature, callbackSignature, recipientEtaAddress,
+   asset, amount, resource}` for the merchant to verify on-chain
+   before serving the resource.
 
 ## Why the agent can't sign directly
 
 The agent's Umbra-side keypair is derived server-side via HMAC-SHA-256
-from a master seed and the agent's UUID; it never leaves Payrail's
+from a master seed and the agent's UUID; it never leaves Obscura's
 backend. This is deliberate:
 
 - **Bounded loss on key compromise.** A leaked API key can only spend up
@@ -64,22 +65,35 @@ backend. This is deliberate:
 The merchant decodes the `umbra-mixer-v1` envelope and verifies the
 on-chain proofs the agent attached:
 
-1. **Decode** the base64 envelope into `{queueSignature, callbackSignature, recipientEtaAddress, asset}`.
-2. **Fetch** the queue + callback transactions on Solana via Helius RPC.
-3. **Verify** the deposit instruction targets the merchant's own ETA and
-   uses the configured stablecoin mint.
-4. **Serve** the paid resource with an `X-Payment-Response` header.
+1. **Decode** the base64 envelope into `{queueSignature,
+   callbackSignature, recipientEtaAddress, asset, amount, resource}`.
+2. **Sanity-check** the envelope: `recipientEtaAddress` matches the
+   merchant's own ETA, `asset` matches the configured mint, `amount` /
+   `resource` match what the route requires, and the `queueSignature`
+   wasn't seen in the past 5 minutes (replay window).
+3. **Fetch** the queue + callback transactions on Solana via Helius RPC
+   and confirm both landed without error.
+4. **Serve** the paid resource with an `X-Payment-Response` header
+   carrying the same proofs.
 
 The actual encrypted-balance credit on the merchant's side happens
-asynchronously — a background daemon scans the mixer tree for
-receiver-claimable UTXOs and claims them via Umbra's relayer. By the
-time the merchant's dashboard shows the inbound spend, the encrypted
-balance has already settled.
+asynchronously — a background daemon (`/api/cron/claim-daemon`, every
+2 minutes) scans the mixer tree for receiver-claimable UTXOs and
+claims them via the Umbra relayer. By the time the merchant's
+dashboard shows the inbound spend, the encrypted balance has settled.
+
+## Latency budget
+
+The hot path is dominated by ZK-proof generation and Arcium MPC
+finalization on the Umbra side: typically 10–25 seconds per spend on
+devnet, with a P99 around 45 seconds on a cold prover cache. The SDK's
+default timeout is 60 seconds; bump it via `signTimeoutMs` only after
+measuring real cold-path numbers in your environment.
 
 ## Verify on-chain
 
 The `X-Payment-Response` header is base64-encoded JSON. Decode it to
-get the Solana tx signature:
+get the queue signature:
 
 <CodeBlock lang="ts">
 {`const receipt = JSON.parse(
@@ -88,7 +102,7 @@ get the Solana tx signature:
     "base64",
   ).toString("utf8"),
 );
-console.log(\`https://solscan.io/tx/\${receipt.transaction}?cluster=devnet\`);`}
+console.log(\`https://solscan.io/tx/\${receipt.queueSignature}?cluster=devnet\`);`}
 </CodeBlock>
 
 Next: [Error handling](/docs/agents/errors) — every failure mode the

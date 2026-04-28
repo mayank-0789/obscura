@@ -22,7 +22,7 @@ type AppShellContextValue = {
 
 const AppShellContext = createContext<AppShellContextValue | null>(null);
 
-const JUST_CREATED_KEY = "payrail:just-created-agent";
+const JUST_CREATED_KEY = "obscura:just-created-agent";
 
 export function useAppShell(): AppShellContextValue {
   const ctx = useContext(AppShellContext);

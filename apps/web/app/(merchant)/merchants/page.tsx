@@ -287,7 +287,8 @@ function Quickstart() {
               </BulletLine>
               <BulletLine>
                 <strong className="text-zinc-100">On-chain verification.</strong>{" "}
-                PayAI facilitator checks the signature before we serve a byte.
+                The middleware reads the queue tx via Solana RPC before we
+                serve a byte.
               </BulletLine>
               <BulletLine>
                 <strong className="text-zinc-100">
@@ -311,7 +312,7 @@ function Quickstart() {
               </Link>
               <span className="text-zinc-700">/</span>
               <Link
-                href="https://github.com/mayank-0789/payrail"
+                href="https://github.com/mayank-0789/obscura"
                 className="inline-flex items-center gap-2 border-b border-zinc-700 pb-0.5 transition hover:border-emerald-400 hover:text-emerald-400"
               >
                 View on GitHub
@@ -373,11 +374,11 @@ function Economics() {
             detail="4% + $0.30 means the floor is $0.31 before you break even. Micropayments don't work here."
           />
           <ScenarioCard
-            tone="payrail"
-            tag="Payrail — Solana + x402"
+            tone="obscura"
+            tag="Obscura — Solana + x402"
             headline="99.5% lands in your wallet."
             stat="$0.02 charged → $0.0001 in fees"
-            detail="Solana settlement + 0% platform fee during beta. The merchant SDK is open-source; the facilitator is swappable."
+            detail="Solana settlement + 0% platform fee during beta. The merchant SDK is open-source and verification is a single Solana RPC call your server makes — no third party in the loop."
           />
         </div>
 
@@ -388,7 +389,7 @@ function Economics() {
           <p className="max-w-4xl font-display text-[24px] font-light leading-[1.45] tracking-tight text-zinc-100 md:text-[32px]">
             An agent hits your weather API{" "}
             <span className="text-emerald-gradient">5,000 times a day</span> at
-            $0.01 a call. On Payrail that&apos;s{" "}
+            $0.01 a call. On Obscura that&apos;s{" "}
             <span className="text-emerald-gradient">$50/day</span> —{" "}
             <span className="text-emerald-gradient">$1,500/month</span> — in
             your wallet.
@@ -411,16 +412,16 @@ function ScenarioCard({
   stat,
   detail,
 }: {
-  tone: "legacy" | "payrail";
+  tone: "legacy" | "obscura";
   tag: string;
   headline: string;
   stat: string;
   detail: string;
 }) {
   const accentText =
-    tone === "payrail" ? "text-emerald-400" : "text-rose-400";
+    tone === "obscura" ? "text-emerald-400" : "text-rose-400";
   const borderSide =
-    tone === "payrail"
+    tone === "obscura"
       ? "border-l md:border-l-0 md:border-r"
       : "border-l md:border-l";
   return (
@@ -471,8 +472,8 @@ const merchantFaqs: QA[] = [
     a: "No. The middleware abstracts it entirely. You watch a USDC balance rise in your payout wallet and click cash-out when you want rupees. The Solana layer is opaque if you want it to be.",
   },
   {
-    q: "Is x402 locked to Payrail?",
-    a: "No. x402 is an open protocol. Our middleware is a thin convenience layer — swappable facilitator, self-hostable, and removable without changing the protocol your API already speaks.",
+    q: "Is x402 locked to Obscura?",
+    a: "No. x402 is an open protocol. Our middleware is a thin convenience layer — verification is a public Solana RPC call your server makes, the SDK is self-hostable, and removable without changing the protocol your API already speaks.",
   },
 ];
 

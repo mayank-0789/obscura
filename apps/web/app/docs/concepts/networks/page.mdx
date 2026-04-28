@@ -6,7 +6,7 @@ export default function ({ children }) {
 
 # Devnet vs mainnet
 
-Payrail supports two Solana networks:
+Obscura supports two Solana networks:
 
 - **`solana-devnet`** — free test network. Default for new accounts.
   Funds are synthetic and worthless; good for end-to-end integration
@@ -15,7 +15,8 @@ Payrail supports two Solana networks:
   actual money.
 
 The two networks are isolated — a devnet transaction never touches
-mainnet and vice versa. Wallets, assets, and nonces are all network-scoped.
+mainnet and vice versa. Wallets, ETAs, mints, and mixer trees are all
+network-scoped.
 
 ## Default: devnet
 
@@ -25,9 +26,9 @@ Both SDKs default to `solana-devnet`. That's deliberate:
   `pay.charge()` costs the merchant nothing.
 - Test agents and test merchants can be set up in seconds with
   zero-stakes keypairs.
-- The flow is identical to mainnet — the same x402 handshake, the same
-  facilitator, the same settlement. Moving to production is an env flag
-  change.
+- The flow is identical to mainnet — same x402 handshake, same
+  `umbra-mixer-v1` envelope, same on-chain verification path. Moving
+  to production is an env flag change.
 
 ## Switching to mainnet
 
@@ -42,9 +43,10 @@ mainnet. The SDK handles everything else.
 Flip the `network` config:
 
 <CodeBlock lang="ts">
-{`const pay = payrail({
-  payoutWallet: process.env.PAYRAIL_PAYOUT_WALLET!,
+{`const pay = obscura({
+  merchantEtaAddress: process.env.MERCHANT_ETA_ADDRESS!,
   network: "solana",   // was "solana-devnet"
+  rpcUrl: process.env.HELIUS_RPC_URL,
 });`}
 </CodeBlock>
 
@@ -53,28 +55,28 @@ The `mint` default automatically switches:
 - `solana-devnet` → `4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU` (devnet USDC)
 - `solana` → `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v` (mainnet USDC)
 
-## Wallet addresses are network-isolated
+## ETAs are network-isolated
 
-A single keypair can hold tokens on both networks — the address is the
-same — but the balances are separate. **Don't mix them:**
+Your `merchantEtaAddress` is derived deterministically from a
+server-held seed plus your merchant ID, so the same Solana pubkey is
+valid on both networks — but the encrypted balance behind that pubkey
+is a separate on-chain account per network. **Don't mix them:**
 
-- Your devnet payout wallet should only appear in a devnet
-  `pay.charge()` config.
-- Your mainnet payout wallet is usually a different address entirely
-  (generated at the time you switched to prod).
+- Your devnet ETA registration only accepts devnet incoming payments.
+- Your mainnet ETA needs a separate registration (handled at signup
+  when a mainnet account is provisioned).
 
-Payrail's merchant dashboard shows network-scoped balances and feeds,
+Obscura's merchant dashboard shows network-scoped balances and feeds,
 so you won't accidentally see devnet earnings appear next to mainnet
 ones.
 
-## Getting devnet USDC
+## Getting devnet funds
 
-For agent-side testing, hit any PayAI-supported devnet faucet — or let
-Payrail's top-up flow fund your devnet agent wallet in 30 seconds via
-UPI (the devnet USDC comes out of a Payrail-operated treasury, not a
-real exchange).
+For agent-side testing, Obscura's top-up flow funds your devnet agent's
+encrypted balance in ~30 seconds via UPI (the devnet stablecoin comes
+out of an Obscura-operated treasury, not a real exchange).
 
-For merchant-side testing, any devnet USDC reaching your payout wallet
+For merchant-side testing, any devnet payment landing on your ETA
 counts. A single agent spend ($0.01) is enough to see the full flow
 end-to-end.
 
@@ -82,17 +84,22 @@ end-to-end.
 
 Before you flip the flag:
 
-1. [ ] **Your dashboard balance is real**. Check
-   `https://solscan.io/account/<payout_wallet>` shows the expected
-   mainnet USDC.
-2. [ ] **Your RPC is production-grade**. The default public RPC is
-   rate-limited; set `HELIUS_RPC_URL` or similar.
-3. [ ] **Your prices are right**. One extra zero in `amount` costs 10×
-   per call on mainnet. Use the dashboard's API catalog to cross-check.
-4. [ ] **Your handler is idempotent**. If a second settle-retry runs
-   against your endpoint (rare but possible), does your handler
-   double-charge your downstream systems?
-5. [ ] **PayAI paid-tier creds**. Free tier is throttled. For
-   production RPS, set `apiKeyId` + `apiKeySecret`.
+1. [ ] **Your dashboard balance is real.** The merchant dashboard
+   shows mainnet ETA balance — confirm it matches what you expect on
+   Solscan.
+2. [ ] **Your RPC is production-grade.** The default public RPC is
+   rate-limited; set `HELIUS_RPC_URL` (or any other paid provider) on
+   the merchant SDK config.
+3. [ ] **Your prices are right.** One extra zero in `amount` costs
+   10× per call on mainnet. Use the dashboard's API catalog to
+   cross-check the prices you've registered against your code.
+4. [ ] **Your handler is idempotent.** If a paid request hits your
+   handler more than once for the same `queueSignature` (the merchant
+   SDK rejects this within the replay window, but cross-process or
+   post-window replays are possible), does your handler double-charge
+   downstream systems?
+5. [ ] **Your replay window is sized for your traffic.** Default 5
+   minutes is fine for most workloads; raise via `replayWindowMs` if
+   you have unusually slow client retry loops.
 
 Once all five are checked, the flag flip is safe.

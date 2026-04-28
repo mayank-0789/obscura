@@ -8,18 +8,18 @@ import { env } from "@/lib/env";
 // Solscan deep-link scoped to the current network. Clipboard success state
 // flips to "Copied ✓" in emerald for ~1.2s then reverts.
 export function PayoutWalletCard({
-  payoutWallet,
+  merchantEtaAddress,
   provisionedAt,
 }: {
-  payoutWallet: string | null;
+  merchantEtaAddress: string | null;
   provisionedAt: string | null;
 }) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
-    if (!payoutWallet) return;
+    if (!merchantEtaAddress) return;
     try {
-      await navigator.clipboard.writeText(payoutWallet);
+      await navigator.clipboard.writeText(merchantEtaAddress);
       setCopied(true);
       setTimeout(() => setCopied(false), 1200);
     } catch {
@@ -27,7 +27,7 @@ export function PayoutWalletCard({
     }
   };
 
-  if (!payoutWallet) {
+  if (!merchantEtaAddress) {
     return (
       <div className="rounded-lg border border-zinc-800 bg-[#0c0c0e] p-6">
         <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-500">
@@ -46,8 +46,8 @@ export function PayoutWalletCard({
 
   const solscanUrl =
     env.NEXT_PUBLIC_SOLANA_CLUSTER === "mainnet-beta"
-      ? `https://solscan.io/account/${payoutWallet}`
-      : `https://solscan.io/account/${payoutWallet}?cluster=devnet`;
+      ? `https://solscan.io/account/${merchantEtaAddress}`
+      : `https://solscan.io/account/${merchantEtaAddress}?cluster=devnet`;
 
   return (
     <section
@@ -64,9 +64,9 @@ export function PayoutWalletCard({
           </h2>
           <p
             className="mt-2 truncate font-mono text-[16px] text-zinc-100"
-            title={payoutWallet}
+            title={merchantEtaAddress}
           >
-            {payoutWallet}
+            {merchantEtaAddress}
           </p>
           <p className="mt-1.5 text-[12px] text-zinc-500">
             Provisioned{" "}

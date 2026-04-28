@@ -89,7 +89,7 @@ export function OnboardingShell() {
           >
             <Logo size="sm" />
             <span className="font-display text-[17px] font-light tracking-tight">
-              Payrail
+              Obscura
             </span>
           </Link>
           <button
@@ -115,7 +115,7 @@ export function OnboardingShell() {
               <span className="italic text-emerald-gradient">the rail?</span>
             </h1>
             <p className="mt-5 max-w-[560px] text-[17px] leading-[1.65] text-zinc-300">
-              Payrail has two sides — pick one to start, or choose both.
+              Obscura has two sides — pick one to start, or choose both.
             </p>
             <p className="mt-2 text-[13px] text-zinc-500">
               You can add the other side anytime from your dashboard.
@@ -138,7 +138,7 @@ export function OnboardingShell() {
               <RoleCard
                 kicker="02 / API provider"
                 title="Charge per API call."
-                body="Install @obscura-app/merchant-sdk, wrap an Express route with pay.charge. Get paid in USDC on Solana directly to your Payrail-managed wallet."
+                body="Install @obscura-app/merchant-sdk, wrap an Express route with pay.charge. Get paid in USDC on Solana directly to your Obscura-managed wallet."
                 features={[
                   "Managed Solana payout wallet",
                   "Live earnings dashboard",

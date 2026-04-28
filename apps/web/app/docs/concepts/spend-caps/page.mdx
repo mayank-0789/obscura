@@ -6,7 +6,7 @@ export default function ({ children }) {
 
 # Spend caps
 
-Every Payrail agent has a **monthly spend cap** — a hard ceiling on how
+Every Obscura agent has a **monthly spend cap** — a hard ceiling on how
 much the agent can spend in a calendar month, enforced at signature
 time. Caps are the single most important safety feature on the agent
 side: a leaked API key can never drain more than the remaining cap.
@@ -48,11 +48,29 @@ via the dashboard, a fresh snapshot is taken.
 
 ## Reset cadence
 
-Caps reset at the start of every calendar month, UTC. There's no prorating
-or rolling window — the cap is simply "this month's budget."
+Caps reset at the start of every calendar month, UTC. There's no
+prorating or rolling window — the cap is simply "this month's budget."
 
-A scheduled job runs on the 1st of each month to zero out `spent_usdg`
-across every budget row.
+The reset is **lazy**, not scheduled: every sign request first runs an
+idempotent `UPDATE … SET spent_usdg=0, period_start=now() WHERE
+period_start <= now() - interval '1 month'`. The first spend after the
+month boundary triggers the reset for that agent; subsequent spends
+the same period are no-ops on the reset clause. No cron job to fail.
+
+## Compensation on signing failure
+
+The cap is incremented BEFORE the Umbra mixer call (it has to be — a
+read-then-mixer-then-write would have a TOCTOU window). If the mixer
+call fails AFTER the increment, `/api/x402/sign` runs `safeRevertCap`
+to subtract the amount back. Two cases:
+
+- **Mixer fails cleanly (RPC error, prove failure).** Revert succeeds
+  → cap is back to its pre-spend value, transaction row marked failed.
+- **Mixer's MPC callback didn't finalize within timeout.** The on-chain
+  debit may have already landed, so we do NOT revert the cap (that
+  would let the agent double-spend). The transaction row stays
+  `pending`, and `/api/cron/reconcile` (every 5 minutes) inspects the
+  queue tx on-chain to decide whether to confirm or fail-and-revert.
 
 ## Practical patterns
 
@@ -78,10 +96,12 @@ which is useful when debugging "why is my agent over cap" issues.
 ## What caps don't protect against
 
 - **Application-level errors.** If your agent is buggy and makes 10000
-  redundant API calls, the cap limits the damage but doesn't prevent
-  it. Build in idempotency on the agent side.
+  redundant API calls within the cap, the cap limits the damage but
+  doesn't prevent it. Build in idempotency on the agent side.
 - **Merchant pricing changes.** The merchant's `amount` is what gets
   charged. If a merchant raises their price, your agent spends more
   per-call — the cap is the bound.
-- **Protocol-level attacks.** x402 replay protection handles duplicate
-  payments, but the cap is a spend ceiling, not a fraud detector.
+- **Insufficient encrypted balance.** The cap is a policy ceiling; the
+  encrypted balance is the actual fund pool. Spending below the cap
+  but above the balance returns `insufficient_funds` (402), not
+  `over_cap`.

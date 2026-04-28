@@ -1,6 +1,6 @@
-# Payrail — Money Model
+# Obscura — Money Model
 
-> **How every rupee moves through Payrail. Written in plain English; no finance jargon assumed.**
+> **How every rupee moves through Obscura. Written in plain English; no finance jargon assumed.**
 
 This doc covers:
 1. [The big picture — three parties, three flows](#the-big-picture)
@@ -17,11 +17,11 @@ This doc covers:
 
 ## The big picture
 
-Payrail connects three parties and moves money in three directions.
+Obscura connects three parties and moves money in three directions.
 
 ### The three parties
 
-| Party | What they are | How they use Payrail |
+| Party | What they are | How they use Obscura |
 |---|---|---|
 | 👤 **User** | Person who owns an AI agent | Pays rupees via UPI/card to fund their agent |
 | 🤖 **Agent** | Software program owned by the user | Spends USDC stablecoin when calling paid APIs |
@@ -45,7 +45,7 @@ Everything in this doc is about explaining these three flows clearly.
 
 ### The user experience
 
-1. User opens `/topup` in Payrail dashboard
+1. User opens `/topup` in Obscura dashboard
 2. Picks an agent, enters an amount (minimum ₹500)
 3. Sees a breakdown of exactly what their agent will receive
 4. Taps "Pay" → redirected to Dodo's UPI/card checkout
@@ -73,14 +73,14 @@ The user sees a single line item. Behind the scenes, those ₹31.25 cover four t
 |---|---|---|
 | Dodo Payments processing fee | ~₹7.50 | Dodo (1.5% of ₹500) |
 | GST on Dodo's fee | ~₹1.35 | Government (via Dodo) |
-| GST on our own service fee | ~₹4.77 | Government (via Payrail) |
-| Payrail's actual take | ~₹17.63 | Payrail |
+| GST on our own service fee | ~₹4.77 | Government (via Obscura) |
+| Obscura's actual take | ~₹17.63 | Obscura |
 
-**Payrail's net margin on each top-up: ~3.5% of the top-up amount.**
+**Obscura's net margin on each top-up: ~3.5% of the top-up amount.**
 
 ### What's inside the rate (the 0.6% spread)
 
-The live market rate right now is about ₹84 per USD (from Frankfurter, updated every 15 min). The rate we quote is ₹84.50. The ₹0.50 difference is a **0.6% spread** that exactly covers the cost of buying USDC on an Indian crypto exchange (Mudrex/CoinDCX). Payrail earns nothing from the rate — it's cost recovery only.
+The live market rate right now is about ₹84 per USD (from Frankfurter, updated every 15 min). The rate we quote is ₹84.50. The ₹0.50 difference is a **0.6% spread** that exactly covers the cost of buying USDC on an Indian crypto exchange (Mudrex/CoinDCX). Obscura earns nothing from the rate — it's cost recovery only.
 
 ### Scaling — the service fee is proportional
 
@@ -118,10 +118,10 @@ Every top-up is checked against tampering:
 
 *This part is already built and working on devnet. Brief explanation only.*
 
-When an AI agent calls a paid API using Payrail's SDK:
+When an AI agent calls a paid API using Obscura's SDK:
 
 1. The API returns `402 Payment Required` (a standard HTTP status)
-2. Our SDK automatically requests a payment signature from Payrail's backend
+2. Our SDK automatically requests a payment signature from Obscura's backend
 3. Backend checks the agent's spending cap, then signs a Solana transaction delegated by the user
 4. Payment is verified and settled by PayAI (the open x402 facilitator)
 5. Merchant's wallet receives USDC
@@ -129,7 +129,7 @@ When an AI agent calls a paid API using Payrail's SDK:
 
 The entire handshake takes ~500ms. Merchant's dashboard updates in real-time via webhooks + server-sent events.
 
-**Payrail takes zero fee on this flow.** We already earned our cut on the top-up side. The agent-to-merchant USDC transfer is direct, on-chain, and free from our side.
+**Obscura takes zero fee on this flow.** We already earned our cut on the top-up side. The agent-to-merchant USDC transfer is direct, on-chain, and free from our side.
 
 ---
 
@@ -139,7 +139,7 @@ Merchants earn USDC from agent payments. To get real money in their bank account
 
 ### Tier 1 — Standard cash-out (free, T+2 to T+3)
 
-**What merchant pays Payrail: ₹0.** Same as Razorpay's default payout.
+**What merchant pays Obscura: ₹0.** Same as Razorpay's default payout.
 
 **Timeline:** 2 to 3 business days from request.
 
@@ -149,7 +149,7 @@ Merchants earn USDC from agent payments. To get real money in their bank account
 Mon 10:00 AM  Merchant clicks "Cash out"
 Mon 10:05 AM  USDC sent to Mudrex
 Mon 02:00 PM  Mudrex completes the sale
-Tue 09:00 AM  Rupees hit Payrail's bank (T+1)
+Tue 09:00 AM  Rupees hit Obscura's bank (T+1)
 Tue 11:00 AM  We trigger Dodo Payouts
 Wed 03:00 PM  Rupees land in merchant's bank (T+2)
 ```
@@ -158,7 +158,7 @@ Merchants don't complain about this — it matches exactly what Razorpay, PayU, 
 
 ### Tier 2 — Instant cash-out (1% fee, under 30 min) [future]
 
-**What merchant pays Payrail: 1% of the cashed-out amount.**
+**What merchant pays Obscura: 1% of the cashed-out amount.**
 
 **Timeline:** under 30 minutes.
 
@@ -166,7 +166,7 @@ Merchants don't complain about this — it matches exactly what Razorpay, PayU, 
 
 ```
 1. Merchant clicks "Cash out instantly"
-2. Payrail pays rupees IMMEDIATELY from a pre-funded rupee drawer
+2. Obscura pays rupees IMMEDIATELY from a pre-funded rupee drawer
 3. In background: sell USDC on Mudrex, replenish drawer
 ```
 
@@ -186,7 +186,7 @@ MUDREX (sells USDC → rupees)
   Trading fee (~0.4%, incl. GST)          −₹39.65
   Crypto TDS (1%, tax prepayment)         −₹99.12
                                           ─────────
-  Rupees received in Payrail's bank     ₹9,693.93
+  Rupees received in Obscura's bank     ₹9,693.93
 ─────────────────────────────────────────────────────
 DODO PAYOUTS (rupees → merchant bank)
   Flat payout fee + GST                   −₹17.70
@@ -204,7 +204,7 @@ MERCHANT RECEIVES IN BANK               ~₹9,676
 | Trading fee | Mudrex's explicit per-trade fee | Mudrex |
 | Crypto TDS (1%) | **Indian tax law** — 1% withheld on every crypto-to-fiat sale. **Recoverable on annual tax filing.** | Government (tax prepayment) |
 | Dodo Payouts fee | Flat ₹15–25 per bank transfer (like NEFT) | Dodo |
-| Payrail fee | ₹0 for standard, 1% for instant | Payrail |
+| Obscura fee | ₹0 for standard, 1% for instant | Obscura |
 
 ### Key decisions locked
 
@@ -216,7 +216,7 @@ MERCHANT RECEIVES IN BANK               ~₹9,676
 
 ## The drawers — working capital explained
 
-Payrail needs small pools of money held ready at specific points in the system. Think of them like the currency drawer at an airport exchange counter — you need the right currency ready before anyone can swap for it.
+Obscura needs small pools of money held ready at specific points in the system. Think of them like the currency drawer at an airport exchange counter — you need the right currency ready before anyone can swap for it.
 
 ### Drawer 1 — Top-up USDC drawer (required)
 
@@ -271,7 +271,7 @@ Trace one full cycle: user tops up ₹10,000 → agent spends it all on various 
 |---|---|---|---|
 | Government (GST + TDS combined) | ~₹170 | 1.7% | Tax |
 | Dodo Payments | ~₹165 | 1.65% | Top-up processing |
-| **Payrail (platform)** | **~₹290** | **~2.9%** | Our net revenue |
+| **Obscura (platform)** | **~₹290** | **~2.9%** | Our net revenue |
 | Mudrex (round-trip) | ~₹205 | 2.05% | Buy USDC on top-up + sell on cash-out |
 | Dodo Payouts | ~₹18 | 0.18% | Bank transfer fees |
 | Exchange spread (round-trip) | ~₹110 | 1.1% | Cost of converting back and forth |
@@ -280,12 +280,12 @@ Trace one full cycle: user tops up ₹10,000 → agent spends it all on various 
 ### What this tells us
 
 - **Merchants keep ~90% of what users spend.** That's competitive with credit-card rails (Stripe/Razorpay pay merchants ~91–94%).
-- **Payrail earns ~2.9% net overall** (slightly below our 3.5% top-up target because some bleeds through via exchange and tax friction on the way back out).
+- **Obscura earns ~2.9% net overall** (slightly below our 3.5% top-up target because some bleeds through via exchange and tax friction on the way back out).
 - **No single party takes an unreasonable cut.** The system is honest end-to-end.
 
 ### The one-sentence pitch number
 
-> **For every ₹10,000 flowing through Payrail, merchants receive ₹9,043 and Payrail keeps ₹290.**
+> **For every ₹10,000 flowing through Obscura, merchants receive ₹9,043 and Obscura keeps ₹290.**
 
 ---
 
@@ -373,7 +373,7 @@ By this stage, revenue (₹3.5 lakh/month per ₹1 crore of monthly volume) is c
 
 ### The one-sentence pitch (elevator version)
 
-> **"Payrail is the UPI-to-USDC rail for AI agents. A user pays ₹500 via UPI; their AI agent gets $5.55 of stablecoin; the merchant earns in USDC and cashes out to their bank like any other vendor."**
+> **"Obscura is the UPI-to-USDC rail for AI agents. A user pays ₹500 via UPI; their AI agent gets $5.55 of stablecoin; the merchant earns in USDC and cashes out to their bank like any other vendor."**
 
 ### The capital efficiency pitch
 
@@ -381,7 +381,7 @@ By this stage, revenue (₹3.5 lakh/month per ₹1 crore of monthly volume) is c
 
 ### The economics pitch
 
-> **"For every ₹10,000 a user pays, merchants collectively keep ₹9,043 in their bank accounts — that's 90%, competitive with credit-card rails. Payrail nets ₹290. Government gets ₹170 in taxes. Every paisa is accounted for."**
+> **"For every ₹10,000 a user pays, merchants collectively keep ₹9,043 in their bank accounts — that's 90%, competitive with credit-card rails. Obscura nets ₹290. Government gets ₹170 in taxes. Every paisa is accounted for."**
 
 ### The capital story — long version
 
@@ -410,4 +410,4 @@ By this stage, revenue (₹3.5 lakh/month per ₹1 crore of monthly volume) is c
 
 **Last updated:** 2026-04-22
 
-*This document captures the locked economic and architectural decisions for Payrail's money flow. If you're reading this and something has changed, update both this file and the relevant memory entries.*
+*This document captures the locked economic and architectural decisions for Obscura's money flow. If you're reading this and something has changed, update both this file and the relevant memory entries.*

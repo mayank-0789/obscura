@@ -37,7 +37,7 @@ function getLimiter(
   const limiter = new Ratelimit({
     redis: client,
     limiter: Ratelimit.slidingWindow(max, window),
-    prefix: `payrail:rl:${name}`,
+    prefix: `obscura:rl:${name}`,
     analytics: false,
   });
   limiters.set(cacheKey, limiter);

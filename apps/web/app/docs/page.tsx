@@ -5,7 +5,7 @@ export default function DocsIndexPage() {
     <article className="mx-auto max-w-[720px]">
       <div className="mb-8 flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.28em] text-emerald-400">
         <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.8)]" />
-        Payrail Docs
+        Obscura Docs
       </div>
 
       <h1 className="font-display text-[54px] font-light leading-[1.02] tracking-[-0.02em] text-zinc-50">
@@ -14,7 +14,7 @@ export default function DocsIndexPage() {
       </h1>
 
       <p className="mt-6 text-[17px] leading-[1.65] text-zinc-300">
-        Payrail turns stablecoin settlement on Solana into a single HTTP call.
+        Obscura turns stablecoin settlement on Solana into a single HTTP call.
         Your agent <code className="font-mono text-emerald-400">fetch()</code>
         s a paid API and the payment handshake happens automatically — no
         wallets in your agent code, no crypto knowledge required.
@@ -24,14 +24,14 @@ export default function DocsIndexPage() {
         <QuickstartCard
           kicker="01 / For agent developers"
           title="Ship an agent that pays for APIs."
-          body="Install @obscura-app/sdk, drop in your agent's API key, point fetch at a paid endpoint. Payrail handles signing, spend caps, and retries on your behalf."
+          body="Install @obscura-app/sdk, drop in your agent's API key, point fetch at a paid endpoint. Obscura handles signing, spend caps, and retries on your behalf."
           href="/docs/agents/quickstart"
           cta="Read the agent quickstart"
         />
         <QuickstartCard
           kicker="02 / For API providers"
           title="Monetize any route in one line."
-          body="Install @obscura-app/merchant-sdk, wrap an Express route with pay.charge({ amount }). The PayAI facilitator verifies and settles payments on Solana. You get USDC in your payout wallet."
+          body="Install @obscura-app/merchant-sdk, wrap an Express route with pay.charge({ amount }). The middleware returns x402 challenges and verifies confidential mixer payments on-chain via Solana RPC."
           href="/docs/merchants/quickstart"
           cta="Read the merchant quickstart"
         />
@@ -48,7 +48,7 @@ export default function DocsIndexPage() {
             polyfilled <code className="font-mono text-zinc-400">fetch</code>.
           </Bullet>
           <Bullet>
-            <strong className="text-zinc-100">A Payrail account.</strong>{" "}
+            <strong className="text-zinc-100">An Obscura account.</strong>{" "}
             <Link
               href="/onboarding"
               className="text-emerald-400 hover:underline"
@@ -80,10 +80,10 @@ export default function DocsIndexPage() {
               GitHub
             </div>
             <a
-              href="https://github.com/mayank-0789/payrail"
+              href="https://github.com/mayank-0789/obscura"
               className="text-emerald-400 hover:underline"
             >
-              github.com/mayank-0789/payrail ↗
+              github.com/mayank-0789/obscura ↗
             </a>
             <p className="mt-1 text-[13px] text-zinc-500">
               Monorepo. SDKs live under{" "}

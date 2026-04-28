@@ -23,7 +23,7 @@ const lines: Line[] = [
       <>
         <span className={tokens.kw}>import</span>
         <span className={tokens.op}> {"{"} </span>
-        <span className={tokens.id}>Payrail</span>
+        <span className={tokens.id}>Obscura</span>
         <span className={tokens.op}> {"}"} </span>
         <span className={tokens.kw}>from</span>{" "}
         <span className={tokens.str}>&quot;@obscura-app/sdk&quot;</span>
@@ -40,7 +40,7 @@ const lines: Line[] = [
         <span className={tokens.id}>agent</span>{" "}
         <span className={tokens.op}>=</span>{" "}
         <span className={tokens.kw}>new</span>{" "}
-        <span className={tokens.cls}>Payrail</span>
+        <span className={tokens.cls}>Obscura</span>
         <span className={tokens.op}>({"{"}</span>
       </>
     ),
@@ -56,7 +56,7 @@ const lines: Line[] = [
         <span className={tokens.op}>.</span>
         <span className={tokens.id}>env</span>
         <span className={tokens.op}>.</span>
-        <span className={tokens.id}>PAYRAIL_KEY</span>
+        <span className={tokens.id}>OBSCURA_KEY</span>
         <span className={tokens.op}>,</span>
       </>
     ),

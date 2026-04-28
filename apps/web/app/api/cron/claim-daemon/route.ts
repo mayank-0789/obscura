@@ -35,11 +35,10 @@ import { buildSubjectUmbraClient } from "@/lib/umbra";
 // invocation (~60s worst case). On paid plans this could go higher; for
 // production scale, switch to a long-running worker (Railway / Fly).
 //
-// **Spent-nullifier note**: unlike the script form (which persists a
-// claimedLeafIds Set on disk under scripts/.scan-state/), this serverless
-// route has no persistent local FS. We rely on the relayer rejecting double-
-// claims at submit time — wasteful (one redundant prove per spent UTXO) but
-// correct. A Redis-backed claimedLeafIds set is the production fix; deferred.
+// **Spent-nullifier note**: this serverless route has no persistent local FS,
+// so we rely on the relayer rejecting double-claims at submit time — wasteful
+// (one redundant prove per spent UTXO) but correct. A Redis-backed
+// claimedLeafIds set is the production fix; deferred.
 
 const PER_INVOCATION_MERCHANT_LIMIT = 2;
 

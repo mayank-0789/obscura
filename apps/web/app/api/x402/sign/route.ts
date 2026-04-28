@@ -1,4 +1,4 @@
-// POST /api/x402/sign — the heart of Payrail's agent-spending loop.
+// POST /api/x402/sign — the heart of Obscura's agent-spending loop.
 //
 // Called by @obscura-app/sdk when an agent's fetch() receives a 402 from a paid
 // API. We authenticate the caller via the agent's API key, enforce the monthly

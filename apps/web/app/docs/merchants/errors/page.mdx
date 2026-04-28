@@ -6,9 +6,10 @@ export default function ({ children }) {
 
 # Error handling
 
-The middleware handles x402 errors itself — a malformed payment becomes
-a 402 with an explanation body, a failed settlement becomes a 402 with
-`settle_failed`. Your handler never runs on a broken payment.
+The middleware handles x402 errors itself — a payment-less request
+becomes a 402 with a price-quote body, a malformed envelope becomes a
+402 with `invalid_payment` and a human-readable `reason`. Your handler
+never runs on a broken payment.
 
 Exceptions bubble into Express's `next(err)` so you can catch them in a
 global error handler:
@@ -25,41 +26,66 @@ global error handler:
 <DocTable
   headers={["Status", "Body", "Meaning"]}
   rows={[
-    ["402", <code key="c">{`{ accepts, x402Version, ... }`}</code>, <>No <code>PAYMENT-SIGNATURE</code> sent. Body holds the price quote; a <code>PAYMENT-REQUIRED</code> header carries a base64 copy.</>],
-    ["402", <code key="c">{`{ error: "invalid_payment", reason }`}</code>, "Signature verified but amount / mint / recipient don't match the quote."],
-    ["402", <code key="c">{`{ error: "settle_failed", reason }`}</code>, "Signature is valid but on-chain settlement failed (funds, RPC, or facilitator). Retry later."],
-    ["500", <code key="c">next(err)</code>, "Unexpected throw — usually a misconfigured facilitator URL or RPC."],
+    ["402", <code key="c">{`{ x402Version, accepts: [...] }`}</code>, <>No <code>PAYMENT-SIGNATURE</code> sent. Body holds the price quote; a <code>PAYMENT-REQUIRED</code> header carries a base64 copy.</>],
+    ["402", <code key="c">{`{ error: "invalid_payment", reason }`}</code>, <>Envelope decode/check failed (bad scheme, recipient mismatch, asset mismatch, amount mismatch, resource mismatch, replayed queueSignature, or on-chain queue tx missing/failed).</>],
+    ["500", <code key="c">next(err)</code>, "Unexpected throw — usually an RPC connection error or a config error in pay.charge()."],
   ]}
 />
 
-## Why 402 instead of 500 for settle failures
+## Reasons you'll see in `invalid_payment`
 
-The client is better equipped to handle payment failures than your
-server is. A 402 with `settle_failed` is an actionable response: the
-client knows the signature was valid but settlement didn't land, and
-can choose to retry with a fresh signature. A 500 would hide that
-detail and trigger the wrong recovery path.
+The `reason` string in the 402 body is the merchant SDK's internal
+verification message. Common values:
+
+<DocTable
+  headers={["Reason", "Cause"]}
+  rows={[
+    [<code key="c">envelope is not valid base64 JSON</code>, <>The <code>PAYMENT-SIGNATURE</code> header isn&apos;t a base64 envelope. Either the agent SDK is misconfigured or someone is poking your endpoint by hand.</>],
+    [<code key="c">unsupported scheme: …</code>, <>The envelope&apos;s <code>scheme</code> is not <code>umbra-mixer-v1</code>. Older or non-Obscura clients.</>],
+    [<code key="c">recipientEtaAddress does not match merchant ETA</code>, "Agent presented an envelope addressed to a DIFFERENT merchant. Either misconfiguration or a deliberate replay attempt."],
+    [<code key="c">asset mint does not match route</code>, "Envelope mint differs from the merchant's configured stablecoin. The agent's Obscura backend and your SDK must agree on the mint."],
+    [<code key="c">amount does not match route</code>, "Envelope amount differs from this route's pay.charge amount. Agent submitted a stale or wrong-priced challenge."],
+    [<code key="c">resource URL does not match request</code>, "Envelope was prepared against a different URL. Cross-route replay attempt."],
+    [<code key="c">queueSignature already used (replay)</code>, <>Same envelope re-presented within <code>replayWindowMs</code>. The agent SDK is mis-retrying — investigate.</>],
+    [<code key="c">queue tx not found on chain</code>, "RPC returned null. Queue tx may not be confirmed yet — the agent SDK shouldn't have presented the envelope this early."],
+    [<code key="c">queue tx failed on chain: …</code>, "Queue tx landed but reverted. Should never happen on a healthy Obscura backend; surface this to the operator."],
+    [<code key="c">RPC error fetching queue tx: …</code>, "Your RPC is having issues. Switch to a paid tier or a different provider."],
+  ]}
+/>
+
+## Why 402 instead of 500 for verification failures
+
+The agent is better equipped to handle payment failures than your
+server is. A 402 with `invalid_payment` is an actionable response: the
+agent SDK can choose to retry with a fresh signature, or surface the
+specific reason to its caller. A 500 would hide the detail and trigger
+the wrong recovery path.
 
 ## Logging
 
-Settlement failures + malformed payments are logged to `stderr` by
-PayAI's underlying x402-solana library. For production you'll want to:
+Verification failures and unexpected throws don't log themselves —
+attach a global error middleware (above) and log
+`req.path`, the `invalid_payment` reason, and any exception trace.
+For production:
 
-1. Forward these to your log aggregator (Datadog, Axiom, Sentry).
-2. Alert on sustained `settle_failed` rates — indicates facilitator or
-   RPC problems.
-3. Ignore `invalid_payment` noise — clients trying random payloads is
-   normal.
+1. Forward verification failures to your log aggregator (Datadog,
+   Axiom, Sentry).
+2. Alert on sustained `RPC error fetching queue tx` rates — indicates
+   RPC provider problems.
+3. Don't alert on `invalid_payment` noise — agents probing your
+   endpoint with malformed payloads is normal.
 
 ## What never reaches your handler
 
-Your handler only runs after a confirmed, on-chain settlement. So you
-never need to handle:
+Your handler only runs after a confirmed on-chain queue transaction
+verified to match this route. So you never need to handle:
 
 - Unsigned requests (→ 402 with quote).
-- Invalid signatures (→ 402 with `invalid_payment`).
-- Expired nonces or blockhashes (→ 402 with `invalid_payment`).
-- Settlement failures (→ 402 with `settle_failed`).
+- Malformed envelopes (→ 402 with `invalid_payment`).
+- Cross-merchant or cross-route replays (→ 402 with `invalid_payment`).
 - Wrong network / mint mismatches (→ 402 with `invalid_payment`).
+- Failed or missing on-chain queue tx (→ 402 with `invalid_payment`).
 
-If your handler runs, the payment is in your wallet.
+If your handler runs, the queue tx has landed, the encrypted-balance
+deduction has finalized via Arcium MPC, and a UTXO addressed to your
+ETA exists in the mixer tree waiting to be claimed.

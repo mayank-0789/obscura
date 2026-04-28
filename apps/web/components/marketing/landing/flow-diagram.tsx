@@ -16,7 +16,7 @@ type Actor = {
 const operator: Actor = {
   kicker: "01 · The operator",
   title: "You fund, once.",
-  body: "Top up with UPI or card. Payrail converts it to USDC on Solana in under 30 seconds and credits your agent's wallet.",
+  body: "Top up with UPI or card. Obscura converts it to USDC on Solana in under 30 seconds and credits your agent's wallet.",
   cadence: "One-time action",
   currency: "₹ → USDC",
   Icon: PhoneIcon,
@@ -45,7 +45,7 @@ const actors: Actor[] = [operator, agent, merchant];
 export function FlowDiagram() {
   return (
     <section
-      aria-label="How Payrail works"
+      aria-label="How Obscura works"
       className="border-b border-zinc-800/60 bg-[#0a0a0a]"
     >
       <div className="mx-auto max-w-[1400px] px-6 pb-28 pt-28 lg:px-10">

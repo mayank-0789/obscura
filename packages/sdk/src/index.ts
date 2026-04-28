@@ -2,37 +2,37 @@
  * @obscura-app/sdk — pay-per-call SDK for AI agents.
  *
  * Wraps the native `fetch` with automatic x402 handling: when an HTTP call
- * receives a 402 with a `PAYMENT-REQUIRED` header, the SDK asks the Payrail
+ * receives a 402 with a `PAYMENT-REQUIRED` header, the SDK asks the Obscura
  * backend to execute a confidential Umbra mixer transfer from the agent's
  * encrypted balance to the merchant's, then retries the original request
  * with a `PAYMENT-SIGNATURE` header carrying the on-chain proofs. The
  * agent's encrypted balance, the signing key, and Umbra subject identity
- * never leave Payrail's backend — the agent only holds an API key.
+ * never leave Obscura's backend — the agent only holds an API key.
  *
  *   npm install @obscura-app/sdk
  *
- *   import { Payrail } from "@obscura-app/sdk";
- *   const agent = new Payrail({
- *     apiKey: process.env.PAYRAIL_KEY!,
- *     baseUrl: process.env.PAYRAIL_BASE_URL!, // e.g. https://<your-app>.up.railway.app
+ *   import { Obscura } from "@obscura-app/sdk";
+ *   const agent = new Obscura({
+ *     apiKey: process.env.OBSCURA_KEY!,
+ *     baseUrl: process.env.OBSCURA_BASE_URL!, // e.g. https://<your-app>.up.railway.app
  *   });
  *   const res = await agent.fetch("https://your-merchant.example.com/top");
  *   const json = await res.json();
  */
 
-import { PayrailError, type PayrailErrorCode } from "./errors.js";
+import { ObscuraError, type ObscuraErrorCode } from "./errors.js";
 
-export { PayrailError, type PayrailErrorCode };
+export { ObscuraError, type ObscuraErrorCode };
 
-export type PayrailOptions = {
-  /** Agent API key from the Payrail dashboard. Format: `pk_<28 chars>`. */
+export type ObscuraOptions = {
+  /** Agent API key from the Obscura dashboard. Format: `pk_<28 chars>`. */
   apiKey: string;
   /**
-   * Base URL of the Payrail backend that will sign your agent's payments.
-   * Required — point it at whatever host you've deployed the Payrail web
+   * Base URL of the Obscura backend that will sign your agent's payments.
+   * Required — point it at whatever host you've deployed the Obscura web
    * app on (Railway, Vercel, your own domain). No default is shipped so
    * callers can't silently talk to a wrong/dead host. Example:
-   * `"https://my-payrail.up.railway.app"`.
+   * `"https://my-obscura.up.railway.app"`.
    */
   baseUrl: string;
   /**
@@ -79,7 +79,7 @@ const MAX_RETRY_BACKOFF_MS = 8_000;
 // times we ask. Retrying them just burns budget — surface them to the caller
 // immediately. Anything NOT in this set (network_error, server_error,
 // timeout, server-side rate_limited) gets an exponential-backoff retry.
-const TERMINAL_CODES = new Set<PayrailErrorCode>([
+const TERMINAL_CODES = new Set<ObscuraErrorCode>([
   "conflict",
   "over_cap",
   "insufficient_funds",
@@ -91,7 +91,7 @@ const TERMINAL_CODES = new Set<PayrailErrorCode>([
   "bad_request",
 ]);
 
-export class Payrail {
+export class Obscura {
   readonly #apiKey: string;
   readonly #baseUrl: string;
   readonly #fetch: typeof fetch;
@@ -99,14 +99,14 @@ export class Payrail {
   readonly #signMaxRetries: number;
   readonly #signRetryBaseMs: number;
 
-  constructor(options: PayrailOptions) {
+  constructor(options: ObscuraOptions) {
     if (!options.apiKey) {
-      throw new PayrailError("bad_request", "Payrail: apiKey is required");
+      throw new ObscuraError("bad_request", "Obscura: apiKey is required");
     }
     if (!options.baseUrl) {
-      throw new PayrailError(
+      throw new ObscuraError(
         "bad_request",
-        "Payrail: baseUrl is required (e.g. https://<your-app>.up.railway.app)",
+        "Obscura: baseUrl is required (e.g. https://<your-app>.up.railway.app)",
       );
     }
     this.#apiKey = options.apiKey;
@@ -121,7 +121,7 @@ export class Payrail {
    * Make an HTTP request. Identical to `fetch` for non-402 responses.
    * On 402 + `PAYMENT-REQUIRED` header, signs + retries transparently.
    *
-   * Throws `PayrailError` on any sign-flow failure — inspect `err.code` to
+   * Throws `ObscuraError` on any sign-flow failure — inspect `err.code` to
    * distinguish "over_cap" / "invalid_challenge" / "network_error" / etc.
    */
   async fetch(
@@ -136,7 +136,7 @@ export class Payrail {
       initial.headers.get("payment-required") ??
       initial.headers.get("PAYMENT-REQUIRED");
     if (!paymentRequiredHeader) {
-      throw new PayrailError(
+      throw new ObscuraError(
         "no_payment_required_header",
         "Merchant returned 402 but no PAYMENT-REQUIRED header — this is an x402 protocol violation by the merchant.",
       );
@@ -169,7 +169,7 @@ export class Payrail {
         return await this.#requestSignature(paymentRequiredHeader, resourceUrl);
       } catch (err) {
         lastErr = err;
-        if (!(err instanceof PayrailError) || TERMINAL_CODES.has(err.code)) {
+        if (!(err instanceof ObscuraError) || TERMINAL_CODES.has(err.code)) {
           throw err;
         }
         if (attempt === this.#signMaxRetries) {
@@ -191,7 +191,7 @@ export class Payrail {
     paymentRequiredHeader: string,
     resourceUrl: string,
   ): Promise<string> {
-    // AbortController-backed timeout. Without it, a stuck Payrail backend
+    // AbortController-backed timeout. Without it, a stuck Obscura backend
     // would hold the agent's request open indefinitely — bad for retry
     // policies and worse for serverless agents with their own deadlines.
     const controller = new AbortController();
@@ -213,17 +213,17 @@ export class Payrail {
       });
     } catch (err) {
       if (controller.signal.aborted) {
-        throw new PayrailError(
+        throw new ObscuraError(
           "timeout",
-          `Payrail /api/x402/sign exceeded ${this.#signTimeoutMs}ms — ` +
+          `Obscura /api/x402/sign exceeded ${this.#signTimeoutMs}ms — ` +
             "the mixer transfer may still complete server-side; do NOT retry " +
             "without verifying the prior request didn't land",
           { cause: err },
         );
       }
-      throw new PayrailError(
+      throw new ObscuraError(
         "network_error",
-        `Could not reach Payrail at ${this.#baseUrl}`,
+        `Could not reach Obscura at ${this.#baseUrl}`,
         { cause: err },
       );
     } finally {
@@ -235,28 +235,28 @@ export class Payrail {
         error?: string;
         message?: string;
       };
-      const code: PayrailErrorCode =
+      const code: ObscuraErrorCode =
         isKnownCode(body.error) ? body.error : "unknown";
       const message = body.message
-        ? `Payrail /api/x402/sign failed (${res.status}): ${code} — ${body.message}`
-        : `Payrail /api/x402/sign failed (${res.status}): ${code}`;
-      throw new PayrailError(code, message, { status: res.status });
+        ? `Obscura /api/x402/sign failed (${res.status}): ${code} — ${body.message}`
+        : `Obscura /api/x402/sign failed (${res.status}): ${code}`;
+      throw new ObscuraError(code, message, { status: res.status });
     }
 
     const json = (await res.json().catch(() => null)) as {
       paymentSignatureHeader?: string;
     } | null;
     if (!json?.paymentSignatureHeader) {
-      throw new PayrailError(
+      throw new ObscuraError(
         "server_error",
-        "Payrail /api/x402/sign returned no paymentSignatureHeader",
+        "Obscura /api/x402/sign returned no paymentSignatureHeader",
       );
     }
     return json.paymentSignatureHeader;
   }
 }
 
-const KNOWN_CODES = new Set<PayrailErrorCode>([
+const KNOWN_CODES = new Set<ObscuraErrorCode>([
   "missing_token",
   "invalid_token",
   "agent_inactive",
@@ -274,8 +274,8 @@ const KNOWN_CODES = new Set<PayrailErrorCode>([
   "unknown",
 ]);
 
-function isKnownCode(code: unknown): code is PayrailErrorCode {
-  return typeof code === "string" && KNOWN_CODES.has(code as PayrailErrorCode);
+function isKnownCode(code: unknown): code is ObscuraErrorCode {
+  return typeof code === "string" && KNOWN_CODES.has(code as ObscuraErrorCode);
 }
 
 function sleep(ms: number): Promise<void> {

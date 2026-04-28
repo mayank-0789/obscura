@@ -203,7 +203,7 @@ function Quickstart() {
               </Link>
               <span className="text-zinc-700">/</span>
               <Link
-                href="https://github.com/mayank-0789/payrail"
+                href="https://github.com/mayank-0789/obscura"
                 className="inline-flex items-center gap-2 border-b border-zinc-700 pb-0.5 transition hover:border-emerald-400 hover:text-emerald-400"
               >
                 View on GitHub
@@ -454,7 +454,7 @@ const figures = [
   {
     value: "₹500",
     label: "minimum top-up to ship your first agent",
-    source: "Payrail",
+    source: "Obscura",
   },
 ];
 
@@ -471,7 +471,7 @@ function Numbers() {
             <span className="italic text-zinc-500">theoretical.</span>
           </h2>
           <p className="mt-6 text-[15px] leading-[1.7] text-zinc-400">
-            It&apos;s already happening. Payrail is the rail between the 900M
+            It&apos;s already happening. Obscura is the rail between the 900M
             Indians who transact in rupees and the agents that transact on
             Solana.
           </p>
@@ -535,7 +535,7 @@ const userFaqs: QA[] = [
   },
   {
     q: "Who controls the money?",
-    a: "The operator. Each agent's Umbra-side keypair is derived server-side from a master seed (HMAC-SHA-256, domain-separated per subject) and never leaves Payrail's backend. Every outgoing transfer runs through a spend-cap check before signing. No cap, no signature.",
+    a: "The operator. Each agent's Umbra-side keypair is derived server-side from a master seed (HMAC-SHA-256, domain-separated per subject) and never leaves Obscura's backend. Every outgoing transfer runs through a spend-cap check before signing. No cap, no signature.",
   },
   {
     q: "What happens when an agent hits its monthly cap?",

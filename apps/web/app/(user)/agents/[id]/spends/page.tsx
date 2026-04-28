@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { AgentSpendsShell } from "./agent-spends-shell";
 
 export const metadata: Metadata = {
-  title: "Spends · Payrail",
+  title: "Spends · Obscura",
   description:
     "Full history of confirmed x402 payments this agent has made on Solana.",
 };

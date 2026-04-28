@@ -29,9 +29,10 @@ includes:
 
 This silences the warning. **The runtime is verified compatible** — the
 prover only consumes the `IZkProverFor*` interface shapes from
-`@umbra-privacy/sdk/interfaces`, which are stable across 2.x → 4.x. Our
-`scripts/umbra-test-mixer-send.ts` exercises both register-side and
-claim-side proofs end-to-end and passes.
+`@umbra-privacy/sdk/interfaces`, which are stable across 2.x → 4.x. The
+live e2e flow (agent → `/api/x402/sign` → mixer create → claim daemon)
+exercises both register-side and claim-side proofs and has been validated
+against devnet.
 
 ## Upgrade rules
 
@@ -40,8 +41,8 @@ claim-side proofs end-to-end and passes.
   and break the prover at runtime, not at compile time.
 - **Before bumping `@umbra-privacy/sdk`**:
   1. Check `web-zk-prover`'s peerDep on the new SDK version.
-  2. Run `pnpm umbra:test-mixer-send <agent-uuid>` against a fresh receiver
-     ID and confirm Step 5 lands `status=completed`.
+  2. Run a live demo cycle (`pnpm dev:demo` + demo-agent) and confirm
+     queue + callback signatures land for at least one paid call.
   3. Update the `peerDependencyRules` allowedVersions to match.
 - **When `web-zk-prover@4.x` ships** (eventual): pin to that, drop the
   `peerDependencyRules` override.

@@ -6,44 +6,52 @@ export default function ({ children }) {
 
 # Error handling
 
-The SDK throws `PayrailError` with a typed `code` for every failure mode.
+The SDK throws `ObscuraError` with a typed `code` for every failure mode.
 Switch on `err.code` for user-facing responses, or rethrow unknown codes.
 
 ## The pattern
 
 <CodeBlock lang="ts" filename="agent.ts">
-{`import { Payrail, PayrailError } from "@obscura-app/sdk";
+{`import { Obscura, ObscuraError } from "@obscura-app/sdk";
 
-const agent = new Payrail({
-  apiKey: process.env.PAYRAIL_KEY!,
-  baseUrl: process.env.PAYRAIL_BASE_URL!,
+const agent = new Obscura({
+  apiKey: process.env.OBSCURA_KEY!,
+  baseUrl: process.env.OBSCURA_BASE_URL!,
 });
 
 try {
   const res = await agent.fetch(url);
   return await res.json();
 } catch (err) {
-  if (err instanceof PayrailError) {
+  if (err instanceof ObscuraError) {
     switch (err.code) {
       case "over_cap":
         // Monthly spend cap hit. Raise it in the dashboard or wait
         // for the calendar-month reset.
         throw new Error("This agent has no budget left this month.");
+      case "insufficient_funds":
+        // Encrypted balance is below the requested amount. Top up.
+        throw new Error("Agent needs a top-up before retrying.");
       case "agent_inactive":
         // Agent paused or cancelled in the dashboard.
         throw new Error("Agent is inactive.");
       case "invalid_token":
         // API key revoked, rotated, or mistyped.
-        throw new Error("Payrail API key invalid — rotate in dashboard.");
+        throw new Error("Obscura API key invalid — rotate in dashboard.");
       case "invalid_challenge":
         // The merchant sent a malformed 402 — not your fault.
         throw new Error("Merchant payment request was invalid.");
+      case "conflict":
+        // The same spend intent is already in flight. Don't retry.
+        throw new Error("Duplicate spend already processing — wait, don't retry.");
       case "signing_failed":
-        // Umbra or Solana failed to sign. Safe to retry.
-        throw new Error("Payment signing failed — retry in a moment.");
+        // Umbra didn't finalize. May be in flight on-chain — DON'T retry
+        // until reconciliation has run, or you risk double-charging.
+        throw new Error("Payment is in flight — check status before retrying.");
       case "network_error":
-        // Couldn't reach Payrail backend.
-        throw new Error("Payrail unreachable — retry in a moment.");
+      case "timeout":
+        // Couldn't reach Obscura, or the sign request exceeded the timeout.
+        throw new Error("Obscura unreachable — retry in a moment.");
       default:
         throw err;
     }
@@ -57,48 +65,50 @@ try {
 <DocTable
   headers={["Code", "Status", "When it fires"]}
   rows={[
-    [<code key="c">over_cap</code>, "402", "Agent's monthly spend cap would be exceeded."],
-    [<code key="c">agent_inactive</code>, "403", "Agent is paused or cancelled."],
-    [<code key="c">missing_token</code>, "401", <>No Bearer token on the request to Payrail. The SDK sets this for you — only fires if <code>apiKey</code> is empty.</>],
-    [<code key="c">invalid_token</code>, "401", "API key is unknown, revoked, or mis-formatted."],
-    [<code key="c">invalid_challenge</code>, "400", "Merchant's 402 response is malformed or for the wrong network/mint."],
-    [<code key="c">signing_failed</code>, "500", "Umbra or Solana failed to sign. Safe to retry once."],
+    [<code key="c">over_cap</code>, "402", "Agent's monthly spend cap would be exceeded. Terminal — raise cap or wait for month reset."],
+    [<code key="c">insufficient_funds</code>, "402", "Agent's encrypted balance is below the requested amount. Terminal — top up before retrying."],
+    [<code key="c">agent_inactive</code>, "403", "Agent is paused or cancelled. Terminal."],
+    [<code key="c">missing_token</code>, "401", <>No Bearer token on the request to Obscura. The SDK sets this for you — only fires if <code>apiKey</code> is empty.</>],
+    [<code key="c">invalid_token</code>, "401", "API key is unknown, revoked, or mis-formatted. Terminal."],
+    [<code key="c">invalid_challenge</code>, "400", "Merchant's 402 response is malformed or for the wrong network/mint. Terminal."],
+    [<code key="c">conflict</code>, "409", "An identical spend intent (same agent + URL + amount + payTo + asset) is already in flight. Terminal — let the original finish."],
+    [<code key="c">rate_limited</code>, "429", "Agent has 3+ parallel spends in flight. Retry after a backoff."],
+    [<code key="c">signing_failed</code>, "500", "Umbra MPC didn't finalize within timeout. The on-chain debit may still land — DO NOT retry without checking reconciliation."],
     [<code key="c">bad_request</code>, "400", <>SDK-level constructor issue (e.g. missing <code>apiKey</code>) or a malformed sign-request body.</>],
-    [<code key="c">server_error</code>, "500", "Unhandled Payrail backend error. Safe to retry once; contact support if persistent."],
+    [<code key="c">server_error</code>, "500", "Unhandled Obscura backend error. Retried automatically by the SDK with exponential backoff."],
     [<code key="c">no_payment_required_header</code>, "—", "Merchant returned 402 but without a PAYMENT-REQUIRED header (protocol violation on the merchant)."],
-    [<code key="c">network_error</code>, "—", <>Couldn&apos;t reach Payrail. Check <code>baseUrl</code> / connectivity.</>],
+    [<code key="c">network_error</code>, "—", <>Couldn&apos;t reach Obscura. Check <code>baseUrl</code> / connectivity. Retried automatically.</>],
+    [<code key="c">timeout</code>, "—", <>Sign request exceeded <code>signTimeoutMs</code> (default 60s). The mixer transfer may still complete — verify before retrying.</>],
     [<code key="c">unknown</code>, "—", "Catch-all for unrecognized error codes. Treat as a retryable server-side issue."],
   ]}
 />
 
-## When to retry
+## Built-in retries
 
-The SDK doesn't retry on its own — that's your call, and depends on
-whether the operation is idempotent. A safe pattern:
+The SDK retries transient failures automatically — `network_error`,
+`timeout`, `server_error`, `rate_limited` — with exponential backoff
+(500ms → 1s → 2s, capped at 8s, default 2 retries). Tune via
+[`signMaxRetries`](/docs/agents/advanced) and `signRetryBaseMs`.
 
-<CodeBlock lang="ts">
-{`const RETRYABLE = new Set<string>([
-  "signing_failed",
-  "server_error",
-  "network_error",
-]);
+**Terminal codes are never retried** by the SDK, no matter how high you
+set `signMaxRetries`:
 
-async function callWithRetry(url: string, attempts = 2): Promise<Response> {
-  try {
-    return await agent.fetch(url);
-  } catch (err) {
-    if (
-      err instanceof PayrailError &&
-      RETRYABLE.has(err.code) &&
-      attempts > 0
-    ) {
-      await new Promise((r) => setTimeout(r, 500));
-      return callWithRetry(url, attempts - 1);
-    }
-    throw err;
-  }
-}`}
-</CodeBlock>
+<DocTable
+  headers={["Code", "Why never retried"]}
+  rows={[
+    [<code key="c">conflict</code>, "Original is in flight — duplicating it just blocks on the same lock."],
+    [<code key="c">over_cap</code>, "Cap won't change between retries."],
+    [<code key="c">insufficient_funds</code>, "Balance won't change without a top-up."],
+    [<code key="c">agent_inactive</code>, "Status flag — won't flip without dashboard action."],
+    [<code key="c">invalid_token</code>, "Auth won't fix itself."],
+    [<code key="c">missing_token</code>, "Same — auth misconfigured."],
+    [<code key="c">invalid_challenge</code>, "Merchant payload is malformed."],
+    [<code key="c">no_payment_required_header</code>, "Merchant violated the x402 spec."],
+    [<code key="c">bad_request</code>, "Caller-side error."],
+  ]}
+/>
 
-`over_cap`, `agent_inactive`, and `invalid_token` are intentionally NOT
-retryable — retrying them just wastes round-trips.
+`signing_failed` is a special case — it's NOT retried by the SDK because
+the on-chain debit may have already landed, and a blind retry would
+double-charge. Surface it to your caller and let them decide after
+reconciliation completes.

@@ -32,7 +32,7 @@ import { getConnection } from "@/lib/solana";
 // Helius doesn't retry us to death.
 
 // Pending rows older than this window are ignored — we don't want a very old
-// pending (likely orphaned by a mid-flight failure in the SDK / facilitator)
+// pending (likely orphaned by a mid-flight failure in the SDK or Umbra mixer)
 // to get auto-confirmed by an unrelated same-amount transfer.
 const CONFIRM_WINDOW_MINUTES = 60;
 
@@ -233,9 +233,10 @@ async function confirmPendingTx(
   // `desc(createdAt) limit 1` always picks the newest pending. If the FIRST
   // payment lands on-chain before the second (normal ordering), the webhook
   // fires twice and we attach the right signature to the right row by
-  // coincidence of sequence. If ordering inverts (rare — facilitator reorders
-  // a batch), one row ends up with the wrong sig until a reconciler sweeps.
-  // Dashboard display is unaffected (amounts are identical). Acceptable.
+  // coincidence of sequence. If ordering inverts (rare — RPC delivers tx
+  // notifications out of order), one row ends up with the wrong sig until a
+  // reconciler sweeps. Dashboard display is unaffected (amounts are
+  // identical). Acceptable.
   const windowStart = new Date(
     Date.now() - CONFIRM_WINDOW_MINUTES * 60 * 1000,
   );

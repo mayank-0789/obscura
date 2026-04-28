@@ -5,9 +5,9 @@
  *   npm install @obscura-app/merchant-sdk
  *
  *   import express from "express";
- *   import { payrail } from "@obscura-app/merchant-sdk";
+ *   import { obscura } from "@obscura-app/merchant-sdk";
  *
- *   const pay = payrail({
+ *   const pay = obscura({
  *     merchantEtaAddress: process.env.MERCHANT_ETA_ADDRESS!,
  *     network: "solana-devnet",
  *     rpcUrl: process.env.HELIUS_RPC_URL,
@@ -28,8 +28,8 @@
  * encrypted-balance deduction has already landed on chain via Arcium MPC,
  * and a UTXO addressed to the merchant sits in the mixer tree. The
  * merchant's claim daemon picks that up asynchronously and credits the
- * encrypted balance — see scripts/umbra-claim-daemon.ts.
+ * encrypted balance — see /api/cron/claim-daemon (Vercel Cron, 2-min cadence).
  */
 
-export { payrail, type PayrailMerchantClient, type PaymentRequirements } from "./express.js";
+export { obscura, type ObscuraMerchantClient, type PaymentRequirements } from "./express.js";
 export type { ChargeConfig, MerchantSdkConfig } from "./types.js";

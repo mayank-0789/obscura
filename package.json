@@ -1,5 +1,5 @@
 {
-  "name": "payrail",
+  "name": "obscura",
   "private": true,
   "scripts": {
     "build": "turbo run build",
@@ -11,22 +11,11 @@
     "db:push": "pnpm --filter @obscura-app/db exec drizzle-kit push",
     "db:studio": "pnpm --filter @obscura-app/db exec drizzle-kit studio",
     "db:migrate": "pnpm --filter @obscura-app/db exec drizzle-kit migrate",
-    "dev:demo": "concurrently --names web,merchant --prefix-colors cyan,magenta --kill-others-on-fail \"pnpm --filter web dev\" \"pnpm --filter demo-merchant-news dev\"",
-    "umbra:bootstrap-treasury": "tsx scripts/umbra-bootstrap-treasury.ts",
-    "umbra:wrap-treasury-sol": "tsx scripts/umbra-wrap-treasury-sol.ts",
-    "umbra:claim-daemon": "tsx scripts/umbra-claim-daemon.ts",
-    "umbra:reconcile-pending": "tsx scripts/umbra-reconcile-pending.ts",
-    "umbra:bootstrap-merchant": "tsx scripts/umbra-bootstrap-merchant.ts"
+    "dev:demo": "concurrently --names web,merchant --prefix-colors cyan,magenta --kill-others-on-fail \"pnpm --filter web dev\" \"pnpm --filter demo-merchant-news dev\""
   },
   "devDependencies": {
-    "@neondatabase/serverless": "^1.1.0",
-    "@solana/spl-token": "^0.4.14",
-    "@solana/web3.js": "^1.98.4",
-    "@types/node": "^22.15.3",
     "concurrently": "^9.2.1",
-    "dotenv": "^17.4.2",
     "prettier": "^3.7.4",
-    "tsx": "^4.21.0",
     "turbo": "^2.9.6",
     "typescript": "5.9.2"
   },

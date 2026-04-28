@@ -1,4 +1,4 @@
-// Payrail schema (post-Umbra pivot).
+// Obscura schema (post-Umbra pivot).
 // Conventions: UUIDs (pg defaultRandom), timestamptz, bigint for money.
 // USDG base units: $1 = 1_000_000 (6 decimals). INR paise: ₹1 = 100.
 // Soft deletes via status / revoked_at — avoid hard DELETEs.

@@ -14,7 +14,7 @@ import { RoleSwitcher } from "./role-switcher";
 import { LAST_ROLE_KEY, type Role } from "@/lib/onboarding";
 
 type Props = {
-  // Crumb rendered after "Payrail /" on the left. Defaults to "Dashboard"
+  // Crumb rendered after "Obscura /" on the left. Defaults to "Dashboard"
   // for backwards compat with the agent shell; merchant shell passes
   // "Merchant dashboard".
   crumb?: string;
@@ -99,7 +99,7 @@ export function DashboardTopBar({
         <Link href="/" className="flex items-center gap-2">
           <Logo size="sm" />
           <span className="text-[13px] font-semibold tracking-tight text-zinc-100">
-            Payrail
+            Obscura
           </span>
         </Link>
         <span className="text-zinc-700">/</span>

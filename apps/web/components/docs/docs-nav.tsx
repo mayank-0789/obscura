@@ -10,7 +10,7 @@ export function DocsNav() {
           <Logo />
           <div className="flex items-baseline gap-2.5">
             <span className="font-display text-[22px] font-normal leading-none tracking-[-0.01em] text-zinc-50 transition group-hover:text-emerald-300">
-              Payrail
+              Obscura
             </span>
             <span className="font-mono text-[10px] uppercase tracking-[0.28em] text-zinc-500">
               /docs
@@ -26,7 +26,7 @@ export function DocsNav() {
             For merchants
           </Link>
           <Link
-            href="https://github.com/mayank-0789/payrail"
+            href="https://github.com/mayank-0789/obscura"
             className="hidden items-center gap-1.5 transition hover:text-zinc-100 md:inline-flex"
           >
             GitHub

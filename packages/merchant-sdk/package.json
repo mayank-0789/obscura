@@ -3,11 +3,11 @@
   "version": "0.1.1",
   "description": "Express middleware for API sellers to accept confidential x402 payments on Solana via the Umbra mixer.",
   "license": "MIT",
-  "author": "Payrail",
-  "homepage": "https://github.com/mayank-0789/payrail",
+  "author": "Obscura",
+  "homepage": "https://github.com/mayank-0789/obscura",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mayank-0789/payrail.git",
+    "url": "git+https://github.com/mayank-0789/obscura.git",
     "directory": "packages/merchant-sdk"
   },
   "keywords": [
@@ -18,7 +18,7 @@
     "payments",
     "api-monetization",
     "usdc",
-    "payrail"
+    "obscura"
   ],
   "sideEffects": false,
   "main": "./dist/index.cjs",
@@ -50,6 +50,7 @@
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
     "@solana/web3.js": "^1.98.4",
+    "@types/node": "^22.15.3",
     "tsup": "^8.5.1",
     "typescript": "5.9.2"
   },

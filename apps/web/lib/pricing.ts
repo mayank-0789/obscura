@@ -1,7 +1,7 @@
 // Top-up pricing — single source of truth for quote API + webhook credit +
 // UI breakdown. Deterministic for (paidPaise, marketRate).
 //
-// Product framing: Payrail sells a "platform service + payment conversion".
+// Product framing: Obscura sells a "platform service + payment conversion".
 // The service portion is GSTable; the converted principal is pass-through.
 // See memory `project_topup_pricing.md` for the full model rationale.
 //
@@ -18,7 +18,7 @@ import { convertInrToUsdg } from "@/lib/rates";
 const BPS_DENOM = 10_000n;
 
 // Service fee — flat percentage of top-up, inclusive of 18% GST. Covers
-// Payrail platform margin + Dodo processing + govt GST on our cut.
+// Obscura platform margin + Dodo processing + govt GST on our cut.
 // Net margin after all three: ~3.5%.
 const SERVICE_FEE_BPS = 625n;
 

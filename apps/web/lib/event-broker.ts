@@ -61,7 +61,7 @@ class EventBroker {
 // HMR-safe singleton. Next.js rebuilds modules on every hot reload in dev,
 // which would otherwise orphan active SSE subscriptions. Attaching to
 // globalThis preserves the broker across reloads.
-const GLOBAL_KEY = "__payrail_event_broker__";
+const GLOBAL_KEY = "__obscura_event_broker__";
 type GlobalWithBroker = { [GLOBAL_KEY]?: EventBroker };
 const g = globalThis as unknown as GlobalWithBroker;
 export const eventBroker: EventBroker = g[GLOBAL_KEY] ?? (g[GLOBAL_KEY] = new EventBroker());

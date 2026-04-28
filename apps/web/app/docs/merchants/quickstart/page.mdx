@@ -7,43 +7,47 @@ export default function ({ children }) {
 # Charge per API call
 
 Wrap one Express route with `pay.charge()` and your API starts quoting
-prices in USDC, verifying payments via the x402 protocol, and settling
-on Solana in the same request. No account on our side at runtime — the
-middleware speaks x402 directly to the PayAI facilitator.
+prices in USDC, returning x402 challenges to unpaid clients, and
+verifying confidential payments on-chain in the same request. Your
+server holds no signing key — you only receive funds.
 
-**Time to first settled payment:** ~5 minutes.
+**Time to first verified payment:** ~5 minutes.
 
-## Grab your payout wallet
+## Grab your merchant ETA address
 
-1. [Sign up](/merchants) and pick "API provider" during onboarding.
-2. Your dashboard shows a **payout wallet** — a Solana address Payrail
-   minted for you. Click the copy button.
+1. [Sign in](/onboarding) and pick **API provider** during onboarding.
+2. Your dashboard shows a **merchant ETA address** — the deterministic
+   Solana pubkey of your Umbra encrypted token account, registered on
+   chain at signup. Click the copy button.
 3. Paste it into your server's environment:
 
 <CodeBlock lang="bash" filename="your-api/.env">
-{`PAYRAIL_PAYOUT_WALLET=7xK3r…NhGP`}
+{`MERCHANT_ETA_ADDRESS=7xK3r…NhGP
+HELIUS_RPC_URL=https://devnet.helius-rpc.com/?api-key=…`}
 </CodeBlock>
 
-<Callout kind="info" title="You don't hold the key in your server">
-  The payout wallet only *receives* funds — it never signs anything
-  from your server. Payrail manages the key so a future cash-out flow
-  can swap USDC → INR on your behalf. Nothing to rotate, nothing to
-  leak.
+<Callout kind="info" title="Your server holds no key">
+  The ETA is the *receiving* side of an Umbra encrypted balance.
+  Inbound payments land in the encrypted account, not on your server.
+  Obscura's claim daemon decrypts and credits your encrypted balance
+  asynchronously; cash-out flows are managed via the dashboard.
 </Callout>
 
 ## Wrap a route
 
 Create `server.ts` and paste this in. The `charge` middleware goes
 *before* your handler — it intercepts payment-less requests with a 402,
-and passes payment-bearing requests through after settling on-chain.
+and verifies payment-bearing requests on-chain before letting them
+through.
 
 <CodeBlock lang="ts" filename="server.ts">
 {`import express from "express";
-import { payrail } from "@obscura-app/merchant-sdk";
+import { obscura } from "@obscura-app/merchant-sdk";
 
-const pay = payrail({
-  payoutWallet: process.env.PAYRAIL_PAYOUT_WALLET!,
+const pay = obscura({
+  merchantEtaAddress: process.env.MERCHANT_ETA_ADDRESS!,
   network: "solana-devnet",
+  rpcUrl: process.env.HELIUS_RPC_URL,
 });
 
 const app = express();
@@ -79,17 +83,18 @@ Run it:
   per-route prices and non-USDC stablecoins.
 </Callout>
 
-## Watch earnings land
+## Watch payments land
 
 With the server running, point any x402 client — the [agent
 quickstart](/docs/agents/quickstart) works — at your route. On your
 [merchant dashboard](/merchants/dashboard) the payment shows up within
-a second via real-time SSE, including the Solana tx signature with a
-Solscan deep-link.
+a second via real-time SSE, with the on-chain queue signature linked to
+Solscan. The encrypted-balance credit follows asynchronously after the
+claim daemon picks it up (next 2-minute tick).
 
 ## What's next
 
 - [How it works](/docs/merchants/flow) — every step of the two-phase x402 handshake.
-- [Settlement receipts](/docs/merchants/receipts) — reading `res.locals.payrailSettlement` + the `X-Payment-Response` header.
+- [Settlement receipts](/docs/merchants/receipts) — reading `res.locals.obscuraSettlement` + the `X-Payment-Response` header.
 - [Pricing & assets](/docs/merchants/pricing) — per-route prices, custom mints, mainnet switching.
 - [Deploy](/docs/merchants/deploy) — where this SDK runs best.

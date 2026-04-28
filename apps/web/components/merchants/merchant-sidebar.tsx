@@ -37,7 +37,7 @@ const GROUPS: NavGroup[] = [
   },
 ];
 
-export function MerchantSidebar({ payoutWallet }: { payoutWallet: string | null }) {
+export function MerchantSidebar({ merchantEtaAddress }: { merchantEtaAddress: string | null }) {
   const pathname = usePathname();
 
   return (
@@ -66,16 +66,16 @@ export function MerchantSidebar({ payoutWallet }: { payoutWallet: string | null 
         <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
           Payout wallet
         </div>
-        {payoutWallet ? (
+        {merchantEtaAddress ? (
           <>
             <div
               className="mt-1.5 truncate font-mono text-[12px] text-zinc-300"
-              title={payoutWallet}
+              title={merchantEtaAddress}
             >
-              {shortPk(payoutWallet)}
+              {shortPk(merchantEtaAddress)}
             </div>
             <a
-              href={`https://solscan.io/account/${payoutWallet}?cluster=devnet`}
+              href={`https://solscan.io/account/${merchantEtaAddress}?cluster=devnet`}
               target="_blank"
               rel="noopener noreferrer"
               className="mt-1 inline-flex items-center gap-1 text-[11px] text-zinc-500 transition hover:text-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#08080a] rounded"

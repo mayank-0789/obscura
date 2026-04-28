@@ -14,18 +14,25 @@ seed phrases — just an API key you paste into an env var.
 
 ## Create an agent + grab its API key
 
-1. Open the [dashboard](/dashboard) and sign in.
+1. Open the [dashboard](/dashboard) and sign in with Google.
 2. Press <Kbd>⌘N</Kbd> (or click **+ New agent**). Name your agent, pick
    a monthly spend cap in rupees, submit.
 3. A green banner appears with your agent's plaintext API key (format
-   `pk_…`). **Copy it now** — it's shown only once. Payrail stores only
+   `pk_…`). **Copy it now** — it's shown only once. Obscura stores only
    a hash.
 4. Click **Top up** on the agent row and fund it with ₹500 via UPI or a
    test card. Funds arrive on devnet within ~30 seconds.
 
 <CodeBlock lang="bash" filename="your-agent/.env">
-{`PAYRAIL_KEY=pk_abc…xyz`}
+{`OBSCURA_KEY=pk_abc…xyz
+OBSCURA_BASE_URL=https://your-obscura-host.example.com`}
 </CodeBlock>
+
+<Callout kind="info" title="Where does OBSCURA_BASE_URL come from?">
+  It's the host of the Obscura backend that signs your agent's payments
+  — the same `apps/web` you deployed (or the Obscura-hosted instance).
+  No default is shipped so callers can't silently talk to a wrong host.
+</Callout>
 
 ## Write five lines
 
@@ -34,11 +41,11 @@ endpoint — here we're hitting a demo merchant we run on Solana devnet
 that charges $0.01 per article.
 
 <CodeBlock lang="ts" filename="agent.ts">
-{`import { Payrail } from "@obscura-app/sdk";
+{`import { Obscura } from "@obscura-app/sdk";
 
-const agent = new Payrail({
-  apiKey: process.env.PAYRAIL_KEY!,
-  baseUrl: process.env.PAYRAIL_BASE_URL!,
+const agent = new Obscura({
+  apiKey: process.env.OBSCURA_KEY!,
+  baseUrl: process.env.OBSCURA_BASE_URL!,
 });
 
 const res = await agent.fetch(
@@ -53,19 +60,19 @@ Run it:
 {`npx tsx --env-file=.env agent.ts
 
 # You should see:
-# { id: '42', headline: 'Article #42', body: 'Full article text here…', settledSig: '3Nh…ou2ALF' }`}
+# { id: 42, headline: 'Solana breaks 10k TPS again', body: '…', publishedAt: '2026-04-28T…' }`}
 </CodeBlock>
 
 <Callout kind="info" title="What the response header carries">
   The merchant attaches an `X-Payment-Response` header on success — a
-  base64-encoded settlement receipt with the Solana tx signature. Decode
-  + open it on Solscan to verify on-chain.
+  base64-encoded settlement envelope with the on-chain queue + callback
+  signatures. Decode it to print a Solscan URL for the queue tx.
 </Callout>
 
 ## What's next
 
 - [How it works](/docs/agents/flow) — the full x402 handshake, end to end.
-- [Error handling](/docs/agents/errors) — every `PayrailErrorCode` and
+- [Error handling](/docs/agents/errors) — every `ObscuraErrorCode` and
   when to retry.
-- [Advanced usage](/docs/agents/advanced) — custom `fetch`, pointing at a
-  local Payrail instance, AbortSignal + RequestInit pass-through.
+- [Advanced usage](/docs/agents/advanced) — custom `fetch`, pointing at
+  a local Obscura instance, AbortSignal + RequestInit pass-through.

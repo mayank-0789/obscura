@@ -8,15 +8,15 @@ export default function ({ children }) {
 
 Every export from `@obscura-app/merchant-sdk`, one section per symbol.
 
-## `payrail(config)`
+## `obscura(config)`
 
-The merchant-side factory. Returns a `PayrailMerchantClient` — a small
+The merchant-side factory. Returns a `ObscuraMerchantClient` — a small
 object whose only method is `charge()`.
 
 <CodeBlock lang="ts">
-{`import { payrail } from "@obscura-app/merchant-sdk";
+{`import { obscura } from "@obscura-app/merchant-sdk";
 
-const pay = payrail(config: MerchantSdkConfig);`}
+const pay = obscura(config: MerchantSdkConfig);`}
 </CodeBlock>
 
 ### `MerchantSdkConfig`
@@ -24,22 +24,23 @@ const pay = payrail(config: MerchantSdkConfig);`}
 <DocTable
   headers={["Option", "Type", "Required", "Default", "Description"]}
   rows={[
-    [<code key="c">payoutWallet</code>, <code key="c">string</code>, "Yes", "—", "Solana pubkey (base58) where payments land."],
-    [<code key="c">network</code>, <code key="c">{`"solana" | "solana-devnet"`}</code>, "No", <code key="c">{`"solana-devnet"`}</code>, "Which Solana network to settle on."],
-    [<code key="c">mint</code>, <code key="c">string</code>, "No", "devnet / mainnet USDC", "SPL token mint to accept."],
+    [<code key="c">merchantEtaAddress</code>, <code key="c">string</code>, "Yes", "—", "Solana pubkey (base58) of your Umbra encrypted token account. NOT a regular SPL wallet."],
+    [<code key="c">network</code>, <code key="c">{`"solana" | "solana-devnet"`}</code>, "No", <code key="c">{`"solana-devnet"`}</code>, "Which Solana network to verify on."],
+    [<code key="c">mint</code>, <code key="c">string</code>, "No", "devnet / mainnet USDC", "SPL token mint to accept. Must match the Obscura backend's STABLECOIN_MINT."],
     [<code key="c">decimals</code>, <code key="c">number</code>, "No", <code key="c">6</code>, "Decimals for the mint (USDC + USDG both use 6)."],
-    [<code key="c">facilitatorUrl</code>, <code key="c">string</code>, "No", <code key="c">https://facilitator.payai.network</code>, "Override to self-host or switch providers."],
-    [<code key="c">rpcUrl</code>, <code key="c">string</code>, "No", "Solana public RPC", "RPC endpoint for chain reads."],
-    [<code key="c">apiKeyId</code>, <code key="c">string</code>, "No", "—", <>PayAI paid-tier JWT key ID. Set both this and <code>apiKeySecret</code> to enable paid tier.</>],
-    [<code key="c">apiKeySecret</code>, <code key="c">string</code>, "No", "—", "PayAI paid-tier JWT secret."],
+    [<code key="c">rpcUrl</code>, <code key="c">string</code>, "No", "Solana public RPC", "RPC endpoint for getTransaction reads during verification. Helius recommended for production."],
+    [<code key="c">replayWindowMs</code>, <code key="c">number</code>, "No", <code key="c">300000</code>, "Window during which a queueSignature is rejected on duplicate (default 5 min)."],
   ]}
 />
+
+The factory throws synchronously on a missing or malformed
+`merchantEtaAddress`.
 
 ## `pay.charge(config)`
 
 Returns an Express-compatible middleware. Runs *before* your route
-handler, intercepts payment-less requests with 402, and settles
-payment-bearing requests before calling `next()`.
+handler, intercepts payment-less requests with a 402, and verifies
+payment-bearing requests on-chain before calling `next()`.
 
 ### `ChargeConfig`
 
@@ -49,41 +50,60 @@ payment-bearing requests before calling `next()`.
     [<code key="c">amount</code>, <><code>string</code> (atomic units, e.g. <code>"10000"</code>)</>, "Yes", "Price per call."],
     [<code key="c">description</code>, <code key="c">string</code>, "No", "Human-readable description included in the 402 body."],
     [<code key="c">mimeType</code>, <code key="c">string</code>, "No", <>Response MIME advertised. Default <code>application/json</code>.</>],
-    [<code key="c">maxTimeoutSeconds</code>, <code key="c">number</code>, "No", <>Max client wait for payment. Default <code>300</code>.</>],
+    [<code key="c">maxTimeoutSeconds</code>, <code key="c">number</code>, "No", <>Max client wait for payment, in the 402 body. Default <code>300</code>.</>],
     [<code key="c">asset</code>, <code key="c">{`{ address: string; decimals: number }`}</code>, "No", "Per-route override of the SDK-default mint + decimals."],
   ]}
 />
 
 ### Side effects on `res`
 
-On a successful settlement, the middleware:
+On a successful verification, the middleware:
 
 - Sets an `X-Payment-Response` header — base64-encoded JSON of the
-  settlement result.
-- Sets `res.locals.payrailSettlement` — the parsed settlement object
-  with the Solana tx signature.
-- Calls `next()` so your downstream handler runs with both in place.
+  settlement object.
+- Sets `res.locals.obscuraSettlement` — the parsed settlement object.
+- Calls `next()` so your downstream handler runs.
 
 See [Settlement receipts](/docs/merchants/receipts) for reading them.
 
 ## Re-exports
 
-- **`PaymentRequirements`** — the x402-solana type for a 402 challenge
-  body. Useful for typing handlers that read settlement via
-  `res.locals.payrailSettlement`.
+- **`PaymentRequirements`** — the x402 type for a 402 challenge body.
+  Useful for typing custom 402 handlers.
 
 <CodeBlock lang="ts">
-{`import type { PaymentRequirements } from "@obscura-app/merchant-sdk";`}
+{`import type { PaymentRequirements } from "@obscura-app/merchant-sdk";
+
+type PaymentRequirements = {
+  scheme: "exact";
+  network: "solana" | "solana-devnet";
+  asset: string;
+  amount: string;
+  payTo: string;
+  resource: string;
+  maxTimeoutSeconds: number;
+  description?: string;
+  mimeType: string;
+};`}
 </CodeBlock>
+
+- **`ObscuraMerchantClient`** — the type returned by `obscura()`.
 
 ## Protocol-level notes
 
-- **One `createPaymentRequirements` call per request.** The SDK dedupes
-  the `/supported` round-trip internally, so verify + settle reuse the
-  same quote built during the 402 phase.
-- **Synchronous settle.** The middleware waits for on-chain confirmation
-  before calling `next()`. See [How it works](/docs/merchants/flow) for
-  the latency trade-off.
-- **No Payrail API calls from the middleware.** The SDK talks directly
-  to the PayAI facilitator + Solana RPC — zero dependency on Payrail
-  infrastructure at runtime.
+- **Verification is direct chain read.** The middleware calls
+  `getTransaction(queueSignature)` (and `getTransaction(callbackSignature)`
+  if present) via your configured RPC. No facilitator, no Obscura
+  backend dependency at runtime.
+- **Settlement is implicit.** By the time the agent presents the
+  envelope, the queue tx has landed and Arcium MPC has finalized.
+  Nothing for the merchant to settle — the on-chain mixer commitment
+  IS the settlement. Your encrypted balance is credited
+  asynchronously by Obscura's claim daemon.
+- **Replay protection is in-process.** The SDK keeps an in-memory
+  `Map<queueSignature, seenAt>` and rejects duplicates within
+  `replayWindowMs`. For multi-process deployments, back this with
+  Redis to close the cross-process replay window.
+- **No Obscura API calls from the middleware.** The SDK talks only
+  to Solana RPC. Zero dependency on Obscura infrastructure on the
+  request path.

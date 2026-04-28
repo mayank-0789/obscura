@@ -23,12 +23,8 @@ export class AuthError extends Error {
 }
 
 // Verifies the active NextAuth session. Returns the Google sub + email or
-// throws AuthError. The session is read from cookies via Auth.js — no Bearer
-// token to extract.
-//
-// `_req` accepted but unused, so existing callers that pass `req` (legacy
-// from the Privy Bearer-token era) continue to compile during the migration.
-// Drop the param across the codebase in a later cleanup pass.
+// throws AuthError. Reads the session from cookies via Auth.js — no Bearer
+// token to extract, so `_req` is accepted for caller ergonomics but unused.
 export async function requireAuth(_req?: Request): Promise<{ sub: string; email: string }> {
   void _req;
   const session = await auth();
@@ -62,7 +58,7 @@ export async function requireUser(req?: Request): Promise<User> {
 
 // Thin wrapper around requireUser that returns the user OR an error response.
 // Routes do:  `const u = await authGuard(req); if (u instanceof Response) return u;`
-// (req is unused under NextAuth — kept for migration ergonomics.)
+// (`req` is forwarded for caller ergonomics; NextAuth reads the session from cookies.)
 export async function authGuard(req?: Request): Promise<User | Response> {
   try {
     return await requireUser(req);

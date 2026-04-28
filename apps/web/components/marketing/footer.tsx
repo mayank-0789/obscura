@@ -9,7 +9,7 @@ export function Footer() {
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-zinc-800 pb-5 font-mono text-[10px] uppercase tracking-[0.3em] text-zinc-500">
           <span className="flex items-center gap-2 text-emerald-400">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-            Payrail Journal
+            Obscura Journal
           </span>
           <span className="text-zinc-800">/</span>
           <span>Issue No. 001</span>
@@ -27,7 +27,7 @@ export function Footer() {
               <Logo />
               <div>
                 <div className="font-display text-[20px] font-normal leading-none tracking-[-0.01em] text-zinc-50 transition group-hover:text-emerald-300">
-                  Payrail
+                  Obscura
                 </div>
                 <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-600">
                   The payment rail for AI agents.
@@ -53,7 +53,7 @@ export function Footer() {
               { label: "Docs", href: "/docs" },
               { label: "Agent SDK", href: "/docs/agents/quickstart" },
               { label: "Merchant SDK", href: "/docs/merchants/quickstart" },
-              { label: "GitHub", href: "https://github.com/mayank-0789/payrail" },
+              { label: "GitHub", href: "https://github.com/mayank-0789/obscura" },
             ]}
           />
         </div>
@@ -64,7 +64,7 @@ export function Footer() {
             — End of issue.
           </div>
           <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-600">
-            © 2026 Payrail · MIT · Shipped from Bangalore, IN
+            © 2026 Obscura · MIT · Shipped from Bangalore, IN
           </div>
         </div>
       </div>

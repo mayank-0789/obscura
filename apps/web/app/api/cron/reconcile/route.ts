@@ -16,10 +16,6 @@ import { cronAuthGuard } from "@/lib/cron-auth";
 //
 // Schedule: every 5 minutes via Vercel Cron (see vercel.json). Idempotent —
 // rows already confirmed/failed are skipped by the WHERE clause.
-//
-// Mirrors the logic in `scripts/umbra-reconcile-pending.ts`. The script form
-// stays useful for manual ops (--dry-run, --max-age-hours flags); this route
-// is the production loop.
 
 const MIN_AGE_SECONDS = 120; // give the MPC a chance to land naturally first
 const MAX_AGE_HOURS = 24; // older than this = manual intervention required

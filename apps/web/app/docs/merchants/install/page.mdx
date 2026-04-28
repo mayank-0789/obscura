@@ -7,18 +7,23 @@ export default function ({ children }) {
 # Install
 
 The `@obscura-app/merchant-sdk` package gives you one Express-style
-middleware that handles x402 payment challenges + settlement. Any route
-it wraps becomes a paid endpoint: the middleware returns 402 until the
-client pays, verifies + settles on Solana via the PayAI facilitator,
-then hands off to your downstream handler.
+middleware that handles x402 payment challenges and on-chain
+verification. Any route it wraps becomes a paid endpoint: the
+middleware returns 402 until the client pays via Obscura's confidential
+mixer, verifies the on-chain proofs, then hands off to your downstream
+handler.
 
 ## Requirements
 
 - **Node 18 or later** and any framework with Express-style middleware —
   Express itself, Fastify (via `fastify-express`), Hono's adapter, or
   similar.
-- **A Payrail merchant account.** [Sign up](/merchants) to get a managed
-  Solana payout wallet — no crypto-native tooling required.
+- **An Obscura merchant account.** [Sign in](/onboarding) and pick the
+  merchant role to get a custodied Umbra ETA address — no crypto-native
+  tooling required.
+- **A Solana RPC endpoint.** The middleware reads the queue + callback
+  transactions from chain to verify each payment. The default public
+  RPC is rate-limited; pass your own (Helius works well) for production.
 
 ## Install the SDK
 
@@ -44,5 +49,5 @@ yarn add @obscura-app/merchant-sdk express`}
 {`node -e "console.log(require('@obscura-app/merchant-sdk/package.json').version)"`}
 </CodeBlock>
 
-You're ready. The [Quickstart](/docs/merchants/quickstart) gets you a
-settled payment in about five minutes.
+You're ready. The [Quickstart](/docs/merchants/quickstart) gets you to a
+verified payment in about five minutes.

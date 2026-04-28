@@ -12,20 +12,20 @@ persistent state, no webhooks. Anywhere Node runs, this runs.
 ## Recommended platforms
 
 - **Railway, Fly, Render.** Drop in with a `Dockerfile` or a
-  buildpack. Set `PAYRAIL_PAYOUT_WALLET` + `HELIUS_RPC_URL` as env
+  buildpack. Set `MERCHANT_ETA_ADDRESS` + `HELIUS_RPC_URL` as env
   vars. Best fit for Express-style servers.
 - **Vercel / Cloudflare Workers.** Use the SDK inside a Next.js route
   handler or a Workers fetch handler — the `charge()` middleware has no
   Express runtime dep, just express-shaped req/res. Express adapter
   helpers are on the roadmap.
 - **AWS Lambda / GCF.** Wrap with `serverless-http`. Cold-start cost is
-  ~400ms for the first request's facilitator handshake; warm requests
-  are ~600ms due to the synchronous settlement hop.
+  ~300ms for the first request's RPC handshake; warm requests are
+  ~150–400ms (two `getTransaction` reads).
 
-<Callout kind="warn" title="Pick a region close to the facilitator">
-  Each paid request does ~2 round-trips to
-  `facilitator.payai.network`. Hosting in us-east-1 / us-west-2 gives
-  the best latency for most PayAI regions. EU + AP get a bit slower.
+<Callout kind="tip" title="Pick a region close to your RPC">
+  Each paid request does two `getTransaction` calls against your
+  configured RPC. Hosting in a region near your RPC provider's edge
+  cuts P99 noticeably. Helius's primary regions are us-east + us-west.
 </Callout>
 
 ## Environment variables
@@ -33,22 +33,26 @@ persistent state, no webhooks. Anywhere Node runs, this runs.
 <DocTable
   headers={["Variable", "Required", "Notes"]}
   rows={[
-    [<code key="c">PAYRAIL_PAYOUT_WALLET</code>, "Yes", <>Copy from <a href="/merchants/dashboard">merchants dashboard</a>.</>],
-    [<code key="c">HELIUS_RPC_URL</code>, "No", <>Recommended for production. Default is public RPC (rate-limited). <a href="https://helius.dev">helius.dev</a> is generous on the free tier.</>],
-    [<><code>PAYAI_API_KEY_ID</code> / <code>…_SECRET</code></>, "No", "PayAI paid tier. Free tier needs neither."],
+    [<code key="c">MERCHANT_ETA_ADDRESS</code>, "Yes", <>Copy from your <a href="/merchants/dashboard">merchant dashboard</a>. The Solana pubkey of your Umbra encrypted token account.</>],
+    [<code key="c">HELIUS_RPC_URL</code>, "Recommended", <>Production-grade RPC endpoint. Default is the public Solana RPC, which is rate-limited. <a href="https://helius.dev">helius.dev</a> is generous on the free tier.</>],
   ]}
 />
 
+There is no facilitator API key — verification is direct chain reads.
+
 ## Scaling notes
 
-- **Stateless.** The SDK holds no state between requests. Horizontal
-  scale is just adding Node processes.
-- **One network call per phase.** Phase 1 (no-payment) = 1 `/supported`
-  call. Phase 2 (paid retry) = 1 `/supported` + 1 `/verify` + 1
-  `/settle`. All async, no blocking I/O.
-- **No DB on the merchant side.** The middleware doesn't read or write
-  your database. If you want a local payment log, write to your own DB
-  in the handler using `res.locals.payrailSettlement`.
+- **Stateless on the request path.** No DB, no caches besides the
+  in-memory replay map (queueSignature → seen-at).
+- **One RPC dependency.** Two `getTransaction` calls per paid request.
+  At 100 RPS that's 200 RPC reads/sec — well within Helius free-tier
+  limits, comfortable on any paid tier.
+- **Replay map is per-process.** Horizontal scale across multiple Node
+  processes means each holds its own map. For correctness this is
+  fine — the on-chain queue tx is the source of truth, and a duplicate
+  retry that happens to hit a different process still fails the
+  on-chain check (queue tx already consumed). For tightness against
+  short-window replays across processes, back the map with Redis.
 
 ## Health checks
 

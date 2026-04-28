@@ -38,7 +38,7 @@ const PAYMENT_SCHEME = "umbra-mixer-v1" as const;
  * The x402 PaymentRequirements shape we serve in our 402 response. Compatible
  * with the @obscura-app/sdk consumer side that decodes a base64 JSON
  * `PAYMENT-REQUIRED` header — the SDK reads `accepts[0]`, picks scheme=exact,
- * and forwards the whole header to Payrail's /api/x402/sign.
+ * and forwards the whole header to Obscura's /api/x402/sign.
  */
 export type PaymentRequirements = {
   scheme: "exact";
@@ -53,7 +53,7 @@ export type PaymentRequirements = {
 };
 
 /**
- * The umbra-mixer-v1 payment envelope produced by Payrail's /api/x402/sign.
+ * The umbra-mixer-v1 payment envelope produced by Obscura's /api/x402/sign.
  * Travels in the agent's retry as a base64-encoded `PAYMENT-SIGNATURE` header.
  * Contains the on-chain proofs the merchant verifies via RPC.
  */
@@ -69,7 +69,7 @@ type UmbraMixerEnvelope = {
   callbackSignature?: string;
 };
 
-export type PayrailMerchantClient = {
+export type ObscuraMerchantClient = {
   /**
    * Produce Express-style middleware that demands `amount` atomic units of
    * the configured stablecoin before the downstream handler runs. On a valid
@@ -79,7 +79,7 @@ export type PayrailMerchantClient = {
   charge: (config: ChargeConfig) => Middleware;
 };
 
-export function payrail(config: MerchantSdkConfig): PayrailMerchantClient {
+export function obscura(config: MerchantSdkConfig): ObscuraMerchantClient {
   if (!config.merchantEtaAddress) {
     throw new Error("@obscura-app/merchant-sdk: merchantEtaAddress is required");
   }
@@ -116,7 +116,7 @@ export function payrail(config: MerchantSdkConfig): PayrailMerchantClient {
           if (!paymentHeader) {
             // No payment yet — issue a 402 challenge with the merchant's ETA
             // as `payTo`. The agent SDK forwards this challenge verbatim to
-            // Payrail, which constructs a UTXO addressed to that ETA.
+            // Obscura, which constructs a UTXO addressed to that ETA.
             const requirements: PaymentRequirements = {
               scheme: "exact",
               network,
@@ -344,14 +344,14 @@ function isValidPubkey(s: string): boolean {
   }
 }
 
-// Expose the settlement result at `res.locals.payrailSettlement` so downstream
+// Expose the settlement result at `res.locals.obscuraSettlement` so downstream
 // handlers can attach the on-chain tx signature to their response body. No-op
 // on frameworks without `res.locals` (only Express ships it by default).
 function exposeSettlement(res: ExpressLikeRes, settlement: unknown): void {
   const locals = (res as unknown as { locals?: Record<string, unknown> })
     .locals;
   if (locals && typeof locals === "object") {
-    locals.payrailSettlement = settlement;
+    locals.obscuraSettlement = settlement;
   }
 }
 

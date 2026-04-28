@@ -15,7 +15,7 @@ export function MissingMerchantState() {
         You don&apos;t have a merchant account on this login.
       </h1>
       <p className="mt-4 text-[14px] leading-[1.65] text-zinc-400">
-        Register as a merchant to get a Payrail-managed payout wallet, a live
+        Register as a merchant to get an Obscura-managed payout wallet, a live
         earnings dashboard, and ready-to-paste SDK snippets.
       </p>
       <Link

@@ -1,13 +1,13 @@
 {
   "name": "@obscura-app/sdk",
   "version": "0.1.1",
-  "description": "Pay-per-call SDK for AI agents — wraps fetch() to handle x402 payments via Payrail on Solana.",
+  "description": "Pay-per-call SDK for AI agents — wraps fetch() to handle x402 payments via Obscura on Solana.",
   "license": "MIT",
-  "author": "Payrail",
-  "homepage": "https://github.com/mayank-0789/payrail",
+  "author": "Obscura",
+  "homepage": "https://github.com/mayank-0789/obscura",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mayank-0789/payrail.git",
+    "url": "git+https://github.com/mayank-0789/obscura.git",
     "directory": "packages/sdk"
   },
   "keywords": [
@@ -18,7 +18,7 @@
     "payments",
     "usdc",
     "usdg",
-    "payrail"
+    "obscura"
   ],
   "sideEffects": false,
   "main": "./dist/index.cjs",
