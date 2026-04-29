@@ -23,9 +23,22 @@ const nextAuth: NextAuthResult = NextAuth({
   trustHost: true,
   session: { strategy: "jwt" },
   callbacks: {
-    // Surface the Google subject (`token.sub`) as `session.user.id` so server
-    // code has a single stable identifier per signed-in user — used as the
-    // foreign key into our `users` table.
+    // Auth.js v5 sets user.id to a fresh crypto.randomUUID() on every OAuth
+    // callback when there's no DB adapter — see @auth/core
+    // lib/actions/callback/oauth/callback.js getUserAndAccount(). The Google
+    // sub is preserved as account.providerAccountId, but only persisted by an
+    // adapter; we run JWT-only, so we MUST pin token.sub to the real sub here
+    // or every sign-in mints a new users.auth_id → duplicate user rows.
+    async jwt({ token, account, profile }) {
+      if (account?.provider === "google") {
+        const googleSub =
+          (profile as { sub?: string } | null)?.sub ?? account.providerAccountId;
+        if (googleSub) token.sub = googleSub;
+      }
+      return token;
+    },
+    // Expose the (now stable) Google sub as `session.user.id` so server code
+    // has a single foreign key into our `users` table.
     async session({ session, token }) {
       if (token.sub && session.user) {
         session.user.id = token.sub;

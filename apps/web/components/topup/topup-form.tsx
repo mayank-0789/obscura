@@ -28,6 +28,12 @@ export function TopupForm() {
 
   const [agentId, setAgentId] = useState<string>(initialAgentId);
   const [amountInr, setAmountInr] = useState<number | "">(500);
+  // After mutateAsync resolves, react-query flips isPending false on the next
+  // render — but `window.location.href` doesn't unload the page synchronously,
+  // so the submit button briefly re-enables. A double-click in that window
+  // mints a second Dodo checkout session. Sticky `redirecting` keeps the
+  // button disabled until the page actually navigates away.
+  const [redirecting, setRedirecting] = useState(false);
 
   // If we arrived without ?agent_id= and agents loaded, pick the first active
   // agent.
@@ -62,7 +68,8 @@ export function TopupForm() {
     typeof amountInr === "number" &&
     amountInr >= MIN_INR &&
     amountInr <= MAX_INR &&
-    !createSession.isPending;
+    !createSession.isPending &&
+    !redirecting;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,6 +79,7 @@ export function TopupForm() {
         agentId,
         amountInr: amountInr as number,
       });
+      setRedirecting(true);
       window.location.href = result.checkoutUrl;
     } catch (err) {
       if (err instanceof UnauthorizedError) return;
@@ -251,10 +259,10 @@ export function TopupForm() {
                   disabled={!canSubmit}
                   className="group inline-flex items-center gap-2 rounded-md bg-emerald-400 px-4 py-2 text-[13px] font-semibold text-black transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  {createSession.isPending ? (
+                  {createSession.isPending || redirecting ? (
                     <>
                       <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-black/60 border-t-transparent" />
-                      Starting…
+                      {redirecting ? "Redirecting…" : "Starting…"}
                     </>
                   ) : (
                     <>

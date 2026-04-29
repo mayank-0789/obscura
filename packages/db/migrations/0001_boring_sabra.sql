@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "merchant_apis_merchant_id_endpoint_idx" ON "merchant_apis" USING btree ("merchant_id","endpoint");

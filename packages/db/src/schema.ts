@@ -237,7 +237,14 @@ export const transactions = pgTable(
     index("transactions_agent_id_created_at_idx").on(t.agentId, t.createdAt),
     // Unique on solana_sig — multiple NULLs allowed (pending txs).
     uniqueIndex("transactions_solana_sig_idx").on(t.solanaSig),
-    index("transactions_dodo_payment_id_idx").on(t.dodoPaymentId),
+    // Unique on dodo_payment_id — closes the concurrent-retry double-credit
+    // race in the Dodo webhook handler. Two retries can both pass the
+    // webhook_log idempotency check (one inserts, the other reads existing
+    // unprocessed); the unique index ensures only one of their pending-tx
+    // INSERTs survives, so depositTreasuryToEncryptedAccount can't fire twice
+    // for the same payment_id. Multiple NULLs are allowed (Postgres default),
+    // so non-topup transactions are unaffected.
+    uniqueIndex("transactions_dodo_payment_id_idx").on(t.dodoPaymentId),
     // Partial index for merchant earnings queries.
     index("transactions_counterparty_confirmed_idx")
       .on(t.counterparty, t.status, t.createdAt.desc())
@@ -327,7 +334,16 @@ export const merchantApis = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (t) => [index("merchant_apis_merchant_id_idx").on(t.merchantId)],
+  (t) => [
+    index("merchant_apis_merchant_id_idx").on(t.merchantId),
+    // (merchant_id, endpoint) is the catalog's natural key — two entries with
+    // the same endpoint break the dashboard's friendly-name lookup. Enforced
+    // at the DB to close the read-then-write TOCTOU window in the POST route.
+    uniqueIndex("merchant_apis_merchant_id_endpoint_idx").on(
+      t.merchantId,
+      t.endpoint,
+    ),
+  ],
 );
 
 // -----------------------------------------------------------------------------

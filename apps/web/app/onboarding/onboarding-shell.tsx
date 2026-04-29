@@ -61,7 +61,12 @@ export function OnboardingShell() {
       if (typeof window !== "undefined") {
         localStorage.setItem(ONBOARDED_KEY, "1");
       }
-      router.push(destinationForRole(role));
+      // replace, not push — the back button shouldn't dump them on /onboarding.
+      // Clear pending after the navigation kicks off so the spinner releases
+      // even if the RSC navigation is slow to commit (otherwise the card stays
+      // stuck on "Setting up…" until a manual refresh).
+      router.replace(destinationForRole(role));
+      setPending(null);
     } catch (err) {
       setPending(null);
       const message = err instanceof Error ? err.message : "unknown";

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useAuthedFetch, UnauthorizedError } from "@/hooks/use-authed-fetch";
 
@@ -14,9 +15,16 @@ import { useAuthedFetch, UnauthorizedError } from "@/hooks/use-authed-fetch";
 // (e.g. SignInButton renders on every page, so each route change would
 // otherwise re-fire sync). The upsert is DB-idempotent; this just spares a
 // round-trip.
+//
+// On success we invalidate the ["me"] query so any consumer that 404'd during
+// the sync race (useUser retries 3× over ~7s on user_not_synced and then
+// settles into a permanent error state) refetches against the now-existing
+// row. Without this, a slow sync silently strands fresh signups on the
+// onboarding page with no way to proceed except a hard refresh.
 export function useSyncUser() {
   const { status } = useSession();
   const authedFetch = useAuthedFetch();
+  const queryClient = useQueryClient();
   const syncedRef = useRef(false);
 
   useEffect(() => {
@@ -32,7 +40,11 @@ export function useSyncUser() {
     void (async () => {
       try {
         const res = await authedFetch("/api/auth/sync", { method: "POST" });
-        if (cancelled || res.ok) return;
+        if (cancelled) return;
+        if (res.ok) {
+          void queryClient.invalidateQueries({ queryKey: ["me"] });
+          return;
+        }
         syncedRef.current = false; // allow retry on refresh / next mount
         toast.error("Sign-in sync failed", {
           description: "Your session is active. Refresh to retry.",
@@ -49,5 +61,5 @@ export function useSyncUser() {
     return () => {
       cancelled = true;
     };
-  }, [status, authedFetch]);
+  }, [status, authedFetch, queryClient]);
 }

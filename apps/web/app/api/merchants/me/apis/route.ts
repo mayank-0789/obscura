@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { db, merchantApis } from "@/lib/db";
 import { apiError, apiOk } from "@/lib/api";
 import { merchantAuthGuard } from "@/lib/merchant-auth";
@@ -46,25 +46,6 @@ export async function POST(req: Request) {
     return apiError("bad_request");
   }
 
-  // Uniqueness within a merchant's catalog: (merchant_id, endpoint) is the
-  // sensible key — two entries with the same endpoint would be ambiguous for
-  // the dashboard's friendly-name lookup. Enforced in application code since
-  // the schema doesn't have the composite unique index (would require a
-  // schema change; acceptable for v1 given the low create rate).
-  const duplicate = await db
-    .select({ id: merchantApis.id })
-    .from(merchantApis)
-    .where(
-      and(
-        eq(merchantApis.merchantId, ctx.merchant.id),
-        eq(merchantApis.endpoint, body.endpoint),
-      ),
-    )
-    .limit(1);
-  if (duplicate.length > 0) {
-    return apiError("bad_request", "An entry for this endpoint already exists");
-  }
-
   // Ceiling check via SQL count — avoids pulling every row into JS just to
   // check length. Still racy (read-then-insert) but bounded by the soft cap.
   const [countRow] = await db
@@ -75,6 +56,11 @@ export async function POST(req: Request) {
     return apiError("bad_request", "API catalog entry limit reached");
   }
 
+  // Uniqueness within a merchant's catalog: (merchant_id, endpoint) is the
+  // natural key — two entries with the same endpoint break the dashboard's
+  // friendly-name lookup. Enforced by a DB unique index; we use ON CONFLICT
+  // DO NOTHING so concurrent POSTs collapse to one row (the race-loser sees an
+  // empty `returning()` and surfaces the duplicate error to the client).
   const [inserted] = await db
     .insert(merchantApis)
     .values({
@@ -84,8 +70,13 @@ export async function POST(req: Request) {
       defaultPriceUsdg: body.defaultPriceUsdg,
       status: body.status,
     })
+    .onConflictDoNothing({
+      target: [merchantApis.merchantId, merchantApis.endpoint],
+    })
     .returning();
 
-  if (!inserted) return apiError("server_error");
+  if (!inserted) {
+    return apiError("bad_request", "An entry for this endpoint already exists");
+  }
   return apiOk({ api: serializeMerchantApi(inserted) }, { status: 201 });
 }
