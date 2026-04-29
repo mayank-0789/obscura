@@ -96,6 +96,19 @@ function Hero() {
             </Link>
           </div>
 
+          <p
+            className="reveal mt-5 font-mono text-[11px] uppercase tracking-[0.28em] text-zinc-500"
+            style={{ animationDelay: "0.55s" }}
+          >
+            <Link
+              href="/demo"
+              className="inline-flex items-center gap-2 text-emerald-300/90 transition hover:text-emerald-200"
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.9)]" />
+              Try it live · one click on devnet →
+            </Link>
+          </p>
+
           <div
             className="reveal mt-16 grid max-w-2xl grid-cols-3 gap-6 border-t border-zinc-800/80 pt-6"
             style={{ animationDelay: "0.65s" }}

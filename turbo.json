@@ -35,6 +35,8 @@
         "UMBRA_INDEXER_URL",
         "UMBRA_RELAYER_URL",
         "CRON_SECRET",
+        "DEMO_AGENT_API_KEY",
+        "DEMO_MERCHANT_URL",
         "NEXT_PUBLIC_APP_URL",
         "NEXT_PUBLIC_SOLANA_CLUSTER"
       ]

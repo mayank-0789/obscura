@@ -21,7 +21,23 @@ export type MerchantPaymentEvent = {
   confirmedAt: string;
 };
 
-export type BrokerEvent = MerchantPaymentEvent;
+// DemoRunEvent — published by the /api/demo/run orchestrator after a
+// successful spend. Drives the "other judges' recent runs" side panel on
+// the /demo page without a Helius webhook round-trip.
+export type DemoRunEvent = {
+  kind: "demo_run";
+  endpoint: string;
+  amountUsdg: string;
+  queueSignature: string;
+  callbackSignature: string | null;
+  // Truncated client IP for "IP …a04" display. Never stored, never logged.
+  ipShort: string;
+  createdAt: string;
+};
+
+export const DEMO_RUNS_TOPIC = "demo:runs";
+
+export type BrokerEvent = MerchantPaymentEvent | DemoRunEvent;
 
 type Subscriber = (event: BrokerEvent) => void;
 

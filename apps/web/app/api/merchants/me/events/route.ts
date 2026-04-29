@@ -38,15 +38,30 @@ export async function GET(req: Request) {
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
       let closed = false;
+      let unsubscribe: (() => void) | null = null;
+      let heartbeat: ReturnType<typeof setInterval> | null = null;
 
+      const close = () => {
+        if (closed) return;
+        closed = true;
+        if (heartbeat) clearInterval(heartbeat);
+        if (unsubscribe) unsubscribe();
+        try {
+          controller.close();
+        } catch {
+          // already closed — safe to ignore.
+        }
+      };
+
+      // enqueue can throw when the underlying connection has gone away
+      // without firing req.signal.abort. Fold into a full close so the
+      // broker subscription + heartbeat don't leak.
       const safeEnqueue = (chunk: string) => {
         if (closed) return;
         try {
           controller.enqueue(encoder.encode(chunk));
         } catch {
-          // enqueue throws if the controller is already closed (e.g. race
-          // with the abort handler). Swallow silently — cleanup will run.
-          closed = true;
+          close();
         }
       };
 
@@ -54,25 +69,13 @@ export async function GET(req: Request) {
       // buffering proxies. EventSource ignores lines beginning with `:`.
       safeEnqueue(`: connected\n\n`);
 
-      const unsubscribe = eventBroker.subscribe(topic, (event) => {
+      unsubscribe = eventBroker.subscribe(topic, (event) => {
         safeEnqueue(`event: ${event.kind}\ndata: ${JSON.stringify(event)}\n\n`);
       });
 
-      const heartbeat = setInterval(() => {
+      heartbeat = setInterval(() => {
         safeEnqueue(`: heartbeat\n\n`);
       }, HEARTBEAT_INTERVAL_MS);
-
-      const close = () => {
-        if (closed) return;
-        closed = true;
-        clearInterval(heartbeat);
-        unsubscribe();
-        try {
-          controller.close();
-        } catch {
-          // already closed — safe to ignore.
-        }
-      };
 
       // Browser closing the tab / navigating away triggers req.signal abort.
       req.signal.addEventListener("abort", close, { once: true });

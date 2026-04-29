@@ -57,6 +57,13 @@ export const env = createEnv({
     // and code paths that need them assert presence at call time.
     UMBRA_INDEXER_URL: z.string().url().optional(),
     UMBRA_RELAYER_URL: z.string().url().optional(),
+    // Judge-facing /demo playground. When BOTH are set, the route at
+    // POST /api/demo/run executes a real x402 spend from this agent against
+    // the demo merchant. When either is missing the route returns 503 and
+    // the page shows a friendly "demo offline" state — no other code path
+    // depends on these.
+    DEMO_AGENT_API_KEY: z.string().min(1).optional(),
+    DEMO_MERCHANT_URL: z.string().url().optional(),
     // Vercel Cron auth — every Vercel Cron firing arrives with
     // `Authorization: Bearer <CRON_SECRET>`. Routes under /api/cron/* refuse
     // any request whose token doesn't match. Optional in env — if unset,
@@ -100,6 +107,8 @@ export const env = createEnv({
     UMBRA_INDEXER_URL: process.env.UMBRA_INDEXER_URL,
     UMBRA_RELAYER_URL: process.env.UMBRA_RELAYER_URL,
     CRON_SECRET: process.env.CRON_SECRET,
+    DEMO_AGENT_API_KEY: process.env.DEMO_AGENT_API_KEY,
+    DEMO_MERCHANT_URL: process.env.DEMO_MERCHANT_URL,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     NEXT_PUBLIC_SOLANA_CLUSTER: process.env.NEXT_PUBLIC_SOLANA_CLUSTER,
   },

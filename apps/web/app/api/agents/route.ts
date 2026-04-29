@@ -88,9 +88,12 @@ export async function POST(req: Request) {
   // route with the same UUID would land on the same on-chain account.
   const agentId = crypto.randomUUID();
   const etaAddress = deriveAgentEtaAddress(agentId);
+  // Short-prefix the ETA in logs — full address is recoverable from
+  // agents.eta_address if needed for ops, but operator log aggregators (and
+  // anyone who scrapes them) don't get a free `(agent_id, ETA)` directory.
   console.info(
     `[agents/create] user=${user.id} agent=${agentId} ` +
-      `etaAddress=${etaAddress} → setting up Umbra account`,
+      `eta=${etaAddress.slice(0, 6)}… → setting up Umbra account`,
   );
 
   const wallet = await createAgentWallet({ agentId, etaAddress });
@@ -112,7 +115,7 @@ export async function POST(req: Request) {
       apiKeyHash: apiKey.hash,
     });
     console.info(
-      `[agents/create] ✓ agent=${agentId} eta=${etaAddress} created`,
+      `[agents/create] ✓ agent=${agentId} eta=${etaAddress.slice(0, 6)}… created`,
     );
 
     return apiOk(

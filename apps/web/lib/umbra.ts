@@ -68,6 +68,16 @@ const DOMAIN_SEPARATOR_PREFIX = "umbra/v1/" as const;
 // valid base58 / UUID character, so HMAC inputs always parse uniquely.
 // Bumping `v1` rotates EVERY agent + merchant key (do not change without a
 // migration plan).
+// Short-prefix Solana addresses for log lines. The mixer's privacy story
+// requires that recipient + amount stay unobservable; mirroring full
+// addresses into operator logs would leak both to anyone with log access.
+// 6 chars is enough to correlate with on-chain breadcrumbs without
+// reconstructing the original address.
+function shortAddr(addr: string): string {
+  if (addr.length <= 12) return addr;
+  return `${addr.slice(0, 6)}…`;
+}
+
 function buildDomainSeparator(subject: UmbraSubject): string {
   return `${DOMAIN_SEPARATOR_PREFIX}${subject}-signing-key|`;
 }
@@ -456,10 +466,14 @@ export async function createReceiverClaimableUtxo(input: {
   amountMicros: bigint;
 }): Promise<CreateUtxoFromEncryptedBalanceResult> {
   const mintBase58 = getStablecoinMint().toBase58();
+  // Privacy: never log full recipient ETA or exact amount. The whole point of
+  // the mixer is that those fields are unobservable; mirroring them into
+  // operator logs would defeat the threat model for anyone with log access
+  // (CloudWatch, Datadog, sidecar exporters). Short-prefix is enough to
+  // correlate against on-chain breadcrumbs without leaking the full address.
   console.info(
     `[umbra/utxo-create] → SDK call from=${input.fromSubject}=${input.fromSubjectId} ` +
-      `recipient=${input.recipientEtaAddress} mint=${mintBase58} ` +
-      `amountMicros=${input.amountMicros}`,
+      `recipient=${shortAddr(input.recipientEtaAddress)} mint=${mintBase58}`,
   );
   const startedAt = Date.now();
   const client = await buildSubjectUmbraClient(

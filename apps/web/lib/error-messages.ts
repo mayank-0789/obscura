@@ -21,6 +21,14 @@ const MESSAGES: Record<string, string> = {
     "This payment would exceed the agent's monthly spend cap. Raise the cap or wait for the next cycle.",
   signing_failed:
     "We couldn't sign the payment. Try again; if this persists, check the agent's status.",
+  // Duplicate request collapsed mid-flight by /api/x402/sign. Terminal — the
+  // SDK never retries this. Tell the user to wait, not to retry.
+  conflict:
+    "This payment is already in flight. Wait for the original to finish before retrying.",
+  // Agent's encrypted balance is below the requested spend amount. Terminal —
+  // only a top-up resolves it. Avoid generic "try again" copy here.
+  insufficient_funds:
+    "The agent doesn't have enough balance for this payment. Top it up to continue.",
   server_error: FALLBACK,
 };
 
