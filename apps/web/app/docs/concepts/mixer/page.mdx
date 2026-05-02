@@ -1,0 +1,174 @@
+import { DocArticle } from "@/components/docs/doc-article";
+
+export default function ({ children }) {
+  return <DocArticle slug="/docs/concepts/mixer">{children}</DocArticle>;
+}
+
+# The Umbra mixer
+
+x402 settles the *protocol* — the 402 challenge, the retry header, the
+verification handshake. It says nothing about who can read the payment
+once it's on chain. Vanilla x402 over USDC is a public ledger entry:
+sender pubkey, recipient pubkey, amount, timestamp. Anyone can scrape
+it.
+
+Obscura's confidentiality property comes from routing every spend
+through **Umbra**, an SPL-token privacy protocol on Solana. This page
+explains the parts you need to reason about Obscura's privacy story
+without reading the SDK.
+
+## The two storage primitives
+
+Umbra has *two* on-chain storage primitives, and an Obscura payment
+moves money between them.
+
+### Encrypted Token Account (ETA)
+
+A **per-(subject, mint) account** that holds a balance encrypted with
+the subject's X25519 key. You can think of it as a "private wallet" for
+one mint — only the subject (or someone they share a viewing key with)
+can decrypt the balance.
+
+- Each agent has an ETA. Each merchant has an ETA.
+- The on-chain account looks like ciphertext to anyone else; balance
+  amounts are not visible.
+- Updates to an ETA happen via Arcium MPC: the SDK posts a "queue tx",
+  the MPC committee runs the homomorphic update, and writes the new
+  ciphertext back via a "callback tx". Both signatures are returned in
+  the umbra-mixer-v1 envelope.
+
+### Mixer UTXO tree
+
+A **set of one-time, addressed-by-commitment leaves** in an on-chain
+Merkle tree (current devnet shape: depth 20, 1,048,576 leaves per
+tree; new trees spawn when one fills). Each leaf is a UTXO commitment
+addressed to a specific recipient ETA — but the commitment hides
+*which* ETA, *what* mint, and *how much*.
+
+- A leaf can only be spent once. Spending emits a **nullifier**, and
+  the on-chain program rejects any future tx whose nullifier has
+  already been seen.
+- Privacy comes from the **anonymity set**: every other depositor's
+  leaves in the tree are indistinguishable from yours. The strength of
+  the privacy guarantee scales with how many UTXOs sit in the tree
+  before yours.
+- The leaf isn't yours yet — it's *claimable* by your ETA. A claim
+  daemon (run by Obscura) folds the leaf into your encrypted balance
+  asynchronously.
+
+## How an Obscura payment moves through them
+
+```
+agent ETA              mixer UTXO tree             merchant ETA
+   │                          │                          │
+   │  1. createReceiverClaimableUtxo                     │
+   │ ────────────────────────►│                          │
+   │     debit ciphertext     │                          │
+   │     leaf addressed to merchant                      │
+   │                          │                          │
+   │                          │  2. claim daemon scans + claims
+   │                          │ ────────────────────────►│
+   │                          │   nullifier emitted      │
+   │                          │   credit ciphertext      │
+```
+
+Step 1 is what `/api/x402/sign` does. The agent's encrypted balance
+goes down by `amount`, a UTXO commitment goes onto the mixer tree, and
+the agent gets back an envelope containing two signatures:
+`queueSignature` (the on-chain tx that submitted the leaf + the
+encrypted-balance update) and `callbackSignature` (the MPC callback
+that finalised the new ciphertext).
+
+Step 2 is the **claim daemon** at `/api/cron/claim-daemon`. It runs on
+a 1-minute cadence, scans receiver-claimable leaves for every
+registered merchant, and submits a batch claim through the **Umbra
+relayer**. The relayer pays Solana gas and forwards the claim
+on-chain — so neither the merchant nor the agent ever needs SOL.
+
+When the merchant verifies the agent's envelope (via `getTransaction`
+on `queueSignature`), they confirm the queue tx exists and didn't err.
+They cannot — and don't need to — see the amount or the sender; the
+program enforced that on-chain.
+
+## What an observer can and can't see
+
+| Observer                         | Sees                                                                 | Doesn't see                                |
+|----------------------------------|----------------------------------------------------------------------|--------------------------------------------|
+| Passive on-chain (Solscan, RPC)  | An Umbra program tx exists; its accounts list                        | Sender ETA, recipient ETA, mint, amount    |
+| Indexer access                   | Tree state (commitments, nullifiers as opaque hashes)                | What any commitment decrypts to            |
+| Relayer access                   | Claim batches it processes (proof + nullifier + ciphertext deltas)   | Owner of the destination ETA, amount       |
+| Obscura backend operator         | Plaintext amounts in transient logs (deferred-hardening; see UMBRA-DEPS §7.4) | Same on-chain protections apply otherwise |
+| Subject's own encrypted balance  | Their own balance after decryption with their X25519 key             | Other subjects' balances                   |
+
+The mixer breaks the **sender→recipient on-chain link**. It does not
+break the link between you and your *own* spend if you also leak
+metadata elsewhere (e.g. by paying for an article that's pseudonymous).
+
+## Path A vs Path B
+
+There are two mechanically distinct ways to send value with Umbra:
+
+- **Path A** — direct ETA-to-ETA transfer via the codama-generated
+  instruction. Mechanically simpler (one tx, no UTXO step), but the
+  on-chain accounts list reveals **sender ETA → recipient ETA**.
+  We don't use this for x402 spends.
+- **Path B** — sender debits their ETA and creates a UTXO in the
+  mixer tree addressed to the recipient. The recipient's ETA never
+  appears in the sender's tx. **This is what `/api/x402/sign` uses**
+  via `createReceiverClaimableUtxo`.
+
+The payoff: a passive on-chain observer who scrapes Path B txs sees
+"someone deposited into the mixer tree" — they don't see who's paying
+whom.
+
+## ZK proofs (Groth16)
+
+Both ends of a mixer transaction run a Groth16 proof. The prover code
+ships in `@umbra-privacy/web-zk-prover` (named "web" because it works
+in browsers; we run it server-side in Node where the same WASM binary
+runs). Cold prove: ~30s; warm prove: ~5s. What's proved:
+
+- **Create-side** (the agent's side): the sender owns ≥ `amount` in
+  their ETA; the new commitment is well-formed; the value
+  conservation holds (debit = leaf-encoded amount); the nullifier is
+  fresh.
+- **Claim-side** (the daemon): the leaf is in the on-chain Merkle
+  tree (witness against a recent root); the claimer owns the
+  destination ETA's viewing key; the credit ciphertext correctly
+  encodes the leaf's amount.
+
+Both proofs are verified on-chain by the Umbra program; we do not
+implement a re-verifier.
+
+## Indexer + relayer
+
+Two off-chain services Umbra hosts:
+
+- **Indexer** (`UMBRA_INDEXER_URL`) — serves Merkle tree state. Used
+  by the SDK to fetch witnesses for claim proofs and to scan for
+  receiver-claimable leaves. The indexer is **untrusted**: every
+  proof generated against its data is verified on-chain.
+- **Relayer** (`UMBRA_RELAYER_URL`) — accepts a signed claim batch,
+  pays the Solana gas, and submits it. Trusted only for liveness, not
+  for correctness — a malicious relayer can refuse to submit but
+  can't forge a claim.
+
+If either is offline, the agent-side deposit and merchant-side
+withdraw paths still work (they don't need either service). Only
+mixer create + mixer claim depend on them.
+
+## Trust assumptions in one paragraph
+
+You trust the **Solana validators** for ordering + finality, the
+**Umbra on-chain program** for nullifier checks and proof
+verification, the **Arcium MPC committee** for honest ciphertext
+updates on ETAs, and **Umbra's hosted services for liveness** (not
+correctness). You do not need to trust the Obscura backend for
+confidentiality of past payments — by the time an envelope is in your
+agent's hands, the on-chain commitment is already final.
+
+## Further reading
+
+- Code: [`apps/web/lib/umbra.ts`](https://github.com/mayank-0789/obscura/blob/main/apps/web/lib/umbra.ts)
+- Operator-facing details: [`UMBRA-DEPS.md`](https://github.com/mayank-0789/obscura/blob/main/UMBRA-DEPS.md)
+- Umbra protocol docs: [umbraprivacy.com](https://umbraprivacy.com)

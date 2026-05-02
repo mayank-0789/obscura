@@ -8,19 +8,8 @@ import {
   type Role,
 } from "@/lib/onboarding";
 
-// Centralised post-authentication routing decision. Called by post-login
-// surfaces (e.g. /onboarding) after a NextAuth Google sign-in resolves.
-//
-// Rules (no magic, no intent stashing):
-//   1. Role unresolved (fresh signup mid-sync, /me still loading) → /onboarding.
-//   2. Onboarded on this device already → role-matched dashboard.
-//   3. Otherwise (returning user, new device) → /onboarding. One-time
-//      explicit re-confirmation per device.
-//
-// Role upgrades (agent-only user who wants to add the merchant side, or
-// vice versa) happen from the authed product's user-menu dropdown —
-// NOT via landing-page CTAs with hidden intent. Cleaner mental model,
-// smaller surface area.
+// Post-auth routing: no role → /onboarding; onboarded → role dashboard;
+// otherwise → /onboarding for one-time per-device re-confirmation.
 export function usePostAuthRouter() {
   const router = useRouter();
 

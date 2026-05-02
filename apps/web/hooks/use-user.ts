@@ -9,9 +9,7 @@ export type MeResponse = {
   user: User;
 };
 
-// Fetches user from /api/me. Retries 404 (sync race) up to 3× with backoff.
-// 401 is handled by useAuthedFetch — it forces a sign-out, so we don't retry
-// or render stale state here.
+// Retries 404 (sync race) up to 3× with backoff; 401 is handled upstream.
 export function useUser() {
   const { status } = useSession();
   const authedFetch = useAuthedFetch();

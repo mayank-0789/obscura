@@ -69,20 +69,12 @@ export function Nav({
   );
 }
 
-// Dashboard entry point for authenticated users. Role-aware:
-//   - role='user'     → links to /dashboard
-//   - role='merchant' → links to /merchants/dashboard
-//   - role='both'     → defers to LAST_ROLE_KEY (the same localStorage key
-//                        the AppShell role switcher writes), falling back
-//                        to the agent dashboard.
-// Renders null for unauthed users — SignInButton handles that flow.
 function AuthedDashboardLink() {
   const { status } = useSession();
   const { data: me } = useUser();
 
   if (status !== "authenticated") return null;
-  // Don't render until we've loaded the user row — avoids flashing the
-  // link with the wrong destination while role is still resolving.
+  // Wait for /me so href doesn't flash the wrong destination.
   if (!me) return null;
 
   const role = me.user.role as Role;

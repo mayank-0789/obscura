@@ -18,8 +18,7 @@ export function DashboardShell() {
     [agents, selectedId],
   );
 
-  // Auto-select the first agent when none is chosen so the detail pane isn't
-  // dead on first paint.
+  // Auto-select first agent so detail pane isn't empty on first paint.
   useEffect(() => {
     if (!agents || agents.length === 0) return;
     if (selectedId) return;

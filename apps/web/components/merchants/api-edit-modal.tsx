@@ -16,13 +16,7 @@ type Props = {
   onClose: () => void;
 };
 
-// Single modal shared between create + edit. When `mode === "edit"` the
-// `initial` row prefills every field and the mutation is a PATCH; otherwise
-// it's a POST. Escape closes; clicking the backdrop closes.
-//
-// Focus management: on open we focus the first input; a Tab handler on the
-// dialog wraps focus between the first and last focusable element so
-// keyboard users stay inside the modal.
+/** Shared create/edit modal with focus-trap; mode toggles POST vs PATCH. */
 export function ApiEditModal({ mode, initial, open, onClose }: Props) {
   const createApi = useCreateMerchantApi();
   const updateApi = useUpdateMerchantApi();
@@ -47,7 +41,6 @@ export function ApiEditModal({ mode, initial, open, onClose }: Props) {
       setPrice("10000");
       setStatus("active");
     }
-    // Focus the name field on open for quick keyboard entry.
     setTimeout(() => firstInputRef.current?.focus(), 30);
   }, [open, mode, initial]);
 
@@ -59,7 +52,6 @@ export function ApiEditModal({ mode, initial, open, onClose }: Props) {
         return;
       }
       if (e.key !== "Tab" || !dialogRef.current) return;
-      // Simple focus trap. Collect all focusable descendants, wrap on edges.
       const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
         'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
       );
@@ -187,9 +179,7 @@ export function ApiEditModal({ mode, initial, open, onClose }: Props) {
               placeholder="10000"
               className="w-full rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2 font-mono text-[13px] text-zinc-100 placeholder:text-zinc-600 focus-visible:border-emerald-400/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
             />
-            {/* Live echo of the dollar value so an off-by-a-zero (e.g.
-                10000000 instead of 10000) is obvious before Save. Empty/
-                invalid input shows nothing. */}
+            {/* Live echo so an off-by-a-zero is obvious before Save. */}
             {isPricePositiveInt(price) ? (
               <p className="mt-1.5 font-mono text-[11px] text-emerald-300/80">
                 ≈ ${formatUsdg(price)} per call

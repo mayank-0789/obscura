@@ -4,21 +4,9 @@ import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 
-// Subscribes to the merchant's real-time payment stream at
-// /api/merchants/me/events. When a `payment` SSE frame lands, invalidates
-// every `["merchant", "me", ...]` React Query so stats + tx feed refresh
-// immediately (faster than the 10s polling baseline).
-//
-// Why not the browser's `EventSource`? Same-origin EventSource would carry
-// cookies, but our `merchantAuthGuard` also accepts `mk_` API keys — keeping
-// the manual `fetch` + ReadableStream pipe gives us a single auth path and
-// full control over reconnect logic later.
-//
-// Lifecycle:
-//   - Connects once when the NextAuth session is authenticated.
-//   - On unmount / session change, aborts the fetch — server SSE route reads
-//     req.signal and closes its writer.
-//   - No explicit reconnect loop yet; 10s polling is the fallback.
+// SSE merchant payment stream; manual fetch keeps a single auth path with
+// `mk_` keys. Aborts on unmount/session change so server closes its writer.
+// No reconnect loop yet — 10s polling is the fallback.
 export function useMerchantEvents() {
   const queryClient = useQueryClient();
   const { status } = useSession();
@@ -43,7 +31,7 @@ export function useMerchantEvents() {
       }
 
       if (!res.ok || !res.body) {
-        // 401/403/404 → polling will keep the UI usable. Don't spam logs.
+        // 401/403/404 → polling fallback keeps UI usable; don't spam logs.
         return;
       }
 

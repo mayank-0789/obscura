@@ -1,8 +1,6 @@
 import { Connection, PublicKey } from "@solana/web3.js";
 import type { ChargeConfig, MerchantSdkConfig } from "./types.js";
 
-// Express-compatible types (only the surface we actually use). We intentionally
-// avoid a runtime dependency on express — consumers bring their own framework.
 type ExpressLikeReq = {
   headers: Record<string, string | string[] | undefined>;
   method?: string;
@@ -34,12 +32,6 @@ const DEFAULT_MAINNET_RPC = "https://api.mainnet-beta.solana.com";
 const DEFAULT_REPLAY_WINDOW_MS = 5 * 60 * 1000;
 const PAYMENT_SCHEME = "umbra-mixer-v1" as const;
 
-/**
- * The x402 PaymentRequirements shape we serve in our 402 response. Compatible
- * with the @obscura-app/sdk consumer side that decodes a base64 JSON
- * `PAYMENT-REQUIRED` header — the SDK reads `accepts[0]`, picks scheme=exact,
- * and forwards the whole header to Obscura's /api/x402/sign.
- */
 export type PaymentRequirements = {
   scheme: "exact";
   network: "solana" | "solana-devnet";
@@ -52,11 +44,6 @@ export type PaymentRequirements = {
   mimeType: string;
 };
 
-/**
- * The umbra-mixer-v1 payment envelope produced by Obscura's /api/x402/sign.
- * Travels in the agent's retry as a base64-encoded `PAYMENT-SIGNATURE` header.
- * Contains the on-chain proofs the merchant verifies via RPC.
- */
 type UmbraMixerEnvelope = {
   scheme: typeof PAYMENT_SCHEME;
   network: string;
@@ -70,12 +57,6 @@ type UmbraMixerEnvelope = {
 };
 
 export type ObscuraMerchantClient = {
-  /**
-   * Produce Express-style middleware that demands `amount` atomic units of
-   * the configured stablecoin before the downstream handler runs. On a valid
-   * payment, the middleware verifies the umbra-mixer-v1 envelope on-chain,
-   * attaches an `X-Payment-Response` header, and calls `next()`.
-   */
   charge: (config: ChargeConfig) => Middleware;
 };
 
@@ -114,9 +95,6 @@ export function obscura(config: MerchantSdkConfig): ObscuraMerchantClient {
           const paymentHeader = extractPaymentHeader(req.headers);
 
           if (!paymentHeader) {
-            // No payment yet — issue a 402 challenge with the merchant's ETA
-            // as `payTo`. The agent SDK forwards this challenge verbatim to
-            // Obscura, which constructs a UTXO addressed to that ETA.
             const requirements: PaymentRequirements = {
               scheme: "exact",
               network,
@@ -137,12 +115,12 @@ export function obscura(config: MerchantSdkConfig): ObscuraMerchantClient {
             return;
           }
 
-          // Agent presented an envelope — verify it.
           const verification = await verifyEnvelope({
             paymentHeader,
             merchantEta: config.merchantEtaAddress,
             expectedAsset: asset.address,
             expectedAmount: charge.amount,
+            expectedNetwork: network,
             resourceUrl,
             seenQueueSigs,
             replayWindowMs,
@@ -150,17 +128,15 @@ export function obscura(config: MerchantSdkConfig): ObscuraMerchantClient {
           });
 
           if (!verification.ok) {
-            res.status(402).json({
+            // 400, NOT 402: agent already paid and produced a bad envelope.
+            // Returning 402 would falsely tell the agent SDK "pay again".
+            res.status(400).json({
               error: "invalid_payment",
               reason: verification.reason,
             });
             return;
           }
 
-          // Settlement is implicit — by the time the agent has the envelope,
-          // the queue tx has landed and Arcium MPC has finalized. Nothing to
-          // settle here. Echo the proofs back so downstream handlers (and
-          // the agent's response logging) can verify on-chain.
           const settlement = {
             scheme: PAYMENT_SCHEME,
             queueSignature: verification.queueSignature,
@@ -188,6 +164,7 @@ interface VerifyContext {
   merchantEta: string;
   expectedAsset: string;
   expectedAmount: string;
+  expectedNetwork: PaymentRequirements["network"];
   resourceUrl: string;
   seenQueueSigs: Map<string, number>;
   replayWindowMs: number;
@@ -198,30 +175,9 @@ type VerifyResult =
   | { ok: true; queueSignature: string; callbackSignature?: string }
   | { ok: false; reason: string };
 
-/**
- * Decodes the umbra-mixer-v1 envelope, runs sanity checks against the merchant's
- * configured ETA + mint + amount + resource URL, then verifies the queue tx
- * (and callback tx if present) actually landed on Solana.
- *
- * What we DO check:
- *   - Envelope shape + scheme tag matches.
- *   - recipientEtaAddress equals the merchant's own ETA. (Stops an agent from
- *     re-presenting an envelope addressed to a DIFFERENT merchant.)
- *   - asset, amount, resource match what this route requires. (Replay across
- *     routes / amounts / mints.)
- *   - queueSignature hasn't been seen within the replay window. (Reuse of the
- *     same envelope on the same route within 5 min.)
- *   - The queue tx exists on Solana and didn't error.
- *   - The callback tx (if present) exists and didn't error.
- *
- * What we INTENTIONALLY don't check (yet — deferred-hardening):
- *   - That the queue tx's instruction data actually matches the envelope's
- *     claimed amount/recipient. The Umbra program enforces consistency by
- *     construction, and parsing the codama-generated instruction layout is
- *     non-trivial; for hackathon scope we trust that a successful queue tx
- *     means the encrypted balance update reflected by the envelope.
- *   - The Groth16 proof signature. Same reason.
- */
+// Verifies the umbra-mixer-v1 envelope against route config + on-chain state.
+// We do NOT parse the codama instruction layout — the Umbra program enforces
+// consistency by construction; deferred-hardening for v2.
 async function verifyEnvelope(ctx: VerifyContext): Promise<VerifyResult> {
   let envelope: UmbraMixerEnvelope;
   try {
@@ -233,6 +189,12 @@ async function verifyEnvelope(ctx: VerifyContext): Promise<VerifyResult> {
 
   if (envelope.scheme !== PAYMENT_SCHEME) {
     return { ok: false, reason: `unsupported scheme: ${envelope.scheme}` };
+  }
+  if (envelope.network !== ctx.expectedNetwork) {
+    return {
+      ok: false,
+      reason: `network mismatch: envelope is ${envelope.network}, route expects ${ctx.expectedNetwork}`,
+    };
   }
   if (envelope.recipientEtaAddress !== ctx.merchantEta) {
     return {
@@ -253,7 +215,6 @@ async function verifyEnvelope(ctx: VerifyContext): Promise<VerifyResult> {
     return { ok: false, reason: "queueSignature missing" };
   }
 
-  // Replay protection: evict expired entries first, then check.
   const now = Date.now();
   for (const [sig, when] of ctx.seenQueueSigs) {
     if (now - when > ctx.replayWindowMs) ctx.seenQueueSigs.delete(sig);
@@ -262,7 +223,6 @@ async function verifyEnvelope(ctx: VerifyContext): Promise<VerifyResult> {
     return { ok: false, reason: "queueSignature already used (replay)" };
   }
 
-  // On-chain verify — the queue tx must exist and have succeeded.
   let queueTx: Awaited<ReturnType<Connection["getTransaction"]>>;
   try {
     queueTx = await ctx.connection.getTransaction(envelope.queueSignature, {
@@ -285,9 +245,6 @@ async function verifyEnvelope(ctx: VerifyContext): Promise<VerifyResult> {
     };
   }
 
-  // If the SDK reported a finalized callback, verify it too. Older envelopes
-  // may not include this field — that's OK, the queue tx is the primary
-  // success signal.
   if (envelope.callbackSignature) {
     try {
       const cbTx = await ctx.connection.getTransaction(
@@ -344,9 +301,6 @@ function isValidPubkey(s: string): boolean {
   }
 }
 
-// Expose the settlement result at `res.locals.obscuraSettlement` so downstream
-// handlers can attach the on-chain tx signature to their response body. No-op
-// on frameworks without `res.locals` (only Express ships it by default).
 function exposeSettlement(res: ExpressLikeRes, settlement: unknown): void {
   const locals = (res as unknown as { locals?: Record<string, unknown> })
     .locals;
@@ -356,10 +310,6 @@ function exposeSettlement(res: ExpressLikeRes, settlement: unknown): void {
 }
 
 function buildResourceUrl(req: ExpressLikeReq): string {
-  // Express sets `req.get('host')`; fall back to the raw `Host` header so
-  // frameworks without `req.get` still produce a useful resource URL. Final
-  // `localhost` fallback only triggers when the Host header is also missing
-  // (proxy strips it without X-Forwarded-Host).
   const headerHost = req.headers["host"];
   const rawHost = Array.isArray(headerHost) ? headerHost[0] : headerHost;
   const host = req.get?.("host") ?? rawHost ?? "localhost";

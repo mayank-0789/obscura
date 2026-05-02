@@ -1,10 +1,5 @@
-// Shared constants for the onboarding + role-switcher flow. Kept in lib/ so
-// the client components that read/write these stay in sync.
-
 export const ONBOARDED_KEY = "obscura:onboarded";
 
-// Persists which side of the rail a role='both' user last viewed, so refreshes
-// and fresh logins land where they left off.
 export const LAST_ROLE_KEY = "obscura:last-role";
 
 export type Role = "user" | "merchant" | "both";

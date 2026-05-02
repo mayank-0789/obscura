@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { z } from "zod";
 import { env } from "@/lib/env";
 import { checkLimit } from "@/lib/ratelimit";
@@ -7,16 +8,6 @@ import {
   type DemoStep,
 } from "@/lib/demo-orchestrator";
 
-// POST /api/demo/run — judge-facing live demo. Streams the x402 dance as
-// Server-Sent Events so the /demo page can render each step in real time.
-//
-// Auth: none. Rate-limited per IP to prevent any one client from draining the
-// demo agent's encrypted balance. The agent's monthly cap is the hard ceiling.
-//
-// 503 responses (instead of streaming) when the demo isn't configured —
-// before any caller hits the orchestrator. Lets the page paint a clear
-// "demo offline" state instead of a half-stream that errors mid-flight.
-
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
@@ -24,9 +15,7 @@ const Body = z.object({
   endpoint: z.string(),
 });
 
-// ~10 demo runs per IP per hour. Tuned so a curious judge can try all three
-// endpoints + a couple of repeats without hitting the wall, while a single
-// scraper can't drain the agent's monthly cap (₹500K = thousands of runs).
+// Per-IP rate limit so a scraper can't drain the demo agent's monthly cap.
 const RATE_LIMIT_MAX = 10;
 const RATE_LIMIT_WINDOW = "1 h" as const;
 
@@ -50,10 +39,6 @@ export async function POST(req: Request) {
   }
   const endpoint = parsed.endpoint;
 
-  // Rate-limit by source IP. Falls back to a single shared bucket when the
-  // platform doesn't expose forwarding headers (local dev) — checkLimit also
-  // short-circuits to "allow" when Upstash isn't configured, so dev still
-  // works.
   const clientIp = extractClientIp(req);
   const ok = await checkLimit(
     "demo-run",
@@ -69,11 +54,7 @@ export async function POST(req: Request) {
     );
   }
 
-  // Derive the canonical app URL from the request itself rather than env.
-  // This makes the demo work on any deployment (preview, prod, custom
-  // domain) without re-pinning NEXT_PUBLIC_APP_URL — the orchestrator hits
-  // /api/x402/sign on the same host that's serving this stream.
-  const baseUrl = canonicalBaseUrl(req);
+  const baseUrl = canonicalBaseUrl();
   const ipShort = redactIp(clientIp);
 
   const encoder = new TextEncoder();
@@ -93,9 +74,6 @@ export async function POST(req: Request) {
         }
       };
 
-      // enqueue can throw when the underlying connection has gone away
-      // without firing req.signal.abort. Fold into a full close so the
-      // heartbeat doesn't leak.
       const safeEnqueue = (chunk: string) => {
         if (closed) return;
         try {
@@ -109,20 +87,12 @@ export async function POST(req: Request) {
         safeEnqueue(`event: ${step.phase}\ndata: ${JSON.stringify(step)}\n\n`);
       };
 
-      // Heartbeat keeps proxies from idle-killing the connection during the
-      // ~10–25s mixer prove. EventSource ignores `:` lines.
       heartbeat = setInterval(() => {
         safeEnqueue(`: heartbeat\n\n`);
       }, 10_000);
 
-      // Initial frame so the client can show "connected" before the first
-      // orchestrator step lands.
       safeEnqueue(`: connected\n\n`);
 
-      // If the client disconnects mid-prove, the orchestrator keeps running
-      // server-side (the on-chain debit is already in flight by then; we
-      // can't cancel it). We just stop emitting — the recent broker still
-      // gets the final publish so other tabs see the run complete.
       req.signal.addEventListener("abort", close, { once: true });
 
       try {
@@ -133,9 +103,6 @@ export async function POST(req: Request) {
           onStep: send,
         });
       } catch (err) {
-        // runDemoSpend is meant to convert all internal failures into an
-        // `error` step — but if something escapes, surface it rather than
-        // hanging the stream.
         console.error("[/api/demo/run] orchestrator threw:", err);
         send({
           phase: "error",
@@ -158,8 +125,6 @@ export async function POST(req: Request) {
   });
 }
 
-/* ─── helpers ───────────────────────────────────────────────────── */
-
 function jsonError(status: number, code: string, message: string): Response {
   return new Response(JSON.stringify({ error: code, message }), {
     status,
@@ -173,18 +138,15 @@ function extractClientIp(req: Request): string {
   return req.headers.get("x-real-ip") ?? "0.0.0.0";
 }
 
-// Returns just the last octet (or first IPv6 group) so the side panel can
-// say "IP …42" without revealing the full address. Never logged or stored.
+// Hash + truncate to 4 hex chars for "IP …a04" display; raw IP is never logged or shown.
+const REDACT_SALT = "obscura-demo-v1";
 function redactIp(ip: string): string {
-  if (ip.includes(":")) return ip.split(":")[0] ?? "ipv6";
-  const parts = ip.split(".");
-  if (parts.length === 4) return parts[3] ?? "";
-  return ip.slice(-4);
+  const digest = createHash("sha256").update(`${REDACT_SALT}|${ip}`).digest("hex");
+  return digest.slice(-4);
 }
 
-function canonicalBaseUrl(req: Request): string {
-  const url = new URL(req.url);
-  const proto = req.headers.get("x-forwarded-proto") ?? url.protocol.replace(":", "");
-  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? url.host;
-  return `${proto}://${host}`;
+function canonicalBaseUrl(): string {
+  // Fixed to env.NEXT_PUBLIC_APP_URL — reading X-Forwarded-Host would let a caller
+  // redirect orchestrator fetches (carrying DEMO_AGENT_API_KEY) to an attacker host.
+  return env.NEXT_PUBLIC_APP_URL.replace(/\/+$/, "");
 }

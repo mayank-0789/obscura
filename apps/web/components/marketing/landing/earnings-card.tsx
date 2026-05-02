@@ -1,9 +1,3 @@
-/**
- * Merchant-side hero companion — mirrors ReceiptCard's aesthetic but shows
- * the other side of the same transaction: earnings accruing, calls coming in,
- * cash-out pending. Lines fade in sequentially to feel alive.
- */
-
 const recent = [
   { time: "23:14", path: "/article/8421", amt: "0.02" },
   { time: "23:14", path: "/article/2057", amt: "0.02" },
@@ -21,7 +15,6 @@ export function EarningsCard() {
         className="pointer-events-none absolute -inset-px border border-emerald-500/10"
       />
 
-      {/* Header */}
       <div className="flex items-center justify-between border-b border-zinc-800 pb-3 text-[10px] uppercase tracking-[0.26em]">
         <span className="flex items-center gap-2 text-emerald-400">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
@@ -30,7 +23,6 @@ export function EarningsCard() {
         <span className="text-zinc-500">Earnings</span>
       </div>
 
-      {/* Today's earnings */}
       <div className="reveal mt-5" style={{ animationDelay: "0.2s" }}>
         <div className="text-[10px] uppercase tracking-[0.22em] text-zinc-600">
           Today
@@ -43,7 +35,6 @@ export function EarningsCard() {
         </div>
       </div>
 
-      {/* Recent calls ledger */}
       <div className="mt-6 border-t border-zinc-800 pt-4">
         <div className="mb-2 text-[10px] uppercase tracking-[0.22em] text-zinc-600">
           Recent
@@ -63,7 +54,6 @@ export function EarningsCard() {
         </div>
       </div>
 
-      {/* Cash out row */}
       <div
         className="reveal mt-5 flex items-center justify-between border-t border-zinc-800 pt-4"
         style={{ animationDelay: `${0.35 + recent.length * 0.12}s` }}

@@ -4,10 +4,6 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { env } from "@/lib/env";
 
-// Renders a ready-to-paste SDK snippet with the merchant's actual ETA
-// address inlined. The goal: a merchant can copy this block into their
-// server.ts and it will "just work" against the network the dashboard is
-// configured for — no further editing.
 export function QuickstartSnippetCard({
   merchantEtaAddress,
 }: {

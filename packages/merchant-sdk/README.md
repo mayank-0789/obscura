@@ -21,8 +21,10 @@ import express from "express";
 import { obscura } from "@obscura-app/merchant-sdk";
 
 const pay = obscura({
-  // Your Umbra-side ETA address — register once via
-  // `pnpm umbra:bootstrap-merchant <id>` and copy the printed address here.
+  // Your Umbra-side ETA address. Sign in to obscurapp.com, complete
+  // merchant onboarding, and copy the ETA address from your dashboard
+  // into MERCHANT_ETA_ADDRESS — derivation, treasury SOL fund, and
+  // Umbra registration are handled server-side during onboarding.
   merchantEtaAddress: process.env.MERCHANT_ETA_ADDRESS!,
   network: "solana-devnet",                    // or "solana"
   rpcUrl: process.env.HELIUS_RPC_URL,          // any Solana RPC works
@@ -108,13 +110,23 @@ agent SDK              your server              solana
 
 ## Bootstrapping your merchant ETA
 
-The merchant ETA is a deterministic Solana keypair derived from a master seed + your merchant ID. Run once:
+The merchant ETA is a deterministic Solana keypair derived server-side from a master seed + your merchant ID. To get yours:
 
-```bash
-pnpm umbra:bootstrap-merchant my-merchant-id
-```
+1. Sign in at [obscurapp.com](https://obscurapp.com).
+2. Open the merchant dashboard and complete onboarding.
+3. The dashboard prints your ETA address — copy it into your server's `.env` as `MERCHANT_ETA_ADDRESS`.
 
-This funds the derived address with SOL from treasury, registers it on Umbra (confidential + anonymous), and prints the ETA address to copy into your `.env` as `MERCHANT_ETA_ADDRESS`.
+Onboarding handles SOL funding from treasury and Umbra registration (confidential + anonymous) for you.
+
+> Heads up — on devnet the configured stablecoin is currently **WSOL with `decimals: 9`**, not USDC. Pass `mint` and `decimals` explicitly so your route's atomic-unit math agrees with the Obscura backend:
+> ```ts
+> obscura({
+>   merchantEtaAddress: ...,
+>   network: "solana-devnet",
+>   mint: "So11111111111111111111111111111111111111112",
+>   decimals: 9,
+> })
+> ```
 
 ## Support
 

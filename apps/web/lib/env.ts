@@ -1,75 +1,36 @@
 import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
 
-// Zod-validated env. Server secrets under `server`; browser vars under `client` (NEXT_PUBLIC_ prefix).
 export const env = createEnv({
   server: {
     DATABASE_URL: z.string().url(),
-    // Auth.js (NextAuth v5). AUTH_SECRET signs the session cookie + JWT.
-    // Generate via `openssl rand -base64 32`.
     AUTH_SECRET: z.string().min(32),
-    // Optional canonical URL — Auth.js infers from Vercel/Next env when unset.
     AUTH_URL: z.string().url().optional(),
-    // Google OAuth credentials — console.cloud.google.com → APIs & Services → Credentials.
     AUTH_GOOGLE_ID: z.string().min(1),
     AUTH_GOOGLE_SECRET: z.string().min(1),
-    // Upstash Redis (used for rate limiting). Both must be set to enable; when
-    // either is missing, rate limiters short-circuit to "allow" so local dev works
-    // without needing an Upstash account.
     UPSTASH_REDIS_REST_URL: z.string().url().optional(),
     UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
-    // Dodo Payments — fiat on-ramp (UPI/card) for agent top-ups.
     DODO_PAYMENTS_API_KEY: z.string().min(1),
     DODO_WEBHOOK_KEY: z.string().min(1),
     DODO_TOPUP_PRODUCT_ID: z.string().min(1),
     DODO_ENVIRONMENT: z.enum(["test_mode", "live_mode"]).default("test_mode"),
-    // Helius — Solana RPC for on-chain reads + tx submission.
     HELIUS_RPC_URL: z.string().url(),
-    // Helius Enhanced Webhooks — used to push payment-confirmed events to
-    // merchant dashboards in real time. All three optional: if any is
-    // missing, merchant registration + webhook verification short-circuit
-    // to best-effort (dashboards fall back to poll-only updates).
     HELIUS_API_KEY: z.string().optional(),
     HELIUS_WEBHOOK_ID: z.string().optional(),
     HELIUS_WEBHOOK_AUTH_TOKEN: z.string().optional(),
-    // Treasury — single raw keypair holding pre-funded USDG. Credits agent
-    // wallets on Dodo webhook. Format: JSON array of 64 ints from solana-keygen.
     TREASURY_SECRET_KEY: z.string().min(1),
     TREASURY_PUBLIC_KEY: z.string().min(32).max(44),
-    // Stablecoin mint address — swappable (USDC devnet / USDC mainnet / USDG).
     STABLECOIN_MINT: z.string().min(32).max(44),
-    // Decimals for STABLECOIN_MINT. USDC + USDG both use 6 on Solana; override
-    // via env if we ever onboard a mint with different precision.
     STABLECOIN_DECIMALS: z.coerce.number().int().min(0).max(18).default(6),
-    // Shared-secret for operator-only admin endpoints (e.g. Helius reconcile).
-    // Optional: when missing, admin endpoints return 503 disabled. Set it to a
-    // long random string and scope access via an external cron / curl.
     ADMIN_API_TOKEN: z.string().min(32).optional(),
-    // Umbra Privacy SDK — server-derived seed material. Used to deterministically
-    // derive every agent + merchant Umbra keypair via HMAC. Lose this and every
-    // encrypted balance is unrecoverable. Required.
+    // Lose this and every encrypted balance is unrecoverable. Required.
     UMBRA_AGENT_SEED_SECRET: z.string().min(32),
     UMBRA_NETWORK: z.enum(["devnet", "mainnet", "localnet"]).default("devnet"),
-    // Override only when the WS endpoint diverges from HELIUS_RPC_URL (rare).
     UMBRA_RPC_SUBSCRIPTIONS_URL: z.string().url().optional(),
-    // Umbra hosted services — required for the mixer (UTXO scan + claim relay).
-    // Direct deposit/withdraw paths don't need these, so they're optional in env
-    // and code paths that need them assert presence at call time.
     UMBRA_INDEXER_URL: z.string().url().optional(),
     UMBRA_RELAYER_URL: z.string().url().optional(),
-    // Judge-facing /demo playground. When BOTH are set, the route at
-    // POST /api/demo/run executes a real x402 spend from this agent against
-    // the demo merchant. When either is missing the route returns 503 and
-    // the page shows a friendly "demo offline" state — no other code path
-    // depends on these.
     DEMO_AGENT_API_KEY: z.string().min(1).optional(),
     DEMO_MERCHANT_URL: z.string().url().optional(),
-    // Vercel Cron auth — every Vercel Cron firing arrives with
-    // `Authorization: Bearer <CRON_SECRET>`. Routes under /api/cron/* refuse
-    // any request whose token doesn't match. Optional in env — if unset,
-    // cron routes are GUARDED-OPEN (allow all) for local dev, with a warning
-    // log; in production set a long random string and configure it as
-    // `CRON_SECRET` in the Vercel project.
     CRON_SECRET: z.string().min(16).optional(),
   },
 

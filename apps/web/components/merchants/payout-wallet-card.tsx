@@ -4,9 +4,6 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { env } from "@/lib/env";
 
-// Hero card. Shows the full payout wallet, a copy-to-clipboard button, and a
-// Solscan deep-link scoped to the current network. Clipboard success state
-// flips to "Copied ✓" in emerald for ~1.2s then reverts.
 export function PayoutWalletCard({
   merchantEtaAddress,
   provisionedAt,

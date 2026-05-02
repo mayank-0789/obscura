@@ -25,10 +25,6 @@ type Options = {
   cursor?: string;
 };
 
-// Confirmed spend feed for a single agent. Mirrors `useMerchantTransactions`
-// but filtered to outgoing payments the agent initiated. 10s poll so the
-// agent detail panel's "Recent spends" stays fresh even without SSE push —
-// can be upgraded to SSE later if we wire agent-side broker topics.
 export function useAgentTransactions(
   agentId: string,
   options: Options = {},

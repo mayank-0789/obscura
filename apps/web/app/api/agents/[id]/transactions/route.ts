@@ -13,11 +13,6 @@ const QuerySchema = z.object({
   cursor: z.string().min(1).optional(),
 });
 
-// GET /api/agents/[id]/transactions?limit=50&cursor=<opaque>
-//
-// Returns confirmed spend rows originated by this agent. Scoped to the
-// current user via the same 404-covers-both-cases pattern as GET
-// /api/agents/[id] — we don't leak "exists but not yours."
 export async function GET(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
@@ -27,10 +22,7 @@ export async function GET(
 
   const { id } = await ctx.params;
 
-  // Verify the agent exists + belongs to the caller before reading the
-  // transactions table. Returning 404 without this join would let someone
-  // enumerate agent ids (the tx query filters by agent_id but wouldn't
-  // 404 for an agent belonging to another user).
+  // Ownership check up front so unowned agent ids 404 before we hit transactions.
   const [agent] = await db
     .select({ id: agents.id })
     .from(agents)
@@ -45,6 +37,7 @@ export async function GET(
   });
   if (!parsed.success) return apiError("bad_request");
 
+  // Cursor encodes (created_at, id) so same-microsecond ties don't drop rows.
   let cursor;
   if (parsed.data.cursor) {
     const decoded = decodeAgentTxCursor(parsed.data.cursor);

@@ -2,16 +2,7 @@ import "server-only";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { db, transactions, type Transaction } from "@/lib/db";
 
-// Agent-side spend queries. Mirrors `lib/merchant-queries.ts` but filters by
-// `agent_id` (outgoing spends) instead of `counterparty` (incoming). Same
-// composite-cursor pagination — `(created_at, id)` — so ties at a single
-// microsecond can't drop rows.
-
-/**
- * Opaque pagination cursor. Clients receive it as `nextCursor` and pass it
- * back as `cursor=...` on the subsequent request — encoded as base64url
- * JSON so the wire format is compact and self-describing.
- */
+/** Opaque pagination cursor — base64url JSON of `(createdAt, id)`. */
 export type AgentTxCursor = { createdAt: string; id: string };
 
 export function encodeAgentTxCursor(c: AgentTxCursor): string {
@@ -38,17 +29,7 @@ export function decodeAgentTxCursor(s: string): AgentTxCursor | null {
   }
 }
 
-/**
- * Paginated feed of confirmed spends originated by this agent. Identical
- * predicate to the merchant feed but keyed on `agent_id` — so the same
- * `transactions` row shows up as outgoing here and incoming on the
- * merchant's dashboard.
- *
- * Uses a row-value tuple comparison `(created_at, id) < cursor` against the
- * `transactions_agent_id_created_at_idx` index. Ordering is
- * `(created_at DESC, id DESC)` so the tuple compare + limit produces a
- * deterministic page even under rapid inserts.
- */
+/** Paginated feed of confirmed spends originated by this agent. Tuple-compare on `(created_at, id)` for stable ordering under rapid inserts. */
 export async function getAgentTransactions(input: {
   agentId: string;
   limit: number;

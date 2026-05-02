@@ -20,17 +20,13 @@ import {
   registerSubjectOnUmbra,
 } from "@/lib/umbra";
 
-// Hard ceiling on agents per user. Keeps a single account from ballooning the
-// DB. Raise as we learn real usage patterns.
 const AGENTS_PER_USER_LIMIT = 50;
 
 const CreateAgentBody = z.object({
   name: z.string().trim().min(1).max(60),
-  // Monthly spend cap in whole rupees. Stored as paise internally.
   monthlyCapInr: z.number().int().positive().max(1_000_000),
 });
 
-// GET /api/agents — list the current user's agents with their budgets.
 export async function GET(req: Request) {
   const user = await authGuard(req);
   if (user instanceof Response) return user;
@@ -47,25 +43,6 @@ export async function GET(req: Request) {
   });
 }
 
-// POST /api/agents — create an agent end-to-end:
-//   1. Derive the Umbra-side keypair from the new agent's UUID + the env-stored
-//      master seed. Pure derivation, no I/O.
-//   2. Lazy-fund the derived address with SOL from treasury so it can pay its
-//      own Umbra registration fees (~3 txs, ~0.01 SOL). Idempotent.
-//   3. Eager-register on Umbra (`confidential: true, anonymous: false`). ~3-5s
-//      end-to-end. Eager (not lazy at first top-up) so the recipient-pre-reg
-//      gotcha never bites: by the time anyone tries to deposit/transfer to
-//      this agent, it's already a valid Umbra subject.
-//   4. Atomic batch insert: agents row (with eta_address + umbra_status='active'
-//      + umbra_registered_at), budgets row, first API key.
-//
-// Failure modes:
-//   - Lazy fund fails (RPC error) → 500. Try again; idempotent.
-//   - Register fails → 500. SOL has landed at the eta_address but no DB rows
-//     exist yet — orphan SOL, recoverable manually if it ever matters.
-//   - DB batch fails → 500. Agent registered on Umbra but no DB row.
-//     Acceptable orphan at this scale; reconcile by re-running creation with
-//     the same UUID (deterministic eta_address, register is idempotent).
 export async function POST(req: Request) {
   const user = await authGuard(req);
   if (user instanceof Response) return user;
@@ -82,15 +59,9 @@ export async function POST(req: Request) {
     .where(eq(agents.userId, user.id));
   if (agentCount >= AGENTS_PER_USER_LIMIT) return apiError("agent_limit_reached");
 
-  // Pre-generate the agent UUID so we can derive the eta_address before any
-  // I/O happens. This UUID is the canonical input to the HMAC seed-derivation
-  // — same agentId always produces the same eta_address, so re-running this
-  // route with the same UUID would land on the same on-chain account.
+  // Pre-generate the agent UUID so eta_address derivation is deterministic before any I/O.
   const agentId = crypto.randomUUID();
   const etaAddress = deriveAgentEtaAddress(agentId);
-  // Short-prefix the ETA in logs — full address is recoverable from
-  // agents.eta_address if needed for ops, but operator log aggregators (and
-  // anyone who scrapes them) don't get a free `(agent_id, ETA)` directory.
   console.info(
     `[agents/create] user=${user.id} agent=${agentId} ` +
       `eta=${etaAddress.slice(0, 6)}… → setting up Umbra account`,
@@ -145,20 +116,13 @@ async function parseBody(req: Request) {
   }
 }
 
-// Funds the agent's derived eta_address with SOL (lazy) and registers it on
-// Umbra (eager). Returns the registration timestamp for persistence; the
-// caller pairs it with the eta_address into the agents row.
-//
-// Returns either `{ etaAddress, umbraRegisteredAt }` on success or a
-// `Response` (apiError) on failure — same pattern as authGuard. Errors are
-// logged with full context server-side; the client gets a generic
-// `server_error` to avoid leaking SDK details.
 async function createAgentWallet(input: {
   agentId: string;
   etaAddress: string;
 }): Promise<{ etaAddress: string; umbraRegisteredAt: Date } | Response> {
   try {
     await fundSubjectAddressIfNeeded(input.etaAddress);
+    // Eager-register on Umbra so the recipient-pre-reg gotcha never bites later deposits/transfers.
     await registerSubjectOnUmbra("agent", input.agentId);
     return { etaAddress: input.etaAddress, umbraRegisteredAt: new Date() };
   } catch (err) {
@@ -180,10 +144,8 @@ async function insertAgentRows(input: {
   capUsdg: bigint;
   apiKeyHash: string;
 }): Promise<Agent> {
-  // We use db.batch (not db.transaction) because our driver is neon-http,
-  // which does not implement transaction() — it throws at runtime. batch()
-  // is supported and hits Neon's atomic /sql/transaction endpoint, so all
-  // three inserts commit together or none do.
+  // db.batch (NOT db.transaction) — neon-http does not implement transaction()
+  // and throws at runtime; batch() hits Neon's atomic /sql/transaction endpoint.
   const [inserted] = await db.batch([
     db
       .insert(agents)

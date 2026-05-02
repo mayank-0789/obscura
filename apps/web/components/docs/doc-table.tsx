@@ -1,19 +1,6 @@
 import type { ReactNode } from "react";
 
-// Table primitive for MDX authoring. Plain markdown pipe-tables can't be
-// used in our pipeline (Turbopack rejects remark-gfm plugin fns), so every
-// table in the docs goes through this component.
-//
-// Usage:
-//   <DocTable
-//     headers={["Code", "Status", "Meaning"]}
-//     rows={[
-//       ["over_cap", "402", "Monthly cap exceeded."],
-//       ["invalid_token", "401", "API key unknown."],
-//     ]}
-//   />
-//
-// Cell content can be plain strings or JSX (including `<code>`).
+// MDX-only table primitive: Turbopack rejects remark-gfm plugin fns.
 export function DocTable({
   headers,
   rows,

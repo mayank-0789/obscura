@@ -3,13 +3,8 @@ import { db, transactions, agents } from "@/lib/db";
 import { authGuard } from "@/lib/auth";
 import { apiError, apiOk } from "@/lib/api";
 
-// GET /api/topup/status/[paymentId]
-// Returns the current state of a top-up by Dodo's payment_id. The /topup/done
-// page polls this after the user returns from Dodo — the webhook credits the
-// agent async, and the user sees "pending" until we flip to "confirmed".
-//
-// Scoped by user: you can only see payments for agents you own. 404 for
-// unknown payment OR payment belonging to another user.
+// Polling-only model: /topup/done polls this; the Dodo webhook (other route) does the credit.
+// 404s for unknown payment OR payment belonging to another user.
 export async function GET(
   req: Request,
   ctx: { params: Promise<{ paymentId: string }> },
@@ -41,8 +36,7 @@ export async function GET(
     .limit(1);
 
   if (!row) {
-    // The webhook hasn't landed yet (or never will). Return pending so the
-    // client keeps polling; it'll stop after its own timeout.
+    // Webhook hasn't landed yet — return pending so the client keeps polling.
     return apiOk({ state: "pending" as const });
   }
 

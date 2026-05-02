@@ -22,9 +22,7 @@ export class AuthError extends Error {
   }
 }
 
-// Verifies the active NextAuth session. Returns the Google sub + email or
-// throws AuthError. Reads the session from cookies via Auth.js — no Bearer
-// token to extract, so `_req` is accepted for caller ergonomics but unused.
+/** Verifies the active NextAuth session. Session-only — distinct from `requireAgentApiKey` (mk_/pk_ Bearer tokens) in the dual-auth model. */
 export async function requireAuth(_req?: Request): Promise<{ sub: string; email: string }> {
   void _req;
   const session = await auth();
@@ -34,9 +32,7 @@ export async function requireAuth(_req?: Request): Promise<{ sub: string; email:
   return { sub: session.user.id, email: session.user.email };
 }
 
-// Resolves a verified Google sub to our DB row. Separated from `requireUser`
-// so callers that verify the session themselves (e.g. the merchant dual-auth
-// guard, which also accepts mk_ Bearer keys) can reuse the row lookup.
+/** Resolves a verified Google sub to our DB row. Split from `requireUser` so dual-auth callers can reuse it. */
 export async function loadUserByAuthId(authId: string): Promise<User> {
   const [user] = await db
     .select()
@@ -47,18 +43,13 @@ export async function loadUserByAuthId(authId: string): Promise<User> {
   return user;
 }
 
-// Verifies the session AND resolves the user to our DB row. Use in routes
-// that operate on user-scoped resources. Throws AuthError('user_not_synced')
-// if the session is valid but the DB row is missing — the client recovers by
-// posting /api/auth/sync.
+/** Verifies session AND resolves the DB user row. Throws AuthError('user_not_synced') if the row is missing — client recovers via /api/auth/sync. */
 export async function requireUser(req?: Request): Promise<User> {
   const { sub } = await requireAuth(req);
   return loadUserByAuthId(sub);
 }
 
-// Thin wrapper around requireUser that returns the user OR an error response.
-// Routes do:  `const u = await authGuard(req); if (u instanceof Response) return u;`
-// (`req` is forwarded for caller ergonomics; NextAuth reads the session from cookies.)
+/** Wraps `requireUser`, returning either the user or an error Response for direct return from a route. */
 export async function authGuard(req?: Request): Promise<User | Response> {
   try {
     return await requireUser(req);

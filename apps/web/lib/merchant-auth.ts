@@ -29,12 +29,8 @@ export class MerchantAuthError extends Error {
 }
 
 /**
- * Context produced by `requireMerchant` / `merchantAuthGuard`.
- *
- * `user` is only present when the caller authenticated via session cookie
- * (i.e. a logged-in browser). mk_ Bearer callers have no associated session,
- * so `user` is null — if a downstream handler needs the owning user it can
- * query by `merchant.ownerUserId`.
+ * `user` is null for mk_ Bearer callers (no session). Downstream handlers
+ * needing the owning user should query by `merchant.ownerUserId`.
  */
 export type MerchantContext = {
   merchant: Merchant;
@@ -43,12 +39,8 @@ export type MerchantContext = {
 };
 
 /**
- * Dual-mode auth for merchant-scoped endpoints. Accepts either:
- *   - `Authorization: Bearer mk_...`  → look up merchant_api_keys
- *   - NextAuth session cookie          → resolve user, load merchant by ownerUserId
- *
- * Routing: if a Bearer header is present we take that path; otherwise we
- * fall back to NextAuth's `auth()` which reads the session cookie.
+ * Dual-mode auth: a Bearer header starting with `mk_` routes to API-key
+ * lookup; otherwise falls back to NextAuth session cookie.
  */
 export async function requireMerchant(req: Request): Promise<MerchantContext> {
   const token = req.headers
@@ -82,9 +74,7 @@ async function resolveByApiKey(token: string): Promise<MerchantContext> {
   const row = rows[0];
   if (!row) throw new MerchantAuthError("invalid_token");
 
-  // Best-effort lastUsedAt bump. Fired and forgotten — we don't block the
-  // request on a metadata update, and we swallow failures (the request is
-  // already authorized; a metadata miss is cosmetic for the UI).
+  // Best-effort lastUsedAt bump — fire-and-forget.
   void db
     .update(merchantApiKeys)
     .set({ lastUsedAt: new Date() })
@@ -102,8 +92,6 @@ async function resolveBySession(): Promise<MerchantContext> {
     throw new MerchantAuthError("missing_token");
   }
 
-  // Delegated to lib/auth so merchant-auth inherits any future checks
-  // (banned-user, soft-delete) added to the shared user resolver.
   let user: User;
   try {
     user = await loadUserByAuthId(session.user.id);
@@ -124,11 +112,6 @@ async function resolveBySession(): Promise<MerchantContext> {
   return { merchant, user, authMode: "session" };
 }
 
-/**
- * Route-ergonomics wrapper matching `authGuard` / `agentAuthGuard`:
- *   const ctx = await merchantAuthGuard(req);
- *   if (ctx instanceof Response) return ctx;
- */
 export async function merchantAuthGuard(
   req: Request,
 ): Promise<MerchantContext | Response> {

@@ -1,6 +1,6 @@
 {
   "name": "@obscura-app/merchant-sdk",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Express middleware for API sellers to accept confidential x402 payments on Solana via the Umbra mixer.",
   "license": "MIT",
   "author": "Obscura",

@@ -3,14 +3,7 @@ import type { NextAuthResult } from "next-auth";
 import Google from "next-auth/providers/google";
 import { env } from "@/lib/env";
 
-// Auth.js v5 (NextAuth) — single Google provider, JWT session strategy.
-// `auth()` reads the active session in route handlers / server components.
-// `handlers` is exported from /api/auth/[...nextauth]/route.ts.
-// Client components use `signIn` / `signOut` from `next-auth/react` directly.
-//
-// Explicit `NextAuthResult` annotation avoids a TS2742 "inferred type cannot
-// be named" error — without it, tsc tries to reach private @auth/core
-// internals to spell out the destructured exports' types.
+// Explicit `NextAuthResult` annotation avoids TS2742 "inferred type cannot be named".
 const nextAuth: NextAuthResult = NextAuth({
   providers: [
     Google({
@@ -18,17 +11,12 @@ const nextAuth: NextAuthResult = NextAuth({
       clientSecret: env.AUTH_GOOGLE_SECRET,
     }),
   ],
-  // App is single-host today; trust the inferred host so dev + previews + prod
-  // all work without manual AUTH_URL config.
   trustHost: true,
   session: { strategy: "jwt" },
   callbacks: {
-    // Auth.js v5 sets user.id to a fresh crypto.randomUUID() on every OAuth
-    // callback when there's no DB adapter — see @auth/core
-    // lib/actions/callback/oauth/callback.js getUserAndAccount(). The Google
-    // sub is preserved as account.providerAccountId, but only persisted by an
-    // adapter; we run JWT-only, so we MUST pin token.sub to the real sub here
-    // or every sign-in mints a new users.auth_id → duplicate user rows.
+    // Auth.js v5 trap: with no DB adapter, user.id is a fresh randomUUID() per
+    // OAuth callback. Pin token.sub to the real Google sub or every sign-in
+    // mints a new users.auth_id row.
     async jwt({ token, account, profile }) {
       if (account?.provider === "google") {
         const googleSub =
@@ -37,8 +25,6 @@ const nextAuth: NextAuthResult = NextAuth({
       }
       return token;
     },
-    // Expose the (now stable) Google sub as `session.user.id` so server code
-    // has a single foreign key into our `users` table.
     async session({ session, token }) {
       if (token.sub && session.user) {
         session.user.id = token.sub;

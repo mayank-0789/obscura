@@ -9,9 +9,6 @@ const QuoteBody = z.object({
   amountInr: z.number().int().min(500).max(100_000),
 });
 
-// POST /api/topup/quote — stateless breakdown preview for the top-up UI.
-// No Dodo session is created; purely a rate + fee calculation so the user
-// sees live numbers before committing to checkout.
 export async function POST(req: Request) {
   const user = await authGuard(req);
   if (user instanceof Response) return user;

@@ -38,12 +38,7 @@ type Props = {
   children: React.ReactNode;
 };
 
-/**
- * Shared authenticated-surface chrome: top bar, agents sidebar, create-agent
- * modal, command palette, and keyboard shortcuts. URL-sync is the parent
- * page's job — it passes `selectedAgentId` down and a matching `onSelectAgent`
- * that knows which route to navigate to.
- */
+/** Shared authed chrome: top bar, sidebar, create modal, palette, shortcuts. */
 export function AppShell({ selectedAgentId, onSelectAgent, children }: Props) {
   const { data: agents } = useAgents();
 
@@ -53,10 +48,8 @@ export function AppShell({ selectedAgentId, onSelectAgent, children }: Props) {
     null,
   );
 
-  // Survive the route change that AppShell#onCreated triggers via
-  // `onSelectAgent` — on /agents/[id], that's `router.push` which unmounts
-  // the current AppShell, nuking `justCreated` before the reveal card can
-  // render. sessionStorage bridges the unmount-then-remount gap.
+  // sessionStorage bridges JUST_CREATED across the AppShell unmount/remount
+  // that onSelectAgent's router.push triggers, preserving the reveal card.
   useEffect(() => {
     try {
       const raw = sessionStorage.getItem(JUST_CREATED_KEY);

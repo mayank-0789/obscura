@@ -5,21 +5,11 @@ import { apiOk } from "@/lib/api";
 import { env } from "@/lib/env";
 import { cronAuthGuard } from "@/lib/cron-auth";
 
-// GET /api/cron/reconcile — auto-reconciler for x402 spends stuck pending.
-//
-// A spend lands in `pending` when its MPC callback didn't finalize within
-// the SDK's monitor window (rare, but happens). The queue tx is on chain;
-// the encrypted-balance deduction either landed (Arcium completed) or never
-// will. We can't tell from inside the SDK once the monitor gave up — but we
-// CAN inspect the queue tx via Solana RPC: if it succeeded, the deduction
-// happened, mark confirmed; if it failed, mark failed and revert the cap.
-//
-// Schedule: every 5 minutes via Vercel Cron (see vercel.json). Idempotent —
-// rows already confirmed/failed are skipped by the WHERE clause.
+// Schedule: every 5 minutes, fired by an external scheduler (Railway cron).
 
-const MIN_AGE_SECONDS = 120; // give the MPC a chance to land naturally first
-const MAX_AGE_HOURS = 24; // older than this = manual intervention required
-const BATCH_LIMIT = 50; // bound per-invocation work for Vercel's deadline
+const MIN_AGE_SECONDS = 120;
+const MAX_AGE_HOURS = 24;
+const BATCH_LIMIT = 50;
 
 interface PendingRow {
   id: string;
@@ -35,8 +25,6 @@ export async function GET(req: Request): Promise<Response> {
   const connection = new Connection(env.HELIUS_RPC_URL, "confirmed");
   const startedAt = Date.now();
 
-  // Pull pending spend rows that have a queue signature but no callback
-  // signature yet, older than MIN_AGE_SECONDS and younger than MAX_AGE_HOURS.
   const candidates = (await db
     .select({
       id: transactions.id,
@@ -73,7 +61,7 @@ export async function GET(req: Request): Promise<Response> {
   let skipped = 0;
 
   for (const row of candidates) {
-    if (!row.queueSignature) continue; // belt-and-suspenders; SQL filtered already
+    if (!row.queueSignature) continue;
     let txInfo: Awaited<ReturnType<typeof connection.getTransaction>> = null;
     try {
       txInfo = await connection.getTransaction(row.queueSignature, {
@@ -89,19 +77,12 @@ export async function GET(req: Request): Promise<Response> {
     }
 
     if (!txInfo) {
-      // Either dropped from the leader cache (try again next run) or never
-      // landed. Be conservative: leave pending and let the next tick retry.
       skipped += 1;
       continue;
     }
 
     if (txInfo.meta?.err) {
-      // Queue tx failed on chain — the deduction did NOT happen. We need
-      // to (1) mark the row failed and (2) refund the cap counter, in that
-      // order: the tx-mark UPDATE has `WHERE status = 'pending'` so two
-      // concurrent reconciler runs can't both win the transition. The cap
-      // revert only fires when the tx-mark actually flipped a row, killing
-      // the theoretical "two reconcilers double-revert the same tx" race.
+      // WHERE status='pending' on the atomic flip kills the two-reconciler double-revert race.
       const flipped = await db
         .update(transactions)
         .set({
@@ -117,9 +98,6 @@ export async function GET(req: Request): Promise<Response> {
         .returning({ id: transactions.id });
 
       if (flipped.length === 0) {
-        // Another reconciler beat us to it. Skip — they handled the cap
-        // revert. Counting this as `skipped` rather than `failed` so the
-        // metric accurately reflects "I did the work for this row".
         skipped += 1;
         continue;
       }
@@ -143,9 +121,6 @@ export async function GET(req: Request): Promise<Response> {
       continue;
     }
 
-    // Queue tx landed successfully — Arcium accepted the deduction. Mark
-    // the row confirmed. callbackStatus stays NULL (we never observed the
-    // actual callback) so we set 'reconciled' as a marker.
     await db
       .update(transactions)
       .set({

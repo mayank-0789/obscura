@@ -26,8 +26,8 @@ const pay = obscura(config: MerchantSdkConfig);`}
   rows={[
     [<code key="c">merchantEtaAddress</code>, <code key="c">string</code>, "Yes", "—", "Solana pubkey (base58) of your Umbra encrypted token account. NOT a regular SPL wallet."],
     [<code key="c">network</code>, <code key="c">{`"solana" | "solana-devnet"`}</code>, "No", <code key="c">{`"solana-devnet"`}</code>, "Which Solana network to verify on."],
-    [<code key="c">mint</code>, <code key="c">string</code>, "No", "devnet / mainnet USDC", "SPL token mint to accept. Must match the Obscura backend's STABLECOIN_MINT."],
-    [<code key="c">decimals</code>, <code key="c">number</code>, "No", <code key="c">6</code>, "Decimals for the mint (USDC + USDG both use 6)."],
+    [<code key="c">mint</code>, <code key="c">string</code>, "No", "devnet / mainnet USDC", "SPL token mint to accept. Must match the Obscura backend's STABLECOIN_MINT. NOTE: devnet today runs on WSOL — pass mint='So11111111111111111111111111111111111111112' explicitly when network='solana-devnet'."],
+    [<code key="c">decimals</code>, <code key="c">number</code>, "No", <code key="c">6</code>, "Decimals for the mint. USDC = 6 (mainnet default). WSOL = 9 (devnet default — pass decimals: 9 explicitly)."],
     [<code key="c">rpcUrl</code>, <code key="c">string</code>, "No", "Solana public RPC", "RPC endpoint for getTransaction reads during verification. Helius recommended for production."],
     [<code key="c">replayWindowMs</code>, <code key="c">number</code>, "No", <code key="c">300000</code>, "Window during which a queueSignature is rejected on duplicate (default 5 min)."],
   ]}

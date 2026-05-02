@@ -6,10 +6,7 @@ import { useSession } from "next-auth/react";
 import { useAuthedFetch } from "@/hooks/use-authed-fetch";
 import type { AgentTransactionsResponse } from "@/hooks/use-agent-transactions";
 
-// Page-sized hook for /agents/[id]/spends. Stack-based cursor navigation so
-// Prev works without refetching from the start. Mirrors
-// `useMerchantPaymentsPage` — same UX contract for an agent-dev viewing
-// their outgoing payment history.
+// Stack-based cursor pager so Prev works without refetching from start.
 export function useAgentSpendsPage(agentId: string, pageSize = 50) {
   const [cursorStack, setCursorStack] = useState<(string | undefined)[]>([
     undefined,
@@ -45,8 +42,7 @@ export function useAgentSpendsPage(agentId: string, pageSize = 50) {
   return {
     ...query,
     pageIndex: cursorStack.length - 1,
-    // Disable nav while fetching so double-clicks can't desync the cursor
-    // stack. Same pattern as useMerchantPaymentsPage.
+    // Disable nav while fetching so double-clicks can't desync the stack.
     canGoNext: !!query.data?.nextCursor && !query.isFetching,
     canGoPrev: cursorStack.length > 1 && !query.isFetching,
     goNext: () => {

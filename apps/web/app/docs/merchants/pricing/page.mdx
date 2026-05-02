@@ -8,7 +8,12 @@ export default function ({ children }) {
 
 Each `pay.charge()` call produces independent middleware, so you can
 price every route differently. Prices are authored in **atomic units** —
-USDC uses 6 decimals, so `"10000"` is $0.01.
+the smallest indivisible unit of the configured mint.
+
+For USDC (6 decimals, mainnet default), `"10000"` is `0.01 USDC` =
+`$0.01`. For devnet WSOL (9 decimals, current devnet default), the same
+`"10000"` is `0.00001 WSOL` ≈ a small fraction of a cent — the units
+example below assumes USDC math.
 
 ## Per-route prices
 

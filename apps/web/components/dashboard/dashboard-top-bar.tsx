@@ -14,13 +14,7 @@ import { RoleSwitcher } from "./role-switcher";
 import { LAST_ROLE_KEY, type Role } from "@/lib/onboarding";
 
 type Props = {
-  // Crumb rendered after "Obscura /" on the left. Defaults to "Dashboard"
-  // for backwards compat with the agent shell; merchant shell passes
-  // "Merchant dashboard".
   crumb?: string;
-  // Opening the command palette. Undefined → no palette trigger rendered
-  // (the merchant shell doesn't use it today — agents list is irrelevant
-  // there).
   onOpenPalette?: () => void;
 };
 
@@ -38,23 +32,12 @@ export function DashboardTopBar({
 
   const identity = session?.user?.email ?? "";
 
-  // Surface the "add the other side" affordance inside the authed product.
-  // This is the replacement for the landing-page intent scheme: if a user
-  // decides they want to register as a merchant (or as an agent), they do
-  // it here rather than via a hidden-flag CTA on the marketing site.
   const role = me?.user.role as Role | undefined;
   const canRegisterMerchant = role === "user";
   const canRegisterAgent = role === "merchant";
 
-  // `target` describes which dashboard the user is adding — it drives the
-  // toast text, the LAST_ROLE_KEY write, and the post-upgrade redirect.
-  // The mutation itself always sets role='both': either direction of
-  // upgrade produces a dual-role user.
-  //
-  // Keep the menu OPEN during the async. Closing before settle means the
-  // "Registering…" button label never paints and, on error, the user loses
-  // context (they'd have to reopen the menu to retry). Close only on
-  // success (navigation unmounts the menu) or keep open + toast on error.
+  // Mutation always sets role='both'; keep menu open during async so error
+  // toast preserves context (closing before settle hides the retry path).
   const upgradeRole = async (target: "agent" | "merchant") => {
     try {
       await setRole.mutateAsync("both");
@@ -76,7 +59,6 @@ export function DashboardTopBar({
     }
   };
 
-  // Click-outside close for the user menu
   useEffect(() => {
     if (!menuOpen) return;
     const handler = (e: MouseEvent) => {
@@ -89,12 +71,8 @@ export function DashboardTopBar({
   }, [menuOpen]);
 
   return (
-    // 3-column grid keeps the user menu flush-right regardless of whether
-    // the center slot has content. Flex + justify-between would leave the
-    // left and right clusters floating against the window edges when the
-    // center is empty (merchant shell without palette + single-role user).
+    // 3-column grid keeps user menu flush-right when center slot is empty.
     <header className="sticky top-0 z-40 grid h-12 grid-cols-[1fr_auto_1fr] items-center gap-4 border-b border-zinc-800/80 bg-[#0a0a0a]/85 px-4 backdrop-blur-md">
-      {/* Left: logo + workspace chip */}
       <div className="flex items-center gap-3 justify-self-start">
         <Link href="/" className="flex items-center gap-2">
           <Logo size="sm" />
@@ -106,9 +84,6 @@ export function DashboardTopBar({
         <span className="text-[13px] text-zinc-400">{crumb}</span>
       </div>
 
-      {/* Center: role switcher (for both-role users) + palette (agent shell).
-          Either may render null — the grid column is `auto` so it collapses
-          gracefully without pulling other columns. */}
       <div className="flex items-center gap-3 justify-self-center">
         <RoleSwitcher />
         {onOpenPalette ? (
@@ -146,7 +121,6 @@ export function DashboardTopBar({
         ) : null}
       </div>
 
-      {/* Right: user menu */}
       <div className="relative justify-self-end" ref={menuRef}>
         <button
           type="button"

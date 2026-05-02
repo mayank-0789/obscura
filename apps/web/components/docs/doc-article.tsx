@@ -1,13 +1,10 @@
 import Link from "next/link";
 
-// Flat navigation order across the full docs tree. Drives both the
-// breadcrumb (group label + page title) and the prev/next footer at the
-// bottom of every page. When adding a new page, just insert it here in
-// the right spot — the footer wires up automatically.
+/** Flat doc nav order; drives breadcrumb + prev/next footer. */
 export type DocPage = {
-  slug: string; // e.g. "/docs/agents/install"
-  group: string; // e.g. "Agents" — shown in breadcrumb
-  title: string; // page title, shown in breadcrumb + footer
+  slug: string;
+  group: string;
+  title: string;
 };
 
 export const DOC_PAGES: DocPage[] = [
@@ -30,14 +27,11 @@ export const DOC_PAGES: DocPage[] = [
   { slug: "/docs/merchants/reference", group: "Merchants", title: "API reference" },
 
   { slug: "/docs/concepts/x402", group: "Concepts", title: "x402 protocol" },
+  { slug: "/docs/concepts/mixer", group: "Concepts", title: "The Umbra mixer" },
   { slug: "/docs/concepts/spend-caps", group: "Concepts", title: "Spend caps" },
   { slug: "/docs/concepts/networks", group: "Concepts", title: "Devnet vs mainnet" },
 ];
 
-// Wrap every MDX page with this. Renders:
-//   - mono breadcrumb above the title ("Agents / Install")
-//   - the MDX children (your actual content)
-//   - Prev/Next footer drawn from DOC_PAGES
 export function DocArticle({
   slug,
   children,

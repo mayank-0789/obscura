@@ -4,12 +4,6 @@ import { env } from "@/lib/env";
 import { DEMO_RUNS_TOPIC, eventBroker } from "@/lib/event-broker";
 import { solscanTxUrl } from "@/lib/solscan";
 
-// Drives the judge-facing /demo playground. Re-implements the x402 dance
-// inline (instead of calling the SDK's one-shot agent.fetch) so each
-// transition can be emitted as a discrete UI step. Privacy framing is
-// load-bearing here: every step name calls out what the Umbra mixer hides
-// vs. what's visible — that's the whole reason judges are looking.
-
 export type DemoEndpoint = "/headlines" | "/article/47" | "/digest";
 
 export const DEMO_ENDPOINTS: readonly DemoEndpoint[] = [
@@ -66,8 +60,6 @@ export type DemoStep =
   | {
       phase: "error";
       text: string;
-      // SDK-aligned error code so the UI can style insufficient_funds /
-      // over_cap / signing_failed differently from a generic failure.
       code: string;
     };
 
@@ -78,10 +70,6 @@ export type RunDemoSpendInput = {
   onStep: (step: DemoStep) => void;
 };
 
-// Decoded shape of `paymentRequiredHeader` as emitted by the merchant SDK.
-// We only read a couple of fields; loosely typed because we don't import the
-// merchant SDK's PaymentRequired type here (kept the orchestrator dependency-
-// free for fast cold starts on the SSE route).
 type DecodedPaymentRequired = {
   accepts?: Array<{
     scheme?: string;
@@ -113,7 +101,6 @@ export async function runDemoSpend(input: RunDemoSpendInput): Promise<void> {
 
   const resourceUrl = `${merchantUrl.replace(/\/+$/, "")}${endpoint}`;
 
-  // 1. Initial fetch — expect 402 from the demo merchant.
   onStep({
     phase: "calling_merchant",
     text: `Agent → GET ${endpoint}`,
@@ -124,9 +111,11 @@ export async function runDemoSpend(input: RunDemoSpendInput): Promise<void> {
   try {
     initial = await fetch(resourceUrl);
   } catch (err) {
+    // Don't echo merchantUrl/err to public stream — may carry internal hosts.
+    console.error("[demo-orchestrator] merchant unreachable:", merchantUrl, err);
     onStep({
       phase: "error",
-      text: `Couldn't reach demo merchant at ${merchantUrl}: ${describe(err)}`,
+      text: "Couldn't reach demo merchant — see server logs.",
       code: "network_error",
     });
     return;
@@ -171,9 +160,7 @@ export async function runDemoSpend(input: RunDemoSpendInput): Promise<void> {
     recipientShort: shortAddr(requirement.payTo),
   });
 
-  // 2. Ask Obscura to sign — internal HTTP hop into our own /api/x402/sign.
-  //    Going via the public API URL (rather than importing the route handler)
-  //    keeps auth / cap / mixer plumbing in exactly one place.
+  // Internal HTTP hop into our own /api/x402/sign keeps auth/cap/mixer in one place.
   onStep({
     phase: "signing",
     text: "Obscura signing via Umbra mixer…",
@@ -205,12 +192,23 @@ export async function runDemoSpend(input: RunDemoSpendInput): Promise<void> {
       error?: string;
       message?: string;
     };
+    // Allowlist of safe public codes; everything else collapses to generic.
+    const safeCodes = new Set([
+      "over_cap",
+      "insufficient_funds",
+      "rate_limited",
+      "agent_inactive",
+      "demo_disabled",
+    ]);
+    const code = body.error && safeCodes.has(body.error) ? body.error : "signing_failed";
+    console.error("[demo-orchestrator] sign failed:", signRes.status, body);
     onStep({
       phase: "error",
-      text: body.message
-        ? `${body.error ?? signRes.status}: ${body.message}`
-        : `Obscura sign failed (${signRes.status})`,
-      code: body.error ?? "signing_failed",
+      text:
+        code === "signing_failed"
+          ? `Obscura sign failed (${signRes.status})`
+          : `${code}: ${body.message ?? "see server logs"}`,
+      code,
     });
     return;
   }
@@ -232,10 +230,7 @@ export async function runDemoSpend(input: RunDemoSpendInput): Promise<void> {
     {};
   const queueSignature = envelope.queueSignature ?? "";
   const callbackSignature = envelope.callbackSignature ?? null;
-  // Prefer the callback signature for Solscan — that's the on-chain
-  // breadcrumb proving the encrypted-state update finalised. Fall back to the
-  // queue tx if the callback didn't land yet (shouldn't happen for an OK
-  // sign response, but be defensive).
+  // Prefer callback sig (proves encrypted-state finalised); fall back defensively.
   const solscanSig = callbackSignature ?? queueSignature;
   const solscanUrl = solscanSig ? solscanTxUrl(solscanSig) : "";
 
@@ -249,7 +244,6 @@ export async function runDemoSpend(input: RunDemoSpendInput): Promise<void> {
     solscanUrl,
   });
 
-  // 3. Re-fetch the merchant resource with PAYMENT-SIGNATURE.
   onStep({
     phase: "fetching_resource",
     text: `Agent → GET ${endpoint} (with PAYMENT-SIGNATURE)`,
@@ -291,8 +285,6 @@ export async function runDemoSpend(input: RunDemoSpendInput): Promise<void> {
     solscanUrl,
   });
 
-  // Fan out to the side-panel subscribers. Best-effort — never throw out of
-  // the orchestrator just because publish failed.
   try {
     eventBroker.publish(DEMO_RUNS_TOPIC, {
       kind: "demo_run",
@@ -307,8 +299,6 @@ export async function runDemoSpend(input: RunDemoSpendInput): Promise<void> {
     console.error("[demo-orchestrator] broker publish failed:", err);
   }
 }
-
-/* ─── helpers ───────────────────────────────────────────────────── */
 
 function decodeBase64Json<T>(b64: string): T | null {
   try {

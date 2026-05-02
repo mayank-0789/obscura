@@ -10,14 +10,7 @@ export class UnauthorizedError extends Error {
   }
 }
 
-// Auth-aware fetch. Under NextAuth the session is carried by an HttpOnly
-// cookie that the browser includes automatically on same-origin requests, so
-// we don't inject any Authorization header here. We DO still treat 401 as
-// session death and trigger a clean sign-out before the caller sees the
-// error — that contract is the point of going through this wrapper.
-//
-// Every hook that talks to our API uses this so the app-wide
-// "401 ⇒ sign out" behaviour stays consistent.
+// 401 ⇒ clean sign-out before caller sees the error (app-wide contract).
 export function useAuthedFetch() {
   const signOut = useSignout();
 

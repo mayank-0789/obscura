@@ -6,23 +6,13 @@ import { MissingMerchantState } from "./missing-merchant-state";
 import { useMerchant } from "@/hooks/use-merchant";
 import { useMerchantEvents } from "@/hooks/use-merchant-events";
 
-/**
- * Authenticated merchant-side chrome. Mirrors the agent AppShell's structure
- * (sticky top bar + left sidebar + scrollable main) but with a merchant
- * sidebar and no create-agent/command-palette wiring.
- *
- * Also owns the "no merchant on this login" branch so every page under
- * /merchants/* handles it uniformly — Payments, Settings, APIs all get the
- * register CTA without their own 404 plumbing.
- */
+/** Authed merchant chrome; centralizes the "no merchant row" branch. */
 export function MerchantAppShell({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const { data, error, isLoading } = useMerchant();
-  // Subscribe to the real-time payment stream for every merchant surface so
-  // any of them reflect a new payment within ~1 frame of landing on-chain.
   useMerchantEvents();
   const merchantEtaAddress = data?.merchant.etaAddress ?? null;
 
@@ -40,7 +30,6 @@ export function MerchantAppShell({
           {isMissingMerchant ? (
             <MissingMerchantState />
           ) : isLoading && !data ? (
-            // Thin loading pass — each child renders its own skeletons.
             <>{children}</>
           ) : (
             children

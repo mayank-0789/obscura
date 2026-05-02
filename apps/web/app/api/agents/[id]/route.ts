@@ -4,9 +4,6 @@ import { authGuard } from "@/lib/auth";
 import { apiError, apiOk } from "@/lib/api";
 import { serializeAgent } from "@/lib/agent-serialize";
 
-// GET /api/agents/[id] — single agent detail, scoped to the current user.
-// 404 covers both "no such agent" and "exists but belongs to someone else" to
-// avoid leaking existence.
 export async function GET(
   req: Request,
   ctx: { params: Promise<{ id: string }> },

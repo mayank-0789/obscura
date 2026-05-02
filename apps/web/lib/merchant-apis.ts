@@ -2,27 +2,16 @@ import "server-only";
 import { z } from "zod";
 import type { merchantApis } from "@/lib/db";
 
-// Shared validators for /api/merchants/me/apis/* routes. Keeping them in lib
-// so both POST and PATCH share the exact same rules.
-//
-// Endpoint pattern: must look like an Express-style route path — starts with
-// `/`, no protocol, no host. We don't require param syntax (`:id`) because
-// many APIs are flat.
-//
-// Regex permits RFC 3986 pchar characters EXCEPT `%`, which is handled
-// separately via the `(?:%[0-9A-Fa-f]{2})` alternation so a malformed
-// percent-encoding like `/foo%zz` is rejected. `*` quantifier on a character
-// class + non-nested alternation is linear-time — no ReDoS risk.
+// `%` handled via `(?:%[0-9A-Fa-f]{2})` so malformed encodings like `/foo%zz` are rejected.
 const ENDPOINT_RE =
   /^\/(?:[A-Za-z0-9\-._~!$&'()*+,;=:@/]|%[0-9A-Fa-f]{2})*$/;
 
 export const ApiNameSchema = z.string().trim().min(1).max(80);
 
-// Accept either a bare path (`/article/:id`) OR a full URL (`https://...`).
-// If a full URL is provided, normalize to its pathname — merchants copying
-// the `resource.url` from an x402 challenge shouldn't need to know to strip
-// the scheme/host. Rejects anything that's neither a valid path nor a valid
-// URL.
+/**
+ * Accepts a bare path (`/article/:id`) OR a full URL (normalized to its
+ * pathname). Rejects anything that's neither.
+ */
 export const ApiEndpointSchema = z
   .string()
   .trim()
@@ -51,9 +40,7 @@ export const ApiEndpointSchema = z
     }
   });
 
-// Price bounds — 100 atomic = $0.0001 (the smallest sensible x402 quote on a
-// 6-decimal stablecoin); 100_000_000 atomic = $100 per call (upper sanity
-// check, we'd want explicit opt-in above this). Both inclusive.
+// 100 atomic = $0.0001; 100_000_000 atomic = $100 per call.
 export const ApiPriceSchema = z
   .union([
     z.bigint(),
@@ -80,8 +67,6 @@ export const CreateApiBodySchema = z.object({
   status: ApiStatusSchema.optional().default("active"),
 });
 
-// PATCH accepts any subset of these fields. All-optional, but at least one
-// must be present — enforced at the route via refinement on Object.keys.
 export const UpdateApiBodySchema = z.object({
   name: ApiNameSchema.optional(),
   endpoint: ApiEndpointSchema.optional(),
@@ -92,9 +77,7 @@ export const UpdateApiBodySchema = z.object({
 export type CreateApiBody = z.infer<typeof CreateApiBodySchema>;
 export type UpdateApiBody = z.infer<typeof UpdateApiBodySchema>;
 
-// Shared serializer so both list + single-entry routes present identical
-// shapes to clients. Kept here rather than duplicated in two route files.
-// bigint → decimal string for JSON transport.
+/** Shared serializer; bigint → decimal string for JSON transport. */
 export function serializeMerchantApi(
   row: typeof merchantApis.$inferSelect,
 ): {

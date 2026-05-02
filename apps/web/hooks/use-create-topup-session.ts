@@ -6,6 +6,8 @@ import { useAuthedFetch } from "@/hooks/use-authed-fetch";
 export type CreateTopupSessionInput = {
   agentId: string;
   amountInr: number;
+  // Server refuses with `conflict` if rate drifted since breakdown render.
+  quotedRate?: number;
 };
 
 export type CreateTopupSessionResult = {
@@ -13,8 +15,6 @@ export type CreateTopupSessionResult = {
   sessionId: string;
 };
 
-// Creates a Dodo checkout session for a top-up. On success the caller should
-// redirect the browser to `checkoutUrl` — Dodo handles the rest.
 export function useCreateTopupSession() {
   const authedFetch = useAuthedFetch();
 

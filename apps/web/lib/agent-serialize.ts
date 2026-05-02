@@ -4,9 +4,7 @@ import type { AgentDTO } from "@/types/agent";
 
 type BudgetSnapshot = Pick<Budget, "period" | "capInr" | "capUsdg" | "spentUsdg">;
 
-// DB rows → wire shape. bigints are stringified (JSON.stringify doesn't handle
-// them); Date becomes ISO string via toJSON(). Every agent response goes through
-// this so the wire contract lives in exactly one place.
+/** DB row → wire shape. bigints stringified; Date → ISO. Single source of truth for the agent wire contract. */
 export function serializeAgent(
   agent: Agent,
   budget: BudgetSnapshot | null,

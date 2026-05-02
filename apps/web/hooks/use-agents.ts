@@ -5,8 +5,7 @@ import { useSession } from "next-auth/react";
 import { useAuthedFetch } from "@/hooks/use-authed-fetch";
 import type { AgentDTO } from "@/types/agent";
 
-// Lists the current user's agents. Shares its queryKey with use-create-agent
-// so new agents appear the moment the mutation resolves.
+// Shares queryKey with use-create-agent for instant new-agent appearance.
 export function useAgents() {
   const { status } = useSession();
   const authedFetch = useAuthedFetch();

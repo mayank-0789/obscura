@@ -11,16 +11,13 @@ import { calculateTopupBreakdown, serializeBreakdown } from "@/lib/pricing";
 
 const CreateTopupSessionBody = z.object({
   agentId: z.string().uuid(),
-  // Min ₹500 is the floor that keeps our margin positive after Dodo fee + GST.
-  // Max ₹1,00,000 per single top-up for anti-fraud.
   amountInr: z.number().int().min(500).max(100_000),
+  quotedRate: z.number().positive().optional(),
 });
 
-// POST /api/topup/session — create a Dodo Payments checkout session scoped to
-// a specific agent. Returns `checkoutUrl` which the client redirects to.
-//
-// The agent_id is passed as checkout metadata so the webhook handler can link
-// the confirmed payment back to the exact agent wallet we're crediting.
+// 0.5% — wider than realistic intra-minute USD/INR moves but narrower than a stale 15-min cache.
+const RATE_DRIFT_TOLERANCE = 0.005;
+
 export async function POST(req: Request) {
   const user = await authGuard(req);
   if (user instanceof Response) return user;
@@ -28,9 +25,6 @@ export async function POST(req: Request) {
   const body = await parseBody(req);
   if (body instanceof Response) return body;
 
-  // Prevent checkout-session spam: each user is capped at 10 initiated top-ups
-  // per hour. Refill attempts after a genuine failure are rare; this is a
-  // generous ceiling against abuse.
   const allowed = await checkLimit("topup-session", user.id, 10, "1 h");
   if (!allowed) return apiError("rate_limited");
 
@@ -44,10 +38,26 @@ export async function POST(req: Request) {
 
   const amountInPaise = body.amountInr * 100;
 
-  // Lock the FX rate at intent creation. Stamped into Dodo metadata so the
-  // webhook credits the exact USDG we promised here, regardless of how long
-  // the user takes to complete checkout or any rate movement in between.
-  const { rate } = await getInrPerUsd();
+  const { rate, source } = await getInrPerUsd();
+
+  // Refuse to lock the fallback rate — would over-charge by ~1.5% vs the live rate the user saw.
+  if (source === "fallback") {
+    return apiError(
+      "rate_unavailable",
+      "FX rate provider is unreachable. Please retry in a moment.",
+    );
+  }
+
+  if (body.quotedRate !== undefined) {
+    const drift = Math.abs(rate - body.quotedRate) / body.quotedRate;
+    if (drift > RATE_DRIFT_TOLERANCE) {
+      return apiError(
+        "conflict",
+        `Quoted rate ${body.quotedRate.toFixed(2)} drifted to ${rate.toFixed(2)}; please re-quote.`,
+      );
+    }
+  }
+
   const breakdown = calculateTopupBreakdown(BigInt(amountInPaise), rate);
 
   try {
@@ -66,10 +76,7 @@ export async function POST(req: Request) {
         amount_inr_paise: String(amountInPaise),
         rate_snapshot: rate.toString(),
       },
-      // Lock down the checkout surface so the final charge cannot diverge from
-      // the amount + currency we already validated server-side. The webhook
-      // amount-mismatch guard is the ultimate backstop, but disabling these at
-      // Dodo level means no user ever gets to the "paid then refused" state.
+      // Lock down checkout surface so final charge can't diverge from validated amount/currency.
       feature_flags: {
         allow_discount_code: false,
         allow_currency_selection: false,

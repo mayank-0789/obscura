@@ -1,19 +1,13 @@
-/**
- * Editor chrome — tab bar, line numbers, a realistic status bar.
- * The status bar is the punchline: it shows an actual settlement metric
- * right under the code, tying the snippet to the on-chain outcome.
- */
-
 type Line = { n: number; nodes: React.ReactNode };
 
 const tokens = {
-  kw: "text-[#f472b6]", // keyword / import / const / await
-  str: "text-[#6ee7b7]", // string literals
-  fn: "text-[#7dd3fc]", // function calls
-  cls: "text-[#fcd34d]", // class / constructor
-  com: "text-zinc-600 italic", // comments
-  id: "text-zinc-200", // identifiers
-  op: "text-zinc-500", // operators/punctuation
+  kw: "text-[#f472b6]",
+  str: "text-[#6ee7b7]",
+  fn: "text-[#7dd3fc]",
+  cls: "text-[#fcd34d]",
+  com: "text-zinc-600 italic",
+  id: "text-zinc-200",
+  op: "text-zinc-500",
 };
 
 const lines: Line[] = [
@@ -136,7 +130,6 @@ const lines: Line[] = [
 export function CodeEditor() {
   return (
     <div className="overflow-hidden rounded-lg border border-zinc-800 bg-[#0b0b0d] shadow-[0_30px_80px_-20px_rgba(0,0,0,0.8)]">
-      {/* Title bar */}
       <div className="flex items-center justify-between border-b border-zinc-800 bg-[#0e0e11] px-4 py-2.5">
         <div className="flex items-center gap-3">
           <div className="flex gap-1.5">
@@ -155,7 +148,6 @@ export function CodeEditor() {
         </div>
       </div>
 
-      {/* Tab strip */}
       <div className="flex items-center border-b border-zinc-800 bg-[#0b0b0d]">
         <div className="flex items-center gap-2 border-b border-emerald-400/80 bg-[#0a0a0a] px-4 py-2">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
@@ -169,7 +161,6 @@ export function CodeEditor() {
         </div>
       </div>
 
-      {/* Code body */}
       <div className="relative grid grid-cols-[52px_1fr] font-mono text-[13px] leading-[1.75]">
         <div className="border-r border-zinc-800/60 bg-[#0a0a0a] py-5 text-right">
           {lines.map((l) => (
@@ -191,15 +182,12 @@ export function CodeEditor() {
               {l.nodes}
             </div>
           ))}
-          {/* Blinking caret on the last content line */}
           <div className="mt-1 h-[1.75em]">
             <span className="blink-cursor inline-block h-[1.2em] w-[8px] translate-y-[3px] bg-emerald-400/80" />
           </div>
         </div>
       </div>
 
-      {/* Status bar — the real punchline. Mirrors editor status-bar chrome
-          but reports the on-chain outcome of the call, not linting. */}
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-zinc-800 bg-gradient-to-r from-emerald-500/10 via-transparent to-transparent px-4 py-2.5 font-mono text-[10.5px] uppercase tracking-[0.18em] text-zinc-400">
         <span className="flex items-center gap-2">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.9)]" />

@@ -1,12 +1,6 @@
-// Error codes surfaced from the Obscura backend (`/api/x402/sign`) plus
-// SDK-local failure modes. The server codes mirror `apps/web/lib/api.ts`
-// exactly — if you add a new one there, add it here too so consumers can
-// type-check against the full set.
-
+// Add a code here only if /api/x402/sign (or another agent-key route) emits
+// it. User-JWT-only codes from apps/web/lib/api.ts are intentionally absent.
 export type ObscuraErrorCode =
-  // Server-side codes (propagated from `/api/x402/sign` error responses).
-  // Kept in lockstep with `apps/web/lib/api.ts` — do not add a code here
-  // that the server cannot actually emit.
   | "missing_token"
   | "invalid_token"
   | "agent_inactive"
@@ -18,7 +12,6 @@ export type ObscuraErrorCode =
   | "signing_failed"
   | "bad_request"
   | "server_error"
-  // SDK-side codes (thrown from this package)
   | "no_payment_required_header"
   | "network_error"
   | "timeout"

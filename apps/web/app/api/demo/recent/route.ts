@@ -14,16 +14,7 @@ import {
   type DemoRunEvent,
 } from "@/lib/event-broker";
 
-// GET /api/demo/recent — SSE stream of recent demo runs for the side panel.
-//
-// Hydration: emits one `demo_run` event per existing spend transaction for
-// the configured demo agent (newest 10), then keeps the connection open and
-// fans out broker publishes from /api/demo/run as they happen.
-//
-// No auth — this is intentionally world-readable. The returned shape only
-// reveals: endpoint, amount, on-chain queue/callback signatures (all visible
-// on Solscan anyway), and a 1-octet-truncated IP that the orchestrator
-// already redacted before publishing.
+// World-readable by design: response only exposes publicly visible chain data.
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -40,10 +31,7 @@ export async function GET(req: Request) {
   }
 
   const demoAgentId = await resolveDemoAgentId(env.DEMO_AGENT_API_KEY);
-  // demoAgentId is null when the configured key doesn't match any agent (e.g.
-  // operator pasted a stale key). The stream still opens — empty history,
-  // and any successful run will still be published to the broker so live
-  // updates work even if hydration is empty.
+  // Stale/unmatched key → still open the stream so live publishes work even with empty hydration.
   const history = demoAgentId ? await loadHistory(demoAgentId) : [];
 
   const encoder = new TextEncoder();
@@ -65,9 +53,7 @@ export async function GET(req: Request) {
         }
       };
 
-      // enqueue can throw if the underlying connection has gone away without
-      // firing req.signal.abort (e.g. client process killed). Fold that into
-      // a full close so we don't leak a broker subscription + heartbeat.
+      // controller.enqueue can throw post-disconnect without firing abort; close to avoid leaks.
       const safeEnqueue = (chunk: string) => {
         if (closed) return;
         try {
@@ -79,10 +65,7 @@ export async function GET(req: Request) {
 
       safeEnqueue(`: connected\n\n`);
 
-      // Hydration — emit oldest-first so the client (which prepends each
-      // run into a list) ends up with newest-at-top after replay. The DB
-      // query already returned newest-first; reversing here is one O(n)
-      // copy on a list of 10.
+      // Reverse to oldest-first so the client's prepend-on-receive lands newest-at-top.
       for (const evt of [...history].reverse()) {
         safeEnqueue(`event: demo_run\ndata: ${JSON.stringify(evt)}\n\n`);
       }
@@ -131,10 +114,7 @@ async function loadHistory(agentId: string): Promise<DemoRunEvent[]> {
     .orderBy(desc(transactions.createdAt))
     .limit(HISTORY_LIMIT);
 
-  // Best-effort reconstruction. We don't keep the original endpoint string,
-  // so derive it from `merchantHost` + the price tier (5000/10000/15000 →
-  // /headlines /article /digest). Falls back to the merchant host alone
-  // when the amount doesn't match any tier.
+  // Endpoint isn't persisted; reconstruct from price tier and fall back to merchantHost.
   return rows.map((row) => ({
     kind: "demo_run" as const,
     endpoint: endpointFromAmount(row.amountUsdg) ?? row.merchantHost ?? "?",

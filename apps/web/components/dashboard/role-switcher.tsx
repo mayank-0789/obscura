@@ -9,13 +9,7 @@ import {
   type Role,
 } from "@/lib/onboarding";
 
-// Segmented pill that flips a role='both' user between /dashboard and
-// /merchants/dashboard. Renders null for single-role users — they can't
-// switch.
-//
-// Active side is inferred from the URL (anything under /merchants is
-// "merchant"; otherwise "agent"). Clicking the inactive side navigates AND
-// persists the choice to localStorage so next login lands there.
+/** Segmented pill flipping role='both' users between agent/merchant dashboards. */
 export function RoleSwitcher() {
   const router = useRouter();
   const pathname = usePathname();
@@ -24,9 +18,7 @@ export function RoleSwitcher() {
 
   if (!isDualRole(role)) return null;
 
-  // Trailing slash is load-bearing — `/merchants` is the marketing landing
-  // and should NOT be classified as the merchant workspace. Only routes
-  // *under* /merchants (the authenticated dashboard tree) flip the switcher.
+  // Trailing slash is load-bearing: `/merchants` is marketing, not workspace.
   const active: ActiveRole = pathname.startsWith("/merchants/")
     ? "merchant"
     : "agent";

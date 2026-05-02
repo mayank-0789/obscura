@@ -1,36 +1,37 @@
 import { merchantAuthGuard } from "@/lib/merchant-auth";
 import { eventBroker, merchantPaymentTopic } from "@/lib/event-broker";
 
-// GET /api/merchants/me/events — Server-Sent Events stream of payment events
-// for the authenticated merchant. Use the browser's `EventSource` to consume.
-//
-// Event types emitted:
-//   - event: `payment`  — a new confirmed spend landed in this merchant's
-//                         payout wallet (see MerchantPaymentEvent shape)
-//   - `:` comment lines — heartbeats every 25s to defeat proxy idle-timeouts
-//
-// Client disconnect (req.signal aborts) releases the broker subscription and
-// closes the stream.
-
-// Tell Next.js not to cache this at the framework level. SSE streams are
-// long-lived and must not be buffered by any intermediary. `dynamic` also
-// prevents the edge runtime from converting this into a static response.
 export const dynamic = "force-dynamic";
 
-// Must run on the Node.js runtime (NOT edge). The `eventBroker` singleton is
-// pinned to globalThis inside a single Node process, and the Helius webhook
-// handler writes to it from that same process. Edge functions execute in a
-// separate V8 isolate pool, which would silently decouple SSE subscribers
-// from webhook publishers — the SSE stream would stay open but receive
-// zero events. Leave `nodejs` even if a future Next.js release suggests
-// edge as default.
+// Pin to nodejs — the eventBroker singleton is process-pinned to globalThis;
+// edge isolates would silently decouple SSE subscribers from webhook publishers.
 export const runtime = "nodejs";
 
+// SSE keepalive: 25s heartbeat to defeat proxy idle-timeouts; close + unsubscribe on disconnect.
 const HEARTBEAT_INTERVAL_MS = 25_000;
+
+const MAX_CONNECTIONS_PER_MERCHANT = 5;
+const merchantConnectionCounts = new Map<string, number>();
 
 export async function GET(req: Request) {
   const ctx = await merchantAuthGuard(req);
   if (ctx instanceof Response) return ctx;
+
+  const merchantId = ctx.merchant.id;
+  const currentCount = merchantConnectionCounts.get(merchantId) ?? 0;
+  if (currentCount >= MAX_CONNECTIONS_PER_MERCHANT) {
+    return new Response(
+      JSON.stringify({
+        error: "rate_limited",
+        message: `Too many open event streams (${currentCount}). Close other dashboard tabs and retry.`,
+      }),
+      {
+        status: 429,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+  }
+  merchantConnectionCounts.set(merchantId, currentCount + 1);
 
   const topic = merchantPaymentTopic(ctx.merchant.etaAddress);
   const encoder = new TextEncoder();
@@ -46,16 +47,16 @@ export async function GET(req: Request) {
         closed = true;
         if (heartbeat) clearInterval(heartbeat);
         if (unsubscribe) unsubscribe();
+        const next = (merchantConnectionCounts.get(merchantId) ?? 1) - 1;
+        if (next <= 0) merchantConnectionCounts.delete(merchantId);
+        else merchantConnectionCounts.set(merchantId, next);
         try {
           controller.close();
         } catch {
-          // already closed — safe to ignore.
+          // already closed
         }
       };
 
-      // enqueue can throw when the underlying connection has gone away
-      // without firing req.signal.abort. Fold into a full close so the
-      // broker subscription + heartbeat don't leak.
       const safeEnqueue = (chunk: string) => {
         if (closed) return;
         try {
@@ -65,8 +66,6 @@ export async function GET(req: Request) {
         }
       };
 
-      // Initial frame announces the connection is open and flushes any
-      // buffering proxies. EventSource ignores lines beginning with `:`.
       safeEnqueue(`: connected\n\n`);
 
       unsubscribe = eventBroker.subscribe(topic, (event) => {
@@ -77,7 +76,6 @@ export async function GET(req: Request) {
         safeEnqueue(`: heartbeat\n\n`);
       }, HEARTBEAT_INTERVAL_MS);
 
-      // Browser closing the tab / navigating away triggers req.signal abort.
       req.signal.addEventListener("abort", close, { once: true });
     },
   });
@@ -87,8 +85,6 @@ export async function GET(req: Request) {
       "Content-Type": "text/event-stream; charset=utf-8",
       "Cache-Control": "no-cache, no-transform",
       Connection: "keep-alive",
-      // Hint to reverse proxies (nginx) to disable response buffering for
-      // this connection — otherwise they may batch our frames.
       "X-Accel-Buffering": "no",
     },
   });

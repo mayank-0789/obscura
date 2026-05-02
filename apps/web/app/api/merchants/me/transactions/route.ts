@@ -7,18 +7,12 @@ import {
 } from "@/lib/merchant-queries";
 
 const QuerySchema = z.object({
-  // Page size. Clamped server-side to [1, 100].
   limit: z.coerce.number().int().min(1).max(100).optional().default(50),
-  // Opaque cursor returned by the previous page's `nextCursor`. Encodes
-  // (created_at, id) so ties at the same microsecond can't drop rows.
   cursor: z.string().min(1).optional(),
 });
 
-// GET /api/merchants/me/transactions?limit=50&cursor=<opaque>
-//
-// Returns confirmed x402 spend rows where counterparty matches the
-// authenticated merchant's etaAddress. Cursor-based pagination on
-// (created_at DESC, id DESC).
+// Reads must hit the partial index on (counterparty, status, kind='spend');
+// keep the underlying query aligned with that predicate.
 export async function GET(req: Request) {
   const ctx = await merchantAuthGuard(req);
   if (ctx instanceof Response) return ctx;
@@ -30,8 +24,7 @@ export async function GET(req: Request) {
   });
   if (!parsed.success) return apiError("bad_request");
 
-  // Malformed cursor → 400. Better than silently treating it as no cursor,
-  // which would dump page 1 when the client expected page N.
+  // Malformed cursor → 400 instead of silently restarting at page 1.
   let cursor;
   if (parsed.data.cursor) {
     const decoded = decodeMerchantTxCursor(parsed.data.cursor);

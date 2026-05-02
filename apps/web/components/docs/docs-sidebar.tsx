@@ -14,9 +14,6 @@ type DocSection = {
   links: DocLink[];
 };
 
-// Sidebar table of contents. Grouped by role/topic. When a page isn't built
-// yet, mark `soon: true` so the label is visible but non-clickable — avoids
-// broken links while the docs are still filling in.
 const SECTIONS: DocSection[] = [
   {
     title: "Getting started",
@@ -54,6 +51,7 @@ const SECTIONS: DocSection[] = [
     title: "Concepts",
     links: [
       { label: "x402 protocol", href: "/docs/concepts/x402" },
+      { label: "The Umbra mixer", href: "/docs/concepts/mixer" },
       { label: "Spend caps", href: "/docs/concepts/spend-caps" },
       { label: "Devnet vs mainnet", href: "/docs/concepts/networks" },
     ],

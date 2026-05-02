@@ -17,12 +17,7 @@ type QuoteResponse = {
   fetchedAt: number;
 };
 
-// Fetches the live rate once on mount, then recomputes the breakdown locally
-// as the user types. The rate is the only non-deterministic input; everything
-// else is pure math so we avoid a server round-trip on every keystroke.
-//
-// Returns `null` breakdown while the initial rate is loading OR when amount
-// is below the ₹500 minimum.
+// Fetches rate once + recomputes locally; null breakdown below ₹500 or while loading.
 export function useTopupQuote(amountInr: number | ""): {
   breakdown: TopupBreakdown | null;
   rate: number | null;
@@ -36,7 +31,7 @@ export function useTopupQuote(amountInr: number | ""): {
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    const fetchRate = async () => {
       try {
         const res = await authedFetch("/api/topup/quote", {
           method: "POST",
@@ -49,15 +44,18 @@ export function useTopupQuote(amountInr: number | ""): {
         setRateSource(json.rateSource);
       } catch {
         if (cancelled) return;
-        // Fallback — checkout still works, user sees slightly stale conversion.
         setRate(FX_FALLBACK_INR_PER_USD);
         setRateSource("fallback");
       } finally {
         if (!cancelled) setLoading(false);
       }
-    })();
+    };
+    void fetchRate();
+    // 90s refresh closes the breakdown-vs-server-lock divergence window.
+    const interval = setInterval(fetchRate, 90_000);
     return () => {
       cancelled = true;
+      clearInterval(interval);
     };
   }, [authedFetch]);
 

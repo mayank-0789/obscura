@@ -4,14 +4,6 @@ import { convertInrToUsdg, FX_FALLBACK_INR_PER_USD } from "@/lib/rates";
 
 export { FX_FALLBACK_INR_PER_USD };
 
-// Live INR/USD rate sourced from Frankfurter (https://frankfurter.app) — ECB
-// reference rates, free, no API key. Cached in-process for 15 minutes so we
-// don't hammer the endpoint on every checkout.
-//
-// When Frankfurter is unreachable or returns implausible data, callers fall
-// back to a hardcoded rate so checkout stays alive. Stale-by-a-day is fine;
-// INR/USD doesn't swing meaningfully hour-to-hour.
-
 const CACHE_TTL_MS = 15 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 3_000;
 const FRANKFURTER_URL = "https://api.frankfurter.app/latest?from=USD&to=INR";
@@ -27,8 +19,7 @@ export type FxQuote = {
 
 /**
  * Fetch the live rate and convert INR paise to USDG micros. Rate is locked at
- * call time and should be stored alongside the resulting USDG amount
- * (see `transactions.rate_snapshot`).
+ * call time and should be stored alongside the resulting USDG amount.
  */
 export async function quoteInrToUsdg(paise: bigint): Promise<{
   usdg: bigint;
@@ -54,8 +45,7 @@ export async function getInrPerUsd(): Promise<FxQuote> {
     const body = (await res.json()) as { rates?: { INR?: number } };
     const rate = body.rates?.INR;
 
-    // Plausibility guard. INR/USD has been in [60, 110] for a decade; anything
-    // outside that is almost certainly a bad payload.
+    // INR/USD has been in [60, 110] for a decade — outside that is bad data.
     if (typeof rate !== "number" || rate < 50 || rate > 150) {
       throw new Error(`frankfurter: implausible rate ${rate}`);
     }

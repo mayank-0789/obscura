@@ -1,14 +1,6 @@
 import { Keypair } from "@solana/web3.js";
 
-// Parse a Solana secret key string into a Keypair.
-//
-// Accepted formats:
-//   - JSON array "[12,34,...,89]" — what `solana-keygen new` writes to disk.
-//     This is our default: we paste the contents of the keygen .json file
-//     directly into the TREASURY_SECRET_KEY env var.
-//
-// We deliberately don't support base58 strings yet — adding that would pull in
-// a bs58 dep for one rare input format. Add when a real use case shows up.
+// Parse a Solana secret key (JSON array format from solana-keygen) into a Keypair.
 export function keypairFromSecret(secret: string): Keypair {
   const trimmed = secret.trim();
   if (!trimmed.startsWith("[") || !trimmed.endsWith("]")) {

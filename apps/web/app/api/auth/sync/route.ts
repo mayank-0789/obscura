@@ -2,12 +2,8 @@ import { db, users } from "@/lib/db";
 import { requireAuth, AuthError } from "@/lib/auth";
 import { apiError, apiOk } from "@/lib/api";
 
-// POST /api/auth/sync — upsert the current user row keyed by Google sub.
-// Idempotent, safe to call repeatedly (and raced by concurrent callers — the
-// hook may fire more than once on rapid remounts).
-//
-// Implemented as a single atomic INSERT ... ON CONFLICT DO UPDATE so two
-// concurrent syncs can't both insert and crash on unique_violation.
+// Recovery for the Auth.js v5 token.sub random-UUID trap: upsert keyed by Google sub.
+// Atomic INSERT...ON CONFLICT so concurrent rapid-remount syncs don't race on unique_violation.
 export async function POST(req: Request) {
   let sub: string;
   let email: string;

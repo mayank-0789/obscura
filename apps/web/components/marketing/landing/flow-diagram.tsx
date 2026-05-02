@@ -1,9 +1,3 @@
-/**
- * Three-actor "how it works" — YOU · YOUR AGENT · API PROVIDERS.
- * Each card answers: who / what they do / when / in what currency.
- * Arrows between cards show the direction of funds.
- */
-
 type Actor = {
   kicker: string;
   title: string;
@@ -49,7 +43,6 @@ export function FlowDiagram() {
       className="border-b border-zinc-800/60 bg-[#0a0a0a]"
     >
       <div className="mx-auto max-w-[1400px] px-6 pb-28 pt-28 lg:px-10">
-        {/* Header */}
         <div className="mb-16 max-w-2xl">
           <p className="rule-with-pip font-mono text-[11px] uppercase tracking-[0.3em] text-zinc-400">
             <span>Section II — How it works</span>
@@ -67,7 +60,6 @@ export function FlowDiagram() {
           </p>
         </div>
 
-        {/* Desktop: three actor cards in a row, arrows between */}
         <div className="hidden md:grid md:grid-cols-[1fr_auto_1fr_auto_1fr] md:items-stretch md:gap-0">
           <ActorCard actor={operator} index={0} />
           <Connector label="₹500  →  $6.00 USDC" />
@@ -76,7 +68,6 @@ export function FlowDiagram() {
           <ActorCard actor={merchant} index={2} />
         </div>
 
-        {/* Mobile: stacked vertically */}
         <div className="space-y-4 md:hidden">
           {actors.map((a, i) => (
             <div key={a.title}>
@@ -167,11 +158,6 @@ function Connector({ label }: { label: string }) {
     </div>
   );
 }
-
-/* ═══════════════════════════════════════════════════════════════════
-   SVG ILLUSTRATIONS — same vocabulary as before, reduced to the three
-   we need. Shared style: 80×80 viewBox, 1.4 stroke, emerald accent.
-   ═══════════════════════════════════════════════════════════════════ */
 
 function PhoneIcon() {
   return (

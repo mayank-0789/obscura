@@ -6,17 +6,8 @@ import { apiError, apiOk } from "@/lib/api";
 
 const IdSchema = z.string().uuid();
 
-// DELETE /api/agents/[id]/keys/[keyId] — soft-revoke an agent API key.
-//
-// Three-layer ownership: the session user owns the agent, and the key
-// belongs to that agent. All three checks live in the WHERE clause so a
-// malicious actor can't probe key existence by IDs they don't own — every
-// failure shape is the same 404.
-//
-// Last-key guard: revoking the FINAL active key would leave the agent
-// un-authable silently (every subsequent /api/x402/sign would return
-// invalid_token without explanation). Block it; the user can mint a new
-// key first via POST, or delete the agent entirely if they want it inert.
+// Soft-revoke via revoked_at — never hard DELETE (preserves audit trail and
+// keeps existing FK references valid). Last-key guard prevents bricking the agent.
 export async function DELETE(
   req: Request,
   ctx: { params: Promise<{ id: string; keyId: string }> },
@@ -29,9 +20,6 @@ export async function DELETE(
   const keyId = IdSchema.safeParse(rawKeyId);
   if (!agentId.success || !keyId.success) return apiError("bad_request");
 
-  // One round-trip to verify (a) the agent belongs to this user and (b)
-  // count active keys, before mutating. The count includes the key we're
-  // about to revoke, so "would this be the last one" = count <= 1.
   const [ownership] = await db
     .select({
       agentId: agents.id,

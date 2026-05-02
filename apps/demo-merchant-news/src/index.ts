@@ -2,18 +2,15 @@ import "dotenv/config";
 import express, { type Request, type Response, type NextFunction } from "express";
 import { obscura } from "@obscura-app/merchant-sdk";
 
-// The merchant's Umbra ETA address (Solana pubkey, base58). Derived
-// server-side at merchant signup — copy it from your merchant dashboard
-// or from /api/merchants/me into MERCHANT_ETA_ADDRESS in your .env.
+// Demo merchant — paid news API. Charges via Obscura x402 middleware.
+
 const merchantEtaAddress = process.env.MERCHANT_ETA_ADDRESS;
 if (!merchantEtaAddress) {
   throw new Error("MERCHANT_ETA_ADDRESS env is required");
 }
 
-// STABLECOIN_MINT must match the Obscura backend's STABLECOIN_MINT env. On
-// devnet today we run the demo against WSOL (because Umbra's devnet doesn't
-// support arbitrary mints yet); on mainnet this flips to USDC/USDG. Decimals
-// follow the mint — WSOL=9, USDC/USDG=6.
+// STABLECOIN_MINT must match the Obscura backend's STABLECOIN_MINT env.
+// Devnet: WSOL (decimals=9); mainnet: USDC/USDG (decimals=6).
 const stablecoinMint = process.env.STABLECOIN_MINT;
 if (!stablecoinMint) {
   throw new Error(
@@ -32,18 +29,13 @@ const pay = obscura({
 
 const app = express();
 
-// Request log + timing middleware. Runs BEFORE the merchant SDK's pay.charge
-// so we see every inbound hit; we tag the response when it lands so 402 vs
-// 200 are visible side-by-side. Without this, only settled (200) requests
-// would log via `logSettlement`, and the 402 → retry round-trip would be
-// invisible.
+// Tags 402 vs 200 side-by-side; without this only settled requests log via logSettlement.
 app.use((req: Request, res: Response, next: NextFunction) => {
   const startedAt = Date.now();
   console.log(`${time()} → ${req.method.padEnd(4)} ${req.path}`);
   res.on("finish", () => {
     const elapsed = `${(Date.now() - startedAt).toString().padStart(4)}ms`;
     if (res.statusCode === 402) {
-      // First hop. SDK will retry shortly with the umbra-mixer-v1 envelope.
       console.log(`${time()} ← 402  ${req.path}            (payment required, ${elapsed})`);
     } else if (res.statusCode === 200) {
       const settlement = (
@@ -59,9 +51,6 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-// A tiny fixture store so the agent's "GET /article/:id" returns plausible
-// varied content run-to-run without needing a real CMS behind it. Keeps the
-// demo self-contained.
 const ARTICLES = [
   { id: 47, headline: "Solana breaks 10k TPS again", tag: "infra" },
   { id: 48, headline: "Jupiter v3 launches routing engine", tag: "defi" },
@@ -70,8 +59,6 @@ const ARTICLES = [
   { id: 51, headline: "USDG mint expands to 4 new chains", tag: "stables" },
 ];
 
-// Cheapest paid endpoint — a list of headlines. Agent fetches this every
-// cycle to decide what to read next.
 app.get(
   "/headlines",
   pay.charge({ amount: "5000", description: "Headline list" }),
@@ -84,8 +71,6 @@ app.get(
   },
 );
 
-// Mid-price — full article body. The agent fetches this after seeing a
-// headline it "finds interesting."
 app.get(
   "/article/:id",
   pay.charge({ amount: "10000", description: "Full article body" }),
@@ -108,8 +93,6 @@ app.get(
   },
 );
 
-// Premium — hand-written digest across multiple articles. Agent calls
-// this less often because it's the most expensive.
 app.get(
   "/digest",
   pay.charge({ amount: "15000", description: "Editor-curated digest" }),

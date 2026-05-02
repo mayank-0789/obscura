@@ -56,7 +56,7 @@ The Obscura backend is the only party that ever sees plaintext amounts, and it's
 ## Quick demo
 
 - **Live demo:** `https://obscurapp.com/demo` *(once deployed)* — judge clicks one button to fire a real x402 transaction on Solana devnet via the Umbra mixer, watches each step stream live, gets a Solscan link to verify on-chain.
-- **Agent SDK demo:** `apps/demo-agent/` — a small Node script that hits `apps/demo-merchant-news/` three times for $0.005, $0.010, $0.015 each. Run end-to-end via `pnpm dev:demo` + `cd apps/demo-agent && pnpm start`.
+- **Agent SDK demo:** `apps/demo-agent/` — a small Node script that loops forever (Ctrl-C to stop), hitting `apps/demo-merchant-news/` once every ~25s with a mix of `/headlines` ($0.005), `/article/:id` ($0.010), and an occasional `/digest` ($0.015). Run end-to-end via `pnpm dev:demo` + `cd apps/demo-agent && pnpm start`.
 - **Demo video:** *(submitted alongside this README)*
 
 ---
@@ -125,13 +125,13 @@ The Obscura backend is the only party that ever sees plaintext amounts, and it's
 
 This is the section the privacy-track judges should read carefully. Every Umbra SDK function we call, where it's called from, and why.
 
-All Umbra integration lives in **`apps/web/lib/umbra.ts`** (~590 lines). Routes, cron jobs, and provisioning helpers all go through that single module — there is no other call site to `@umbra-privacy/sdk` or `@umbra-privacy/web-zk-prover`.
+The bulk of the Umbra integration lives in **`apps/web/lib/umbra.ts`** (~605 lines). Two carve-outs intentionally import the SDK directly: `apps/web/app/api/cron/claim-daemon/route.ts` (scanner + claimer + relayer + claim prover, kept self-contained so the cron has no extra module graph) and `apps/web/app/api/webhooks/dodo/route.ts` (`assertU64` for the deposit amount brand). Anywhere else, fold imports back through `lib/umbra.ts`.
 
 ### 1. Identity and key derivation
 
 Umbra requires every participant — agent, merchant, treasury — to have its own keypair. Storing N keypairs alongside N database rows would be a single point of compromise. Instead, we derive every Umbra keypair on demand from a single env-stored master secret.
 
-**File: `apps/web/lib/umbra.ts:71-103`**
+**File: `apps/web/lib/umbra.ts:81-113`**
 
 ```ts
 const DOMAIN_SEPARATOR_PREFIX = "umbra/v1/" as const;
@@ -174,7 +174,7 @@ Before a subject can deposit, send, or receive anything, it must be registered o
 
 We discovered the dual-mode requirement empirically — the SDK throws Umbra error `18003` (`ENCRYPTED_USER_ACCOUNT_IS_ACTIVE_FOR_ANONYMOUS_USAGE_BIT_MUST_BE_SET`) without `anonymous: true` set on both ends.
 
-**File: `apps/web/lib/umbra.ts:208-226`**
+**File: `apps/web/lib/umbra.ts:218-236`**
 
 ```ts
 import {
@@ -205,13 +205,13 @@ The anonymous step requires a Groth16 ZK proof — supplied by `getUserRegistrat
 - `apps/web/app/api/agents/route.ts` — agent creation flow
 - `apps/web/lib/merchants.ts` — merchant provisioning (`createMerchantWallet`)
 
-Before registering, we lazy-fund the subject's derived address with ~0.05 SOL from the treasury so it can pay its own three registration transactions. See `fundSubjectAddressIfNeeded` (`apps/web/lib/umbra.ts:241-263`).
+Before registering, we lazy-fund the subject's derived address with ~0.05 SOL from the treasury so it can pay its own three registration transactions. See `fundSubjectAddressIfNeeded` (`apps/web/lib/umbra.ts:251-273`).
 
 ### 3. Direct deposits — treasury → encrypted balance
 
 When a user tops up their agent via Dodo (fiat → INR → USDC equivalent), the Dodo webhook handler receives `payment.succeeded`, parses the metadata, and calls our deposit helper to credit the agent's encrypted balance.
 
-**File: `apps/web/lib/umbra.ts:293-319`**
+**File: `apps/web/lib/umbra.ts:303-329`**
 
 ```ts
 import {
@@ -259,7 +259,7 @@ There are two paths Umbra exposes for ETA → ETA confidential transfer:
 
 Latency cost of Path B: ~10–25s per transfer (Groth16 prove + Arcium MPC callback). Acceptable for x402 single-call payments (which typically deliver multi-second-of-LLM-work APIs anyway), unsuitable for sub-cent streaming.
 
-**File: `apps/web/lib/umbra.ts:452-490`**
+**File: `apps/web/lib/umbra.ts:462-504`**
 
 ```ts
 import {
@@ -300,21 +300,21 @@ The function:
 4. Waits for Arcium MPC to validate and emit a callback transaction.
 5. Returns `{ proofSignature, queueSignature, callbackSignature, callbackStatus }`.
 
-**Caller:** `apps/web/app/api/x402/sign/route.ts:250` — the x402 payment-signing route.
+**Caller:** `apps/web/app/api/x402/sign/route.ts:259` — the x402 payment-signing route.
 
-**Critical contract:** we refuse to issue the agent's `umbra-mixer-v1` payment header unless `callbackStatus === "finalized"` (`apps/web/app/api/x402/sign/route.ts:281-296`). A non-finalized callback means the encrypted balance debit may have landed but Arcium hasn't confirmed; the cap is left incremented (so the agent can't double-spend), the row stays `pending`, and the reconciler later resolves it.
+**Critical contract:** we refuse to issue the agent's `umbra-mixer-v1` payment header unless `callbackStatus === "finalized"` (`apps/web/app/api/x402/sign/route.ts:290-305`). A non-finalized callback means the encrypted balance debit may have landed but Arcium hasn't confirmed; the cap is left incremented (so the agent can't double-spend), the row stays `pending`, and the reconciler later resolves it.
 
 ### 5. Receiver claim daemon
 
 UTXOs sitting in the mixer tree don't automatically credit the recipient — the recipient must scan and claim them. The Obscura backend runs this on the merchant's behalf via a scheduled cron service.
 
 **Files involved:**
-- `apps/web/lib/umbra.ts:504-591` — scan + claim helpers
+- `apps/web/lib/umbra.ts:518-605` — scan + claim helpers
 - `apps/web/app/api/cron/claim-daemon/route.ts` — the cron entrypoint
 
 #### Scan: walk the mixer tree, find UTXOs addressed to this merchant
 
-**`apps/web/lib/umbra.ts:504-539`**
+**`apps/web/lib/umbra.ts:518-553`**
 
 ```ts
 import { getClaimableUtxoScannerFunction } from "@umbra-privacy/sdk";
@@ -344,7 +344,7 @@ The scanner walks the on-chain mixer tree from a `(treeIndex, startInsertionInde
 
 #### Claim: produce ZK proof and submit through the relayer
 
-**`apps/web/lib/umbra.ts:550-591`**
+**`apps/web/lib/umbra.ts:564-605`**
 
 ```ts
 import {
@@ -410,7 +410,7 @@ Notes on this implementation:
 
 For the agent dashboard, the agent's encrypted balance is decrypted **locally in the Obscura process** using the X25519 key. No MPC round-trip — fast.
 
-**File: `apps/web/lib/umbra.ts:366-380`**
+**File: `apps/web/lib/umbra.ts:376-390`**
 
 ```ts
 import { getEncryptedBalanceQuerierFunction } from "@umbra-privacy/sdk";
@@ -434,14 +434,14 @@ The `state === "shared"` check is the SDK's signal that the per-mint encrypted b
 
 **Callers:**
 
-- `apps/web/app/api/x402/sign/route.ts:176` — pre-flight balance check before the expensive mixer prove. Saves ~20s when the agent simply doesn't have funds.
+- `apps/web/app/api/x402/sign/route.ts:180` — pre-flight balance check before the expensive mixer prove. Saves ~20s when the agent simply doesn't have funds.
 - `apps/web/app/api/agents/[id]/balance/route.ts` — dashboard live-balance polling.
 
 ### 7. Withdrawals
 
 Merchants and operators can move funds from their encrypted balance back to a public SPL token account. Used for cash-out flows (planned) and operator emergency drains (built).
 
-**File: `apps/web/lib/umbra.ts:325-355`**
+**File: `apps/web/lib/umbra.ts:335-365`**
 
 ```ts
 import {
@@ -593,7 +593,7 @@ AGENT CODE      AGENT SDK    OBSCURA WEB    UMBRA / SOLANA    MERCHANT API
     │                │ ◄paymentSig │              │              │
     │                │                                          │
     │                │  3. GET (merchantUrl)                    │
-    │                │     X-PAYMENT: <umbra-mixer-v1 envelope> │
+    │                │     PAYMENT-SIGNATURE: <umbra-mixer-v1 envelope>│
     │                │ ────────────────────────────────────────►│
     │                │                            ┌────────────│
     │                │                            │ verify     │
@@ -661,9 +661,9 @@ What it does internally:
 2. On 402, read `PAYMENT-REQUIRED` header.
 3. POST to `${baseUrl}/api/x402/sign` with the challenge + Bearer api-key.
 4. Receive base64 `umbra-mixer-v1` envelope.
-5. Retry the original fetch with `X-PAYMENT: <envelope>`.
+5. Retry the original fetch with `PAYMENT-SIGNATURE: <envelope>`.
 
-Public surface: `Obscura`, `ObscuraError`, `ObscuraErrorCode`, `ObscuraOptions`. Errors carry typed codes (`over_cap`, `insufficient_funds`, `signing_failed`, `network_error`, `timeout`, etc.). Auto-retry policy: exponential backoff on transient errors only; terminal errors (`over_cap`, `conflict`, `invalid_token`) fail fast.
+Public surface: `Obscura`, `ObscuraError`, `ObscuraErrorCode`, `ObscuraOptions`. Errors carry typed codes (`over_cap`, `insufficient_funds`, `signing_failed`, `network_error`, `timeout`, etc.). Auto-retry policy: exponential backoff on transient errors only; terminal errors (`over_cap`, `conflict`, `invalid_token`, `signing_failed`, `timeout`) fail fast — the last two are terminal because the in-flight request may have already initiated an on-chain transfer and a retry would risk a second debit.
 
 ### `@obscura-app/merchant-sdk` — for API sellers
 
@@ -717,7 +717,7 @@ obscura/
 │   │   │   │       └── reconcile/route.ts    ← stuck-tx repair
 │   │   │   ├── (user)/                       ← agent-developer UI
 │   │   │   ├── (merchant)/                   ← merchant UI
-│   │   │   └── demo/                         ← live judge-facing demo (planned)
+│   │   │   └── demo/                         ← live judge-facing demo
 │   │   ├── lib/
 │   │   │   ├── umbra.ts                      ← all @umbra-privacy/sdk calls
 │   │   │   ├── solana.ts                     ← Helius RPC + treasury helpers
@@ -733,7 +733,6 @@ obscura/
 │   └── solana/                       ← @obscura-app/solana (web3.js helpers)
 ├── scripts/
 │   └── wrap-treasury-sol.ts          ← devnet helper (wrap SOL → WSOL for the test asset)
-├── MONEY-MODEL.md                    ← economics + flow-of-funds docs
 ├── UMBRA-DEPS.md                     ← peer-dependency pinning notes for @umbra-privacy/*
 └── README.md                         ← this file
 ```
@@ -774,7 +773,7 @@ pnpm dev:demo
 
 # 6. In a second terminal, run the demo agent
 cd apps/demo-agent && pnpm start
-# → 3 paid x402 calls, ~80s end-to-end on devnet
+# → loops until Ctrl-C, ~25s/cycle, 2-4 paid x402 calls per cycle on devnet
 ```
 
 ### Why WSOL as the demo asset
@@ -795,8 +794,6 @@ Four services:
 4. **`cron-reconcile`** — same shape, schedule `*/5 * * * *`, hits `/api/cron/reconcile`.
 
 All 4 services are configured in the same Railway project so they can address each other via Railway's internal DNS (`*.railway.internal`).
-
-`vercel.json` exists in the repo for historical reasons (the project was originally Vercel-targeted); Railway ignores it.
 
 ---
 

@@ -7,16 +7,8 @@ type Props = {
   stats: MerchantMeResponse["stats"] | undefined;
 };
 
-// 4-stat strip at the top of the merchant dashboard. Stats arrive as
-// bigint-strings or integer counts — we format + render. During initial
-// load (stats === undefined) we show em-dashes so the strip holds its
-// vertical rhythm before data arrives.
 export function MerchantStatsStrip({ stats }: Props) {
-  // Guard with `== null` (presence) instead of truthiness — a real $0.00
-  // reading from the backend (`totalEarnedUsdg === "0"`) is truthy as a
-  // string but would have been truthy as `0` too, and we want to SHOW
-  // "$0.00" for a new merchant, not em-dashes. The only em-dash state
-  // should be "still loading."
+  // `== null` guard distinguishes loading (em-dash) from real $0.00.
   const total = stats?.totalEarnedUsdg;
   const thisMo = stats?.thisMonthEarnedUsdg;
   const calls = stats?.callsCount;

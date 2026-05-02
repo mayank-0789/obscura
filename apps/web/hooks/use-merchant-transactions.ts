@@ -25,10 +25,6 @@ type Options = {
   cursor?: string;
 };
 
-// Cursor-paginated list of confirmed earnings for the authenticated merchant.
-// The dashboard calls this with limit=10 (recent feed); the full /payments
-// page will pass limit=50 + cursor for pagination. Polls at the same 10s
-// cadence as useMerchant so stats and feed stay visually in sync.
 export function useMerchantTransactions(options: Options = {}) {
   const { status } = useSession();
   const authedFetch = useAuthedFetch();

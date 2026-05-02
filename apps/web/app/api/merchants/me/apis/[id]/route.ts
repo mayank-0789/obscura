@@ -11,9 +11,6 @@ import {
 
 const IdSchema = z.string().uuid();
 
-// GET /api/merchants/me/apis/[id] — fetch a single entry. Merchant-scoped
-// WHERE so other merchants' entries 404 rather than 403 (doesn't leak
-// existence).
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -40,8 +37,6 @@ export async function GET(
   return apiOk({ api: serializeMerchantApi(row) });
 }
 
-// PATCH /api/merchants/me/apis/[id] — partial update. At least one field in
-// the body must be present. Endpoint changes re-check uniqueness.
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -60,16 +55,11 @@ export async function PATCH(
     return apiError("bad_request");
   }
 
-  // Reject empty-body PATCHes — a no-op update is a client bug, better to
-  // surface it than silently bump updated_at.
   if (Object.keys(body).length === 0) {
     return apiError("bad_request", "At least one field required");
   }
 
-  // If the caller is changing the endpoint, ensure no sibling entry already
-  // claims the new value. `ne(id)` excludes the row being updated from the
-  // uniqueness check — otherwise PATCHing the same endpoint back onto itself
-  // would spuriously 409.
+  // ne(id) excludes self so PATCHing the same endpoint back doesn't false-409.
   if (body.endpoint) {
     const duplicate = await db
       .select({ id: merchantApis.id })
@@ -105,13 +95,7 @@ export async function PATCH(
   return apiOk({ api: serializeMerchantApi(updated) });
 }
 
-// DELETE /api/merchants/me/apis/[id] — hard delete. Safe because no downstream
-// row has a NOT NULL FK to merchant_apis:
-//   - `transactions.merchant_host` is plain text (not a FK)
-//   - `x402_nonces.merchant_api_id` is a FK, but with `onDelete: "set null"`
-//     so deleting an entry nulls the nonce's pointer without cascading.
-// Catalog entries thus have no audit value post-removal; hard-delete keeps
-// the table tight.
+// Hard delete is safe: x402_nonces FK is ON DELETE SET NULL, transactions.merchant_host isn't a FK.
 export async function DELETE(
   req: Request,
   { params }: { params: Promise<{ id: string }> },

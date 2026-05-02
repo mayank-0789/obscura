@@ -1,6 +1,6 @@
 {
   "name": "@obscura-app/sdk",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Pay-per-call SDK for AI agents — wraps fetch() to handle x402 payments via Obscura on Solana.",
   "license": "MIT",
   "author": "Obscura",

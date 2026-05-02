@@ -10,45 +10,22 @@ import {
 } from "@/lib/db";
 import { env } from "@/lib/env";
 import { eventBroker, merchantPaymentTopic } from "@/lib/event-broker";
+import { checkLimit } from "@/lib/ratelimit";
 import { getConnection } from "@/lib/solana";
 
-// POST /api/webhooks/helius — inbound Helius Enhanced Webhook. Fires whenever
-// any watched account address (our registered merchant payout wallets) is a
-// party to a Solana transaction.
-//
-// Responsibilities:
-//   1. Verify the Authorization header matches HELIUS_WEBHOOK_AUTH_TOKEN
-//      (constant-time) — otherwise anyone discovering the endpoint could
-//      flip pending → confirmed on transactions they don't own.
-//   2. Idempotency via webhook_log: (provider='helius', event_id=<sig>) is
-//      unique, so a duplicate delivery of the same tx is a no-op UPSERT.
-//   3. For each transfer of our stablecoin mint into a watched recipient,
-//      find the matching pending transactions row (counterparty + amount +
-//      sender_pubkey + recent) and UPDATE it to confirmed.
-//   4. Publish a MerchantPaymentEvent to the in-process broker so any open
-//      SSE subscriber on the merchant's dashboard invalidates its SWR cache.
-//
-// Returns 200 on every well-auth'd request (including no-op duplicates) so
-// Helius doesn't retry us to death.
+// Pin to nodejs — the in-process eventBroker singleton is process-pinned, so
+// flipping to edge would silently break realtime SSE updates.
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-// Pending rows older than this window are ignored — we don't want a very old
-// pending (likely orphaned by a mid-flight failure in the SDK or Umbra mixer)
-// to get auto-confirmed by an unrelated same-amount transfer.
-const CONFIRM_WINDOW_MINUTES = 60;
+const CONFIRM_WINDOW_MINUTES = 60; // don't auto-confirm orphan pending rows older than this
 
-// Solana ed25519 signature in base58 is 87–88 chars, using the base58
-// alphabet (no 0, O, I, l). Pre-filter before any RPC call or DB write so
-// an attacker with a leaked auth token can't pollute solana_sig with junk.
+// Pre-filter malformed signatures before any RPC/DB write — leaked-token defense.
 const SOLANA_SIG_RE = /^[1-9A-HJ-NP-Za-km-z]{87,88}$/;
 
-// Helius Enhanced webhook payload — we only use a subset. The full schema
-// has many more fields; we keep validation loose on optional fields so a
-// schema drift from Helius doesn't 500 us.
 const TokenTransferSchema = z.object({
   mint: z.string(),
   tokenAmount: z.number().optional(),
-  // Raw atomic units. Helius provides this for most events; when missing we
-  // fall back to (tokenAmount * 10^decimals). Match on raw when available.
   rawTokenAmount: z
     .object({
       tokenAmount: z.string(),
@@ -65,34 +42,50 @@ const EventSchema = z.object({
   tokenTransfers: z.array(TokenTransferSchema).optional().default([]),
 });
 
-const BodySchema = z.array(EventSchema);
+const MAX_EVENTS_PER_BATCH = 100;
+
+const BodySchema = z
+  .array(EventSchema)
+  .max(MAX_EVENTS_PER_BATCH);
+
+// Decline idempotency on no-match within this window so Helius retries us
+// rather than wedging on a sign-route INSERT race.
+const PENDING_RACE_WINDOW_SECONDS = 120;
 
 export async function POST(req: Request) {
   if (!verifyAuth(req)) {
-    // Do NOT return a descriptive error — keep it opaque.
     return new Response(null, { status: 401 });
+  }
+
+  const sourceIp =
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    req.headers.get("x-real-ip") ??
+    "0.0.0.0";
+  const ok = await checkLimit("helius-webhook", sourceIp, 600, "1 m");
+  if (!ok) {
+    console.warn(`[helius-webhook] rate-limited source=${sourceIp}`);
+    return new Response(null, { status: 429 });
   }
 
   let events: z.infer<typeof BodySchema>;
   try {
     events = BodySchema.parse(await req.json());
   } catch {
-    // Malformed body → 400. Helius shouldn't be sending malformed payloads;
-    // if it is we want a loud log + fast fail, not a silent retry loop.
     console.error("[helius-webhook] malformed body");
     return new Response(null, { status: 400 });
   }
 
   let processed = 0;
   let skipped = 0;
+  let retryNeeded = false;
 
   for (const event of events) {
     try {
       const outcome = await handleEvent(event);
       if (outcome === "processed") processed += 1;
+      else if (outcome === "retry") retryNeeded = true;
       else skipped += 1;
     } catch (err) {
-      // Don't let one bad event tank the batch.
       console.error(
         `[helius-webhook] event ${event.signature} failed:`,
         err,
@@ -101,16 +94,19 @@ export async function POST(req: Request) {
     }
   }
 
+  if (retryNeeded && processed === 0) {
+    return new Response(
+      JSON.stringify({ status: "retry", reason: "pending_match_race_window" }),
+      { status: 503, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
   return Response.json({ processed, skipped });
 }
-
-// --------------------------------------------------------------------------
 
 function verifyAuth(req: Request): boolean {
   const expected = env.HELIUS_WEBHOOK_AUTH_TOKEN;
   if (!expected) {
-    // No token configured → accept nothing. Safer to block than to let
-    // unauthed calls flip tx state.
     console.warn(
       "[helius-webhook] HELIUS_WEBHOOK_AUTH_TOKEN not set; rejecting all inbound",
     );
@@ -119,16 +115,12 @@ function verifyAuth(req: Request): boolean {
   const received = req.headers.get("authorization");
   if (!received) return false;
 
-  // Compare fixed-length SHA-256 digests instead of the raw tokens. This
-  // closes the length-probe side channel (an attacker enumerating the secret's
-  // byte length by timing 401 responses against equal-length responses) at
-  // zero real cost.
   const expDigest = createHash("sha256").update(expected).digest();
   const recvDigest = createHash("sha256").update(received).digest();
   return timingSafeEqual(expDigest, recvDigest);
 }
 
-type HandleOutcome = "processed" | "skipped";
+type HandleOutcome = "processed" | "skipped" | "retry";
 
 async function handleEvent(
   event: z.infer<typeof EventSchema>,
@@ -139,9 +131,6 @@ async function handleEvent(
   );
   if (stablecoinTransfers.length === 0) return "skipped";
 
-  // Reject malformed signatures BEFORE any DB write. Prevents an attacker
-  // holding a leaked HELIUS_WEBHOOK_AUTH_TOKEN from polluting solana_sig or
-  // webhook_log.event_id with arbitrary bytes.
   if (!SOLANA_SIG_RE.test(event.signature)) {
     console.warn(
       `[helius-webhook] rejecting event with malformed signature: ${event.signature.slice(0, 20)}…`,
@@ -149,11 +138,7 @@ async function handleEvent(
     return "skipped";
   }
 
-  // Verify the signature exists on-chain and confirmed. This is the key
-  // defense against B3 (spoofed-payload money flip): even with a leaked
-  // auth token, an attacker can't forge a Solana transaction signature —
-  // getSignatureStatuses will either return null (sig not found) or err.
-  // Cost: one RPC call per matched event. Trivial at current volumes.
+  // On-chain re-verify: even with a leaked auth token, an attacker cannot forge a Solana signature.
   const onchainOk = await verifySignatureOnChain(event.signature);
   if (!onchainOk) {
     console.warn(
@@ -162,12 +147,37 @@ async function handleEvent(
     return "skipped";
   }
 
-  // Idempotency guard. INSERT into webhook_log with (provider, event_id)
-  // unique. If the row already exists ON CONFLICT DO NOTHING returns zero
-  // rows → this is a re-delivery, we're done. Placed AFTER the on-chain
-  // check so a forged event that failed verification doesn't permanently
-  // occupy an event_id an attacker could use to pre-empt a real delivery.
-  const [logged] = await db
+  const existing = await db
+    .select({ id: webhookLog.id })
+    .from(webhookLog)
+    .where(
+      and(
+        eq(webhookLog.provider, "helius"),
+        eq(webhookLog.eventId, event.signature),
+      ),
+    )
+    .limit(1);
+  if (existing.length > 0) return "skipped";
+
+  let matched = 0;
+  for (const transfer of stablecoinTransfers) {
+    if (await confirmPendingTx(event.signature, transfer)) matched += 1;
+  }
+
+  // Inside the race window with no match → decline idempotency so Helius retries
+  // (closes the race where on-chain confirmation lands before sign-route INSERT commits).
+  const eventAgeSeconds = event.timestamp
+    ? Math.max(0, Math.floor(Date.now() / 1000) - event.timestamp)
+    : Number.MAX_SAFE_INTEGER;
+  if (matched === 0 && eventAgeSeconds < PENDING_RACE_WINDOW_SECONDS) {
+    console.warn(
+      `[helius-webhook] no pending match yet for sig=${event.signature.slice(0, 12)}…; ` +
+        `eventAge=${eventAgeSeconds}s < ${PENDING_RACE_WINDOW_SECONDS}s — declining idempotency to allow retry`,
+    );
+    return "retry";
+  }
+
+  await db
     .insert(webhookLog)
     .values({
       provider: "helius",
@@ -177,14 +187,9 @@ async function handleEvent(
     })
     .onConflictDoNothing({
       target: [webhookLog.provider, webhookLog.eventId],
-    })
-    .returning({ id: webhookLog.id });
-  if (!logged) return "skipped";
+    });
 
-  for (const transfer of stablecoinTransfers) {
-    await confirmPendingTx(event.signature, transfer);
-  }
-  return "processed";
+  return matched > 0 ? "processed" : "skipped";
 }
 
 async function verifySignatureOnChain(signature: string): Promise<boolean> {
@@ -196,7 +201,6 @@ async function verifySignatureOnChain(signature: string): Promise<boolean> {
     const status = value[0];
     if (!status) return false;
     if (status.err) return false;
-    // 'processed' is not durable; require 'confirmed' or 'finalized'.
     return (
       status.confirmationStatus === "confirmed" ||
       status.confirmationStatus === "finalized"
@@ -213,30 +217,12 @@ async function verifySignatureOnChain(signature: string): Promise<boolean> {
 async function confirmPendingTx(
   signature: string,
   transfer: z.infer<typeof TokenTransferSchema>,
-): Promise<void> {
-  if (!transfer.toUserAccount || !transfer.fromUserAccount) return;
+): Promise<boolean> {
+  if (!transfer.toUserAccount || !transfer.fromUserAccount) return false;
 
   const amount = extractAtomicAmount(transfer);
-  if (amount === null) return;
+  if (amount === null) return false;
 
-  // Match the most-recent pending row where:
-  //   - counterparty == recipient
-  //   - amount_usdg == transferred amount
-  //   - the agent's on-chain pubkey == transfer.fromUserAccount
-  //   - created within CONFIRM_WINDOW_MINUTES
-  //   - still pending
-  // The agent-pubkey join is what makes this specific — matching by recipient
-  // + amount alone could confuse two merchants serving the same agent at the
-  // same price at the same time.
-  //
-  // Edge case — same agent pays same merchant the same amount back-to-back:
-  // `desc(createdAt) limit 1` always picks the newest pending. If the FIRST
-  // payment lands on-chain before the second (normal ordering), the webhook
-  // fires twice and we attach the right signature to the right row by
-  // coincidence of sequence. If ordering inverts (rare — RPC delivers tx
-  // notifications out of order), one row ends up with the wrong sig until a
-  // reconciler sweeps. Dashboard display is unaffected (amounts are
-  // identical). Acceptable.
   const windowStart = new Date(
     Date.now() - CONFIRM_WINDOW_MINUTES * 60 * 1000,
   );
@@ -263,7 +249,7 @@ async function confirmPendingTx(
       `[helius-webhook] no pending tx matched sig=${signature.slice(0, 12)}… ` +
         `to=${transfer.toUserAccount} from=${transfer.fromUserAccount} amount=${amount}`,
     );
-    return;
+    return false;
   }
 
   const [updated] = await db
@@ -275,12 +261,8 @@ async function confirmPendingTx(
     })
     .where(eq(transactions.id, match.id))
     .returning();
-  if (!updated) return;
+  if (!updated) return false;
 
-  // Look up the canonical merchant ETA address and use it as the broker topic
-  // key. Belt-and-braces vs Helius normalizing the recipient differently than
-  // our stored form — an SSE subscriber subscribes using its auth context's
-  // `merchant.etaAddress`, so the publish key must come from the same source.
   const [merchantRow] = await db
     .select({ etaAddress: merchants.etaAddress })
     .from(merchants)
@@ -298,14 +280,12 @@ async function confirmPendingTx(
     createdAt: updated.createdAt.toISOString(),
     confirmedAt: (updated.confirmedAt ?? new Date()).toISOString(),
   });
+  return true;
 }
 
 function extractAtomicAmount(
   transfer: z.infer<typeof TokenTransferSchema>,
 ): bigint | null {
-  // Prefer rawTokenAmount (already atomic) — more precise and avoids floating
-  // point. Fall back to tokenAmount * 10^decimals using the configured
-  // stablecoin decimals if raw is absent.
   if (transfer.rawTokenAmount) {
     try {
       return BigInt(transfer.rawTokenAmount.tokenAmount);
@@ -314,9 +294,9 @@ function extractAtomicAmount(
     }
   }
   if (typeof transfer.tokenAmount === "number") {
-    // Scale by 10^STABLECOIN_DECIMALS, floor to avoid floating-point artifacts.
+    // Math.round (not floor) — IEEE-754 scaling can land at .999… and silently miss the match.
     const scale = 10 ** env.STABLECOIN_DECIMALS;
-    return BigInt(Math.floor(transfer.tokenAmount * scale));
+    return BigInt(Math.round(transfer.tokenAmount * scale));
   }
   return null;
 }

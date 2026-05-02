@@ -11,12 +11,6 @@ type Props = {
   viewAllHref?: string;
 };
 
-// Outgoing-payment list for an agent's detail view. Mirrors the merchant
-// RecentPaymentsList but flipped:
-//   - amount is shown as "-$0.01" in zinc-300 (not emerald), to read as
-//     a debit rather than a credit
-//   - "to <host>" phrasing instead of "from agent <id>"
-//   - Solscan link targets the on-chain tx, not the account
 export function RecentSpendsList({
   transactions,
   isLoading,

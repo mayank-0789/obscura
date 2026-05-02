@@ -7,10 +7,6 @@ import { useUser } from "@/hooks/use-user";
 import { LAST_ROLE_KEY, type Role } from "@/lib/onboarding";
 
 type Props = {
-  // Which side of the rail this CTA is selling. Only consulted for
-  // already-authenticated users — to decide which dashboard to jump to.
-  // Unauthed clicks just open the login flow; post-login routing is
-  // role-based (handled by /onboarding).
   dashboard: "agent" | "merchant";
   children: React.ReactNode;
   variant?: "primary" | "secondary" | "inline";
@@ -18,21 +14,6 @@ type Props = {
   className?: string;
 };
 
-// Landing-page CTA. Behaviour:
-//
-//   unauthed                       → NextAuth Google sign-in with
-//                                    callbackUrl=/onboarding. The onboarding
-//                                    page handles role/ONBOARDED routing.
-//
-//   authed + role covers dashboard → direct-nav to matching dashboard.
-//
-//   authed + role doesn't cover    → direct-nav to matching dashboard
-//                                    ANYWAY. The dashboard handles "you
-//                                    don't have a merchant row yet" with
-//                                    a register CTA.
-//
-//   authed + /me still loading     → short pending state; a fast second
-//                                    click waits for data.
 export function CtaLink({
   dashboard,
   children,
@@ -58,16 +39,13 @@ export function CtaLink({
     }
 
     if (!meFetched) {
-      // Authed but user row still resolving — avoid firing a routing
-      // decision with `role === undefined`. Short pending state; user can
-      // click again once data lands.
+      // Avoid routing with role=undefined; user can click again once data lands.
       setPending(true);
       setTimeout(() => setPending(false), 1500);
       return;
     }
 
-    // For role='both' users, persist which side they jumped to so the
-    // AppShell role-switcher respects it across refreshes.
+    // role='both' users: persist target side so AppShell switcher honors it.
     if (role === "both") {
       localStorage.setItem(
         LAST_ROLE_KEY,

@@ -1,8 +1,3 @@
-/**
- * Editor chrome for the merchant quickstart — Express middleware snippet.
- * Status bar mirrors a real request outcome (charged + settled).
- */
-
 type Line = { n: number; nodes: React.ReactNode };
 
 const tokens = {

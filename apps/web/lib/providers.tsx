@@ -6,10 +6,6 @@ import type { Session } from "next-auth";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 
-// Root client providers: NextAuth session, TanStack Query (data), Sonner (toasts).
-// `session` is fetched server-side in the root layout via `auth()` and passed
-// down so the first paint already knows the auth state — avoids a "session is
-// loading" flicker.
 export function Providers({
   children,
   session,

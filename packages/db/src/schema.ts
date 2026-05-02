@@ -1,5 +1,3 @@
-// Obscura schema (post-Umbra pivot).
-// Conventions: UUIDs (pg defaultRandom), timestamptz, bigint for money.
 // USDG base units: $1 = 1_000_000 (6 decimals). INR paise: ₹1 = 100.
 // Soft deletes via status / revoked_at — avoid hard DELETEs.
 
@@ -18,10 +16,6 @@ import {
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
-// -----------------------------------------------------------------------------
-// Enums
-// -----------------------------------------------------------------------------
-
 export const userRole = pgEnum("user_role", ["user", "merchant", "both"]);
 
 export const agentStatus = pgEnum("agent_status", [
@@ -33,10 +27,10 @@ export const agentStatus = pgEnum("agent_status", [
 export const budgetPeriod = pgEnum("budget_period", ["monthly", "daily"]);
 
 export const txKind = pgEnum("tx_kind", [
-  "topup", // fiat in → encrypted balance
-  "spend", // encrypted balance out → merchant
-  "refund", // reverse of spend
-  "payout", // merchant cash-out → bank (v2)
+  "topup",
+  "spend",
+  "refund",
+  "payout",
 ]);
 
 export const txDirection = pgEnum("tx_direction", ["in", "out"]);
@@ -50,26 +44,17 @@ export const webhookProvider = pgEnum("webhook_provider", [
   "helius",
 ]);
 
-// Umbra-side state for an account (agent or merchant). NULL = not yet
-// registered on Umbra. Once registered, transitions to 'active'. Reserved
-// 'deregistered' for forward-compat (Umbra doesn't expose deregistration today
-// but the protocol supports it).
+// Reserved 'deregistered' for forward-compat (Umbra protocol supports it but doesn't expose today).
 export const umbraAccountStatus = pgEnum("umbra_account_status", [
   "active",
   "deregistered",
 ]);
 
-// -----------------------------------------------------------------------------
-// users — one row per authenticated Google identity. `role` can be 'user' |
-// 'merchant' | 'both'.
-// -----------------------------------------------------------------------------
-
 export const users = pgTable(
   "users",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    // Stable per-user identifier from the auth provider (Google `sub` today,
-    // surfaced via NextAuth session). Indexed unique.
+    // Google `sub` from NextAuth session, indexed unique.
     authId: text("auth_id").notNull(),
     email: text("email"),
     phone: text("phone"),
@@ -87,12 +72,6 @@ export const users = pgTable(
   ],
 );
 
-// -----------------------------------------------------------------------------
-// agents — autonomous program owned by a user. Has a server-derived Umbra
-// keypair (HMAC over UMBRA_AGENT_SEED_SECRET + agent.id) registered on Umbra
-// at creation time. `eta_address` is the L1 Solana pubkey for that keypair.
-// -----------------------------------------------------------------------------
-
 export const agents = pgTable(
   "agents",
   {
@@ -101,11 +80,9 @@ export const agents = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
-    // Solana pubkey (base58) of the agent's Umbra-side keypair. The encrypted
-    // token account (ETA) is a PDA derived from this address + the mint.
+    // Solana pubkey of the agent's Umbra-side keypair (derived server-side via HMAC).
     etaAddress: text("eta_address").notNull(),
     status: agentStatus("status").notNull().default("active"),
-    // Umbra-side registration state. NULL until first registration succeeds.
     umbraStatus: umbraAccountStatus("umbra_status"),
     umbraRegisteredAt: timestamp("umbra_registered_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -121,10 +98,6 @@ export const agents = pgTable(
   ],
 );
 
-// -----------------------------------------------------------------------------
-// budgets — spend policy per agent (1:1, enforced via unique index).
-// -----------------------------------------------------------------------------
-
 export const budgets = pgTable(
   "budgets",
   {
@@ -133,18 +106,13 @@ export const budgets = pgTable(
       .notNull()
       .references(() => agents.id, { onDelete: "cascade" }),
     period: budgetPeriod("period").notNull().default("monthly"),
-    // Source of truth (user-set INR, paise).
     capInr: bigint("cap_inr", { mode: "bigint" })
       .notNull()
       .default(sql`0`),
-    // USDG equivalent at set time (base units, 6 decimals).
     capUsdg: bigint("cap_usdg", { mode: "bigint" })
       .notNull()
       .default(sql`0`),
-    // Running counter for the current period. Reset lazily inside the x402
-    // cap-check path (apps/web/app/api/x402/sign/route.ts) — no cron: if the
-    // period has elapsed when the next sign arrives, spentUsdg is zeroed and
-    // periodStart advanced in the same transaction as the cap check.
+    // Lazy reset inside x402/sign cap-check path (no cron).
     spentUsdg: bigint("spent_usdg", { mode: "bigint" })
       .notNull()
       .default(sql`0`),
@@ -163,10 +131,6 @@ export const budgets = pgTable(
   (t) => [uniqueIndex("budgets_agent_id_idx").on(t.agentId)],
 );
 
-// -----------------------------------------------------------------------------
-// agent_api_keys — multiple per agent (rotation / audit). Plaintext shown once.
-// -----------------------------------------------------------------------------
-
 export const agentApiKeys = pgTable(
   "agent_api_keys",
   {
@@ -174,7 +138,7 @@ export const agentApiKeys = pgTable(
     agentId: uuid("agent_id")
       .notNull()
       .references(() => agents.id, { onDelete: "cascade" }),
-    keyHash: text("key_hash").notNull(), // SHA-256 of pk_<28-char nanoid>
+    keyHash: text("key_hash").notNull(),
     label: text("label"),
     lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
@@ -185,16 +149,7 @@ export const agentApiKeys = pgTable(
   (t) => [index("agent_api_keys_agent_id_idx").on(t.agentId)],
 );
 
-// -----------------------------------------------------------------------------
-// transactions — every money event. Solana tx is source of truth; this is a
-// materialized view. Daily reconciliation cron ensures on-chain ↔ DB parity.
-//
-// Umbra ops use the queue+callback pattern: queueSignature is the tx that
-// asks the Arcium MPC to compute, callbackSignature is the canonical "result
-// landed on-chain" tx (only `callbackStatus = 'finalized'` is success).
-// solanaSig stays for plain SPL paths (treasury fund-up etc.).
-// -----------------------------------------------------------------------------
-
+// Solana tx is source of truth, this is a materialized view; daily reconciliation.
 export const transactions = pgTable(
   "transactions",
   {
@@ -205,25 +160,15 @@ export const transactions = pgTable(
     kind: txKind("kind").notNull(),
     direction: txDirection("direction").notNull(),
     amountUsdg: bigint("amount_usdg", { mode: "bigint" }).notNull(),
-    // Only populated for topup / payout.
     amountInr: bigint("amount_inr", { mode: "bigint" }),
-    // FX rate locked at topup/payout time (INR per 1 USD). NULL for spends.
     rateSnapshot: numeric("rate_snapshot", { precision: 10, scale: 4 }),
-    // Merchant pubkey, literal "TREASURY", or "USER_BANK" sentinel.
     counterparty: text("counterparty").notNull(),
-    // Host of the paid resource for kind='spend' (e.g. "news.example.com").
-    // NULL for topups/payouts. Populated from the x402 `resource.url`.
     merchantHost: text("merchant_host"),
-    // Plain SPL signature (legacy / non-Umbra paths). For Umbra ops we mirror
-    // callbackSignature here once it finalizes, so consumers that key on
-    // solanaSig keep working.
     solanaSig: text("solana_sig"),
-    // Umbra MPC queue signature — proves we asked. Set BEFORE callback lands.
     queueSignature: text("queue_signature"),
-    // Umbra MPC callback signature — proves the encrypted-state update landed.
     callbackSignature: text("callback_signature"),
-    // 'finalized' | 'pruned' | 'timed_out' (from Arcium). Only 'finalized' is
-    // success; pruned/timed_out are uncertain — verify on-chain before retry.
+    // 'finalized' | 'pruned' | 'timed_out'. Only 'finalized' is success;
+    // pruned/timed_out are uncertain — verify on-chain before retry.
     callbackStatus: text("callback_status"),
     dodoPaymentId: text("dodo_payment_id"),
     status: txStatus("status").notNull().default("pending"),
@@ -235,15 +180,10 @@ export const transactions = pgTable(
   },
   (t) => [
     index("transactions_agent_id_created_at_idx").on(t.agentId, t.createdAt),
-    // Unique on solana_sig — multiple NULLs allowed (pending txs).
+    // Multiple NULLs allowed (pending txs).
     uniqueIndex("transactions_solana_sig_idx").on(t.solanaSig),
-    // Unique on dodo_payment_id — closes the concurrent-retry double-credit
-    // race in the Dodo webhook handler. Two retries can both pass the
-    // webhook_log idempotency check (one inserts, the other reads existing
-    // unprocessed); the unique index ensures only one of their pending-tx
-    // INSERTs survives, so depositTreasuryToEncryptedAccount can't fire twice
-    // for the same payment_id. Multiple NULLs are allowed (Postgres default),
-    // so non-topup transactions are unaffected.
+    // Closes concurrent-retry double-credit race in Dodo webhook: unique index
+    // ensures only one pending-tx INSERT survives so deposit can't fire twice.
     uniqueIndex("transactions_dodo_payment_id_idx").on(t.dodoPaymentId),
     // Partial index for merchant earnings queries.
     index("transactions_counterparty_confirmed_idx")
@@ -251,12 +191,6 @@ export const transactions = pgTable(
       .where(sql`${t.kind} = 'spend'`),
   ],
 );
-
-// -----------------------------------------------------------------------------
-// merchants — API providers. Have a server-derived Umbra keypair registered on
-// Umbra at signup time. `eta_address` is where agents pay them (via ETA→ETA
-// confidential transfer in the x402 hot path).
-// -----------------------------------------------------------------------------
 
 export const merchants = pgTable(
   "merchants",
@@ -266,10 +200,9 @@ export const merchants = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     name: text("name"),
-    // Solana pubkey of the merchant's Umbra-side keypair.
+    // Where agents pay merchants via ETA→ETA mixer.
     etaAddress: text("eta_address").notNull(),
-    dodoAccountId: text("dodo_account_id"), // nullable until cash-out onboarded
-    // Umbra-side registration state. NULL until first registration succeeds.
+    dodoAccountId: text("dodo_account_id"),
     umbraStatus: umbraAccountStatus("umbra_status"),
     umbraRegisteredAt: timestamp("umbra_registered_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -280,17 +213,12 @@ export const merchants = pgTable(
       .defaultNow(),
   },
   (t) => [
-    // Unique — one merchant per user. Enforces 1:1 at the DB level so a
-    // double-POST race on /api/merchants can't produce two rows; the losing
-    // INSERT trips ON CONFLICT and we re-read the winner.
+    // Enforces 1:1 at DB level so a double-POST race on /api/merchants
+    // can't produce two rows; losing INSERT trips ON CONFLICT.
     uniqueIndex("merchants_owner_user_id_idx").on(t.ownerUserId),
     uniqueIndex("merchants_eta_address_idx").on(t.etaAddress),
   ],
 );
-
-// -----------------------------------------------------------------------------
-// merchant_api_keys — same pattern as agent_api_keys.
-// -----------------------------------------------------------------------------
 
 export const merchantApiKeys = pgTable(
   "merchant_api_keys",
@@ -309,10 +237,6 @@ export const merchantApiKeys = pgTable(
   },
   (t) => [index("merchant_api_keys_merchant_id_idx").on(t.merchantId)],
 );
-
-// -----------------------------------------------------------------------------
-// merchant_apis — specific registered paid endpoints per merchant.
-// -----------------------------------------------------------------------------
 
 export const merchantApis = pgTable(
   "merchant_apis",
@@ -336,20 +260,13 @@ export const merchantApis = pgTable(
   },
   (t) => [
     index("merchant_apis_merchant_id_idx").on(t.merchantId),
-    // (merchant_id, endpoint) is the catalog's natural key — two entries with
-    // the same endpoint break the dashboard's friendly-name lookup. Enforced
-    // at the DB to close the read-then-write TOCTOU window in the POST route.
+    // Closes read-then-write TOCTOU window in the POST route.
     uniqueIndex("merchant_apis_merchant_id_endpoint_idx").on(
       t.merchantId,
       t.endpoint,
     ),
   ],
 );
-
-// -----------------------------------------------------------------------------
-// webhook_log — idempotency for incoming webhooks (dodo, helius).
-// UNIQUE (provider, event_id) — second delivery of same event is a no-op.
-// -----------------------------------------------------------------------------
 
 export const webhookLog = pgTable(
   "webhook_log",
@@ -365,16 +282,13 @@ export const webhookLog = pgTable(
       .defaultNow(),
   },
   (t) => [
+    // Second delivery of same event is no-op.
     uniqueIndex("webhook_log_provider_event_idx").on(t.provider, t.eventId),
     index("webhook_log_unprocessed_idx").on(t.processedAt),
   ],
 );
 
-// -----------------------------------------------------------------------------
-// x402_nonces — replay protection for x402 payments. TTL cleanup cron drops
-// expired rows hourly.
-// -----------------------------------------------------------------------------
-
+// Replay protection for x402 payments; TTL cleanup cron drops expired hourly.
 export const x402Nonces = pgTable(
   "x402_nonces",
   {
@@ -398,10 +312,6 @@ export const x402Nonces = pgTable(
     index("x402_nonces_expires_at_idx").on(t.expiresAt),
   ],
 );
-
-// -----------------------------------------------------------------------------
-// Type exports (inferred from schema).
-// -----------------------------------------------------------------------------
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;

@@ -3,13 +3,8 @@ import { and, countDistinct, desc, eq, sql } from "drizzle-orm";
 import { db, transactions, type Transaction } from "@/lib/db";
 
 /**
- * Aggregate stats for the merchant dashboard. Single scan over transactions
- * using the partial index (counterparty, status, created_at DESC) WHERE
- * kind = 'spend'.
- *
- * All sums are returned as strings (from bigint) because JS `number` can't
- * safely hold values beyond 2^53 — USDG atomic units are 6 decimals so we'd
- * overflow at ~$9B earned, unlikely but better to be bigint-honest from day 1.
+ * Aggregate stats for the merchant dashboard. Sums returned as bigint-safe
+ * strings — JS `number` overflows beyond ~$9B earned.
  */
 export type MerchantStats = {
   callsCount: number;
@@ -21,9 +16,6 @@ export type MerchantStats = {
 export async function getMerchantStats(
   etaAddress: string,
 ): Promise<MerchantStats> {
-  // Single aggregate query. Using raw SQL for the conditional SUM because
-  // drizzle's CASE WHEN ergonomics around bigints are clunkier than a literal
-  // SQL expression.
   const [row] = await db
     .select({
       callsCount: sql<number>`cast(count(*) as integer)`,
@@ -49,12 +41,8 @@ export async function getMerchantStats(
 }
 
 /**
- * Opaque pagination cursor encoding the last-seen row's `(created_at, id)`.
- * Composite ordering ensures rows with identical `created_at` microseconds
- * (possible under batch inserts) never drop from the feed — the id tiebreaker
- * picks a deterministic winner.
- *
- * Clients treat the returned `nextCursor` string as opaque.
+ * Opaque cursor encoding `(created_at, id)`. The id tiebreaker prevents
+ * dropped rows when multiple share the same microsecond timestamp.
  */
 export type MerchantTxCursor = { createdAt: string; id: string };
 
@@ -85,11 +73,9 @@ export function decodeMerchantTxCursor(
 }
 
 /**
- * Paginated feed of confirmed spends paid to this merchant. Cursor-based
- * pagination on `(created_at DESC, id DESC)`: row-value tuple comparison
- * prevents the microsecond-tie data-loss edge case (two rows sharing the
- * same created_at would both be skipped with a pure `created_at < cursor`
- * predicate).
+ * Paginated feed of confirmed spends paid to this merchant. Row-value tuple
+ * comparison `(created_at, id) < (cursor_ts, cursor_id)` matches ORDER BY
+ * `(created_at DESC, id DESC)` and avoids the microsecond-tie data-loss edge.
  */
 export async function getMerchantTransactions(input: {
   etaAddress: string;
@@ -103,10 +89,6 @@ export async function getMerchantTransactions(input: {
     eq(transactions.status, "confirmed"),
   ];
   if (input.cursor) {
-    // Row-value tuple comparison: (created_at, id) < (cursor_ts, cursor_id)
-    // evaluates lexicographically. Postgres supports this directly and it
-    // matches the (created_at DESC, id DESC) ORDER BY — so the last row of
-    // page N is the strict upper bound for page N+1.
     whereClauses.push(
       sql`(${transactions.createdAt}, ${transactions.id}) < (${new Date(input.cursor.createdAt)}, ${input.cursor.id})`,
     );

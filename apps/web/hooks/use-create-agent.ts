@@ -15,9 +15,7 @@ export type CreateAgentResult = {
   apiKey: string;
 };
 
-// POST /api/agents. On success, invalidates the ["agents"] list so useAgents
-// refetches. The caller is responsible for surfacing the plaintext apiKey
-// once — it is not recoverable afterwards.
+// Caller must surface plaintext apiKey on success; it's not recoverable.
 export function useCreateAgent() {
   const authedFetch = useAuthedFetch();
   const queryClient = useQueryClient();

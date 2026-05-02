@@ -14,22 +14,6 @@ const RoleBody = z.object({
   role: z.enum(["user", "merchant", "both"]),
 });
 
-// POST /api/onboarding/role — sets users.role and, if the chosen role requires
-// a merchant record, provisions one. Idempotent: callable at any time.
-//
-// Rate-limited under the SAME key as POST /api/merchants so an attacker can't
-// alternate between endpoints to mint multiple wallets. 1 create per 10s per
-// user absorbs double-clicks; the unique index on merchants.owner_user_id is
-// the true safety net for concurrent writes.
-//
-// Role-change rules:
-//   - Downgrade to 'user' is REJECTED when a merchants row exists — would
-//     orphan the row, leaving dashboard UI in an inconsistent state. A future
-//     "deregister as merchant" flow must explicitly delete the merchant and
-//     its downstream artifacts (keys, apis).
-//   - Provisioning failures do NOT update users.role — better to let the
-//     client retry from a clean state than to leave users claiming
-//     'merchant' with no merchant row behind them.
 export async function POST(req: Request) {
   const user = await authGuard(req);
   if (user instanceof Response) return user;
@@ -43,8 +27,7 @@ export async function POST(req: Request) {
 
   const existingMerchant = await getMerchantByOwner(user.id);
 
-  // Block role='user' when the user already has a merchant row. Demoting
-  // without cleanup is the silent-orphan bug the audit caught.
+  // Block downgrade to 'user' when a merchant row exists — orphan defense.
   if (body.role === "user" && existingMerchant) {
     return apiError(
       "bad_request",
@@ -54,19 +37,14 @@ export async function POST(req: Request) {
 
   const needsMerchant = body.role === "merchant" || body.role === "both";
 
-  // Only rate-limit the provisioning path. A user flipping role values that
-  // don't require merchant provisioning is a cheap UPDATE — no limiter needed.
   if (needsMerchant && !existingMerchant) {
+    // Shared rate-limit key with /api/merchants — alternation defense.
     const allowed = await checkLimit("create-merchant", user.id, 1, "10 s");
     if (!allowed) return apiError("rate_limited");
   }
 
   let merchantRow = existingMerchant;
   let merchantCreated = false;
-  // Plaintext shown once on first creation. Onboarding UI doesn't surface it
-  // today (the merchant dashboard's API-key panel is the canonical place to
-  // mint + reveal keys), but plumbing it through keeps parity with
-  // POST /api/merchants and lets a future onboarding flow show it inline.
   let merchantApiKey: string | null = null;
   if (needsMerchant) {
     try {
@@ -84,11 +62,6 @@ export async function POST(req: Request) {
     }
   }
 
-  // For roles that don't need a merchant OR where provisionMerchant already
-  // bumped the role via its batch, we still need to persist the explicit
-  // choice (e.g. user picked 'merchant' but provisionMerchant bumped to 'both'
-  // because it piggybacks on the existing 'user' role — this final update
-  // sets the literal value the client asked for).
   const [updated] = await db
     .update(users)
     .set({ role: body.role, updatedAt: new Date() })

@@ -5,8 +5,7 @@ import { useSession } from "next-auth/react";
 import { useAuthedFetch } from "@/hooks/use-authed-fetch";
 import type { AgentDTO } from "@/types/agent";
 
-// Fetches a single agent by id. 404 surfaces as Error("not_found") so the
-// detail page can render a dedicated not-found UI instead of a generic error.
+// 404 surfaces as Error("not_found") so the page can render dedicated UI.
 export function useAgent(id: string) {
   const { status } = useSession();
   const authedFetch = useAuthedFetch();

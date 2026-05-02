@@ -15,19 +15,10 @@ type SetRoleResponse = {
     createdAt: string;
   } | null;
   merchantCreated: boolean;
-  // Plaintext initial merchant API key, returned exactly once on the
-  // creation hop (`merchantCreated: true`). null on idempotent re-call.
+  // Plaintext key returned once on creation; null on idempotent re-call.
   apiKey: string | null;
 };
 
-/**
- * Posts the user's chosen role to `/api/onboarding/role` and, for roles that
- * need a merchant record, provisions one server-side in the same call.
- *
- * On success the `me` query is invalidated so every consumer refetches with
- * the new role. The caller is expected to navigate to the right dashboard
- * based on the returned role.
- */
 export function useSetRole() {
   const authedFetch = useAuthedFetch();
   const queryClient = useQueryClient();

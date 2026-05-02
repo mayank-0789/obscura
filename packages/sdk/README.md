@@ -34,11 +34,14 @@ That's it. The SDK calls the URL; if the merchant returns `402 Payment Required`
 
 ### `new Obscura(options)`
 
-| Option    | Type           | Default            | Description                                                                             |
-| --------- | -------------- | ------------------ | --------------------------------------------------------------------------------------- |
-| `apiKey`  | `string`       | **required**       | Agent API key from the Obscura dashboard (`pk_…`).                                      |
-| `baseUrl` | `string`       | **required**       | URL of the Obscura backend that signs your payments (the host of your deployed `apps/web`). |
-| `fetch`   | `typeof fetch` | `globalThis.fetch` | Inject a custom fetch (undici, mocks, proxies).                                         |
+| Option             | Type           | Default            | Description                                                                                                                                                                       |
+| ------------------ | -------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apiKey`           | `string`       | **required**       | Agent API key from the Obscura dashboard (`pk_…`).                                                                                                                                |
+| `baseUrl`          | `string`       | **required**       | URL of the Obscura backend that signs your payments (the host of your deployed `apps/web`).                                                                                       |
+| `fetch`            | `typeof fetch` | `globalThis.fetch` | Inject a custom fetch (undici, mocks, proxies).                                                                                                                                   |
+| `signTimeoutMs`    | `number`       | `60_000`           | Per-request timeout for `/api/x402/sign`. Cold-path P99 lands ~45s (Groth16 prove + Arcium MPC callback); the default leaves headroom without leaving zombie requests forever.    |
+| `signMaxRetries`   | `number`       | `2`                | Retry attempts on transient failures (network errors, 5xx, timeouts). Terminal codes (`over_cap`, `signing_failed`, `timeout`, `conflict`, etc.) are never retried.               |
+| `signRetryBaseMs`  | `number`       | `500`              | Initial backoff before the first retry; doubles each subsequent attempt, capped at 8s.                                                                                            |
 
 ### `agent.fetch(url, init?)`
 

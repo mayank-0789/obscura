@@ -1,16 +1,4 @@
-// Shared error-response parser for client mutations.
-//
-// Server contract (apiError in lib/api.ts): on error, the response JSON is
-// always `{ error: <code> }` and optionally includes `{ message: <human> }`
-// when the route supplied one. The convention we want in the UI is:
-//   - Prefer the human-readable message when present (it's more useful than
-//     a raw code like `bad_request` in a toast description).
-//   - Fall back to the error code so the calling hook can still switch on it.
-//   - Fall back to `api_error_<status>` when the body is missing/malformed.
-//
-// Callers throw `new Error(await parseApiError(res))` and downstream UI can
-// either show `err.message` verbatim or branch on recognizable code values
-// (`rate_limited`, `forbidden`, `bad_request`, …).
+/** Parse a server error response into a string for `new Error(...)`. Prefers `message`, falls back to `error` code, then `api_error_<status>`. */
 export async function parseApiError(res: Response): Promise<string> {
   try {
     const body = (await res.json()) as { error?: string; message?: string };

@@ -3,11 +3,6 @@ import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import { env } from "@/lib/env";
 
-// Lazy singleton. Any route can call `checkLimit(name, key, window)`; the
-// shared Redis client is constructed once per process. When Upstash env vars
-// are not set (local dev without a Redis), limiters short-circuit to "allow"
-// so the app still runs — the tradeoff is that local dev isn't rate-limited.
-
 let redis: Redis | null = null;
 const limiters = new Map<string, Ratelimit>();
 
@@ -44,8 +39,7 @@ function getLimiter(
   return limiter;
 }
 
-// Returns true when the request is within limits OR the limiter is disabled.
-// Never returns false for a configuration reason — only for a real rate exceedance.
+// Short-circuits to allow when Upstash env vars are unset (local dev).
 export async function checkLimit(
   name: string,
   key: string,

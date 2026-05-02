@@ -50,10 +50,27 @@ Flip the `network` config:
 });`}
 </CodeBlock>
 
-The `mint` default automatically switches:
+The merchant SDK's `mint` default switches based on `network`:
 
-- `solana-devnet` → `4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU` (devnet USDC)
-- `solana` → `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v` (mainnet USDC)
+- `solana-devnet` → `4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU` (devnet USDC, 6 decimals)
+- `solana` → `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v` (mainnet USDC, 6 decimals)
+
+> **Devnet today runs on WSOL (9 decimals), not USDC.** Umbra's devnet
+> deployment doesn't yet include the devnet USDC mint, so the Obscura
+> backend is configured to accept WSOL with `decimals: 9`. If you're
+> running a merchant against the public Obscura devnet, override the
+> SDK defaults to match:
+>
+> <CodeBlock lang="ts">
+> {`obscura({
+>   merchantEtaAddress: ...,
+>   network: "solana-devnet",
+>   mint: "So11111111111111111111111111111111111111112",
+>   decimals: 9,
+> })`}
+> </CodeBlock>
+>
+> Mainnet uses real USDC at 6 decimals — no override needed.
 
 ## ETAs are network-isolated
 

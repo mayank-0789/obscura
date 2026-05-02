@@ -22,16 +22,16 @@ Every Umbra SDK function we call, with file:line of its single call site. All Um
 
 | # | SDK function | Obscura wrapper | Where called from |
 |---|---|---|---|
-| 1 | `getUmbraClient` | `buildSubjectUmbraClient` (`umbra.ts:137`) and `buildTreasuryUmbraClient` (`umbra.ts:173`) | every Umbra op |
+| 1 | `getUmbraClient` | `buildSubjectUmbraClient` (`umbra.ts:147`) and `buildTreasuryUmbraClient` (`umbra.ts:183`) | every Umbra op |
 | 2 | `createSignerFromPrivateKeyBytes` | inside the two builders above | every Umbra op |
-| 3 | `getUserRegistrationFunction` | `registerSubjectOnUmbra` (`umbra.ts:208`) | agent + merchant provisioning |
-| 4 | `getPublicBalanceToEncryptedBalanceDirectDepositorFunction` | `depositTreasuryToEncryptedAccount` (`umbra.ts:293`) | Dodo top-up webhook (`webhooks/dodo/route.ts`) |
-| 5 | `getEncryptedBalanceToReceiverClaimableUtxoCreatorFunction` | `createReceiverClaimableUtxo` (`umbra.ts:452`) | x402 sign route (`x402/sign/route.ts:250`) |
-| 6 | `getClaimableUtxoScannerFunction` | `scanReceiverClaimableUtxos` (`umbra.ts:504`) and inline at `cron/claim-daemon/route.ts` | merchant claim daemon (cron) |
-| 7 | `getReceiverClaimableUtxoToEncryptedBalanceClaimerFunction` | `claimReceiverClaimableUtxos` (`umbra.ts:550`) and inline at `cron/claim-daemon/route.ts` | merchant claim daemon (cron) |
+| 3 | `getUserRegistrationFunction` | `registerSubjectOnUmbra` (`umbra.ts:218`) | agent + merchant provisioning |
+| 4 | `getPublicBalanceToEncryptedBalanceDirectDepositorFunction` | `depositTreasuryToEncryptedAccount` (`umbra.ts:303`) | Dodo top-up webhook (`webhooks/dodo/route.ts`) |
+| 5 | `getEncryptedBalanceToReceiverClaimableUtxoCreatorFunction` | `createReceiverClaimableUtxo` (`umbra.ts:462`) | x402 sign route (`x402/sign/route.ts`) |
+| 6 | `getClaimableUtxoScannerFunction` | `scanReceiverClaimableUtxos` (`umbra.ts:518`) and inline at `cron/claim-daemon/route.ts` | merchant claim daemon (cron) |
+| 7 | `getReceiverClaimableUtxoToEncryptedBalanceClaimerFunction` | `claimReceiverClaimableUtxos` (`umbra.ts:564`) and inline at `cron/claim-daemon/route.ts` | merchant claim daemon (cron) |
 | 8 | `getUmbraRelayer` | inside `claimReceiverClaimableUtxos` and the cron route | merchant claim daemon |
-| 9 | `getEncryptedBalanceQuerierFunction` | `getEncryptedBalance` (`umbra.ts:366`) | x402 sign pre-flight + dashboard balance |
-| 10 | `getEncryptedBalanceToPublicBalanceDirectWithdrawerFunction` | `withdrawFromEncryptedAccount` (`umbra.ts:325`) | merchant cash-out (planned UI) |
+| 9 | `getEncryptedBalanceQuerierFunction` | `getEncryptedBalance` (`umbra.ts:376`) | x402 sign pre-flight + dashboard balance |
+| 10 | `getEncryptedBalanceToPublicBalanceDirectWithdrawerFunction` | `withdrawFromEncryptedAccount` (`umbra.ts:335`) | (defined; no caller wired yet — slated for merchant cash-out UI) |
 
 ZK provers from `@umbra-privacy/web-zk-prover`:
 
@@ -120,14 +120,14 @@ Steps 1–3 happen in `createAgentWallet` (in `apps/web/app/api/agents/route.ts`
 The Umbra SDK is constructed per-subject. Each call to a higher-level helper (`getUserRegistrationFunction`, `getPublicBalance...`, etc.) takes a client.
 
 ```ts
-// apps/web/lib/umbra.ts:137
+// apps/web/lib/umbra.ts:147
 export async function buildSubjectUmbraClient(subject, subjectId) {
   const signer = await createSignerFromPrivateKeyBytes(
     deriveKeypair(subject, subjectId).secretKey,
   );
   return getUmbraClient({
     signer,
-    network: env.UMBRA_NETWORK,                  // "solana-devnet" | "solana"
+    network: env.UMBRA_NETWORK,                  // "devnet" | "mainnet" | "localnet"
     rpcUrl: env.HELIUS_RPC_URL,                  // https
     rpcSubscriptionsUrl: resolveRpcSubscriptionsUrl(),  // wss
     indexerApiEndpoint: env.UMBRA_INDEXER_URL,
@@ -135,16 +135,16 @@ export async function buildSubjectUmbraClient(subject, subjectId) {
 }
 ```
 
-**Caching:** subject clients are NOT cached (we have many subjects, each is cheap to rebuild). The treasury client IS cached (`getTreasuryUmbraClient`, `umbra.ts:163`) because it's process-wide and rebuilding it costs an extra signMessage round-trip.
+**Caching:** subject clients are NOT cached (we have many subjects, each is cheap to rebuild). The treasury client IS cached (`getTreasuryUmbraClient`, near `umbra.ts:183`) because it's process-wide and rebuilding it costs an extra signMessage round-trip.
 
 **`rpcSubscriptionsUrl` derivation:** the SDK's transaction-confirmation path uses WebSocket subscriptions, which need a `wss://` endpoint. Most Solana providers (Helius, QuickNode, Triton) mirror their HTTP endpoint at `wss://` on the same path. We derive by default but allow `UMBRA_RPC_SUBSCRIPTIONS_URL` to override.
 
-**`UMBRA_NETWORK`:** required to be one of `"solana-devnet"` or `"solana"`. Don't pass freeform strings — the SDK uses this internally to pick on-chain program IDs.
+**`UMBRA_NETWORK`:** validated as `"devnet" | "mainnet" | "localnet"` in `apps/web/lib/env.ts`. Don't pass freeform strings — the SDK uses this internally to pick on-chain program IDs. (The merchant-sdk's *config-level* `network` field is separately tagged `"solana-devnet" | "solana"` because that's what the x402 envelope namespace expects; the two must not be confused.)
 
 ### 5.2 `getUserRegistrationFunction` — registration
 
 ```ts
-// apps/web/lib/umbra.ts:208
+// apps/web/lib/umbra.ts:218
 export async function registerSubjectOnUmbra(subject, subjectId) {
   const client = await buildSubjectUmbraClient(subject, subjectId);
   const register = getUserRegistrationFunction(
@@ -170,7 +170,7 @@ export async function registerSubjectOnUmbra(subject, subjectId) {
 ### 5.3 `getPublicBalanceToEncryptedBalanceDirectDepositorFunction` — direct deposits
 
 ```ts
-// apps/web/lib/umbra.ts:293
+// apps/web/lib/umbra.ts:303
 const deposit = getPublicBalanceToEncryptedBalanceDirectDepositorFunction({
   client: treasuryClient,
 });
@@ -194,7 +194,7 @@ const result = await deposit(
 The hot path. Runs every time an agent pays a merchant via x402.
 
 ```ts
-// apps/web/lib/umbra.ts:452
+// apps/web/lib/umbra.ts:462
 const zkProver = getCreateReceiverClaimableUtxoFromEncryptedBalanceProver();
 const createUtxo = getEncryptedBalanceToReceiverClaimableUtxoCreatorFunction(
   { client: senderClient },
@@ -223,7 +223,7 @@ const result = await createUtxo({
 
 **Latency:** ~10–25s on devnet warm. Breakdown: ~5s prove (warm) + 2–3 transaction round-trips + Arcium MPC callback. Cold prove can hit 30s+ on the first call after process restart.
 
-**Critical post-call rule** (`apps/web/app/api/x402/sign/route.ts:281`):
+**Critical post-call rule** (`apps/web/app/api/x402/sign/route.ts:290`):
 
 ```ts
 if (!finalized) {
@@ -240,7 +240,7 @@ This is the load-bearing safety property: *if Arcium hasn't confirmed, we treat 
 ### 5.5 Mixer scan — `getClaimableUtxoScannerFunction`
 
 ```ts
-// inline at apps/web/app/api/cron/claim-daemon/route.ts and umbra.ts:504
+// inline at apps/web/app/api/cron/claim-daemon/route.ts and umbra.ts:518
 const scan = getClaimableUtxoScannerFunction({ client: merchantClient });
 const result = await scan(
   BigInt(treeIndex) as ...,            // start tree
@@ -260,7 +260,7 @@ The scanner walks the on-chain mixer commitment tree from a `(treeIndex, inserti
 ### 5.6 Mixer claim — `getReceiverClaimableUtxoToEncryptedBalanceClaimerFunction`
 
 ```ts
-// apps/web/lib/umbra.ts:550
+// apps/web/lib/umbra.ts:564
 const relayer = getUmbraRelayer({ apiEndpoint: env.UMBRA_RELAYER_URL });
 const zkProver = getClaimReceiverClaimableUtxoIntoEncryptedBalanceProver();
 const claim = getReceiverClaimableUtxoToEncryptedBalanceClaimerFunction(
@@ -296,14 +296,14 @@ const result = await claim(scanResult.received);
 - Formula (from SDK): `baseFee + floor((amount - baseFee) * bps / 10_000)`.
 - Mainnet figures will differ; re-measure before quoting.
 
-**Spent-nullifier behavior:** the relayer batches claims. **The whole batch fails if any single nullifier in it is already spent.** If the scanner returns 5 leaves but 1 is already claimed (e.g. another reconciler finished it), submitting all 5 as a batch reverts all 5, wasting prove cycles for the other 4. Mitigation: maintain a `claimedLeafIds` set, filter scan results before submitting. The CLI version of the daemon does this; the serverless cron version doesn't (no persistent FS) and relies on the relayer-side rejection.
+**Spent-nullifier behavior:** the relayer batches claims. **The whole batch fails if any single nullifier in it is already spent.** If the scanner returns 5 leaves but 1 is already claimed (e.g. another reconciler finished it), submitting all 5 as a batch reverts all 5, wasting prove cycles for the other 4. Mitigation (deferred to mainnet): maintain a Redis-backed `claimedLeafIds` set keyed by `merchant:<id>` and filter scan results before submitting. Today the serverless `/api/cron/claim-daemon` doesn't persist this and relies on relayer-side rejection — fine at hackathon volumes.
 
 **Latency:** ~30s per claim in steady state. Groth16 prove (~25s) + indexer round-trip + relayer sign + on-chain confirm.
 
 ### 5.7 Encrypted balance read — `getEncryptedBalanceQuerierFunction`
 
 ```ts
-// apps/web/lib/umbra.ts:366
+// apps/web/lib/umbra.ts:376
 const query = getEncryptedBalanceQuerierFunction({ client });
 const result = await query([address(getStablecoinMint().toBase58())]);
 const entry = result.get(mintAddr);
@@ -323,7 +323,7 @@ For dashboard purposes we collapse all three into "treat as zero" — the subjec
 ### 5.8 Withdrawals — `getEncryptedBalanceToPublicBalanceDirectWithdrawerFunction`
 
 ```ts
-// apps/web/lib/umbra.ts:325
+// apps/web/lib/umbra.ts:335
 const withdraw = getEncryptedBalanceToPublicBalanceDirectWithdrawerFunction({
   client: subjectClient,
 });
@@ -336,7 +336,7 @@ const result = await withdraw(
 
 Like deposits, this is a direct (non-mixer) operation. The withdraw event is on chain; only the prior encrypted balance state stays hidden. Fine for end-of-day cash-out: the per-call payment graph is already protected; the withdraw is a single privacy-leak point at the end.
 
-Currently used only by the operator's emergency-drain flow (private endpoint, not user-facing). The merchant cash-out UI (planned) will route here.
+Defined but **no caller is wired today**. Slated for the merchant cash-out UI (planned). Until that ships, operator drains require a one-off script invocation.
 
 ---
 
@@ -384,7 +384,7 @@ Devnet measured 2026-04-26: ~0.43% of gross transfer amount, deducted at claim t
 | `ENCRYPTED_USER_ACCOUNT_IS_ACTIVE_FOR_ANONYMOUS_USAGE_BIT_MUST_BE_SET` (error 18003) | Sender or receiver registered with `anonymous: false` | Re-call `register({anonymous: true})` — idempotent re-run runs only the missing step. |
 | `Cannot mix BigInt and other types` | Passed `number` to scan/claim where SDK expects `U32` (bigint brand) | Cast: `BigInt(n) as never` |
 | Queue tx lands but `callbackStatus !== "finalized"` | Arcium MPC didn't finalize within the SDK's monitor window | Reconciler (`/api/cron/reconcile`) inspects queue tx via Helius RPC, marks confirmed/failed within 5 min |
-| Whole claim batch reverts | One spent nullifier in the batch | Filter `claimedLeafIds` before submitting (CLI daemon does this; serverless cron doesn't yet) |
+| Whole claim batch reverts | One spent nullifier in the batch | Persist `claimedLeafIds` (e.g. Redis keyed by merchant) and filter scan results before submitting. Not yet implemented. |
 | `web-zk-prover` peerDep warning | Mismatched SDK version (see section 9 below) | `peerDependencyRules` override silences it |
 
 ### 7.3 Replay protection (merchant SDK)
@@ -406,8 +406,8 @@ Items the Day 6 audit (2026-04-26) flagged that we knowingly deferred. None bloc
 3. **Per-agent concurrency cap** — ✅ DONE (`PER_AGENT_INFLIGHT_LIMIT = 3` in `x402/sign/route.ts`). Same Redis caveat for multi-instance.
 4. **Plaintext amount logging** — ❌ TODO. Redact to log buckets before mainnet.
 5. **`web-zk-prover@2.0.1` vs `sdk@4.0.0` peerDep mismatch** — ✅ DOCUMENTED (section 9 below). Re-validate before any Umbra package bump.
-6. **Daemon overlap lock-file** — ❌ TODO. Cron at 1-min cadence with claims taking ~30s+ → overlapping invocations claiming the same UTXOs. Safe (nullifier check reverts second claim) but wasteful. Add PID-style lockfile in the CLI daemon.
-7. **Daemon claimedLeafIds tracking on serverless** — ⚠ PARTIAL. CLI form persists; serverless `/api/cron/claim-daemon` doesn't (no persistent local FS). Production fix: Redis-backed `claimedLeafIds` keyed by `merchant:<id>`. Defer until traffic justifies it.
+6. **Daemon overlap lock** — ❌ TODO. Cron at 2-min cadence with claims taking ~30s+ → overlapping invocations claiming the same UTXOs. Safe (nullifier check reverts the second claim) but wasteful. Production fix: Redis advisory lock (`SET NX merchant_claim_lock:<id>`) with a short TTL.
+7. **`claimedLeafIds` persistence** — ❌ TODO. Today `/api/cron/claim-daemon` re-scans from `(0n, 0n)` every run and relies on relayer-side spent-nullifier rejection. Production fix: Redis-backed `claimedLeafIds` keyed by `merchant:<id>` and filtered before submitting. Defer until traffic justifies it.
 
 ---
 
@@ -450,10 +450,14 @@ This silences the warning. **The runtime is verified compatible** — the prover
 
 ## 10. Quick reference
 
-**Single rule to remember:** every Umbra interaction routes through `apps/web/lib/umbra.ts`. If you find an `import "@umbra-privacy/sdk"` anywhere else, that's drift — fold it back in.
+**Where Umbra lives:** the bulk of the integration is in `apps/web/lib/umbra.ts`. Two carve-outs intentionally import the SDK directly:
+  - `apps/web/app/api/cron/claim-daemon/route.ts` — uses `getClaimableUtxoScannerFunction`, `getReceiverClaimableUtxoToEncryptedBalanceClaimerFunction`, `getUmbraRelayer`, and the matching prover. Keeping this self-contained lets the cron run without pulling the full `lib/umbra.ts` module graph.
+  - `apps/web/app/api/webhooks/dodo/route.ts` — imports `assertU64` from `@umbra-privacy/sdk/types` for the brand-narrowing on the deposit amount.
+
+Anywhere else, fold imports back through `lib/umbra.ts`.
 
 **Single secret to protect:** `UMBRA_AGENT_SEED_SECRET`.
 
-**Single env var to flip for mainnet:** `UMBRA_NETWORK = "solana"` (plus the cluster swap on `HELIUS_RPC_URL`, `STABLECOIN_MINT`, `STABLECOIN_DECIMALS`, indexer/relayer URLs).
+**Single env var to flip for mainnet:** `UMBRA_NETWORK = "mainnet"` (plus the cluster swap on `HELIUS_RPC_URL`, `STABLECOIN_MINT`, `STABLECOIN_DECIMALS`, indexer/relayer URLs).
 
 **Single command to verify the rail still works:** `pnpm dev:demo` + `cd apps/demo-agent && pnpm start` → expect 3 paid calls in ~80s on devnet.

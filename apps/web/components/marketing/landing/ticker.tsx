@@ -1,9 +1,3 @@
-/**
- * Horizontal ticker of synthetic transactions. Infinitely scrolls via CSS.
- * Doubled content makes the loop seamless — the track translates -50% so the
- * second copy slides into where the first started.
- */
-
 const txns = [
   { agent: "AGT_A1F2", host: "news-api.com", amt: "0.008", ms: "412" },
   { agent: "AGT_F3B8", host: "weather.io/v2", amt: "0.012", ms: "385" },

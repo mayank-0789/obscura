@@ -28,15 +28,10 @@ export function TopupForm() {
 
   const [agentId, setAgentId] = useState<string>(initialAgentId);
   const [amountInr, setAmountInr] = useState<number | "">(500);
-  // After mutateAsync resolves, react-query flips isPending false on the next
-  // render — but `window.location.href` doesn't unload the page synchronously,
-  // so the submit button briefly re-enables. A double-click in that window
-  // mints a second Dodo checkout session. Sticky `redirecting` keeps the
-  // button disabled until the page actually navigates away.
+  // Sticky redirect flag prevents a second Dodo session from a double-click
+  // in the gap between mutation resolve and `window.location.href` unload.
   const [redirecting, setRedirecting] = useState(false);
 
-  // If we arrived without ?agent_id= and agents loaded, pick the first active
-  // agent.
   useEffect(() => {
     if (agentId || agentsLoading || !agents || agents.length === 0) return;
     const firstActive = agents.find((a) => a.status === "active") ?? agents[0];
@@ -48,11 +43,8 @@ export function TopupForm() {
     [agents, agentId],
   );
 
-  const { breakdown, rateSource, loading: quoteLoading } = useTopupQuote(amountInr);
+  const { breakdown, rate, rateSource, loading: quoteLoading } = useTopupQuote(amountInr);
 
-  // Surfaces a one-line message below the amount input when the value is
-  // out-of-range. Empty string is treated as "user is mid-edit" — no error
-  // until they actually type a number outside the bounds.
   const amountError =
     amountInr === ""
       ? null
@@ -78,6 +70,7 @@ export function TopupForm() {
       const result = await createSession.mutateAsync({
         agentId,
         amountInr: amountInr as number,
+        quotedRate: rate ?? undefined,
       });
       setRedirecting(true);
       window.location.href = result.checkoutUrl;
@@ -96,7 +89,6 @@ export function TopupForm() {
       selectedAgentId={agentId || undefined}
       onSelectAgent={(id) => {
         setAgentId(id);
-        // Keep URL in sync so bookmarks and refreshes remember the pick.
         router.replace(`/topup?agent_id=${id}`, { scroll: false });
       }}
     >
@@ -107,7 +99,6 @@ export function TopupForm() {
       ) : (
         <div className="flex min-h-full items-start justify-center px-6 py-12">
           <div className="w-full max-w-xl">
-            {/* Heading */}
             <div>
               <div className="text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500">
                 Top up
@@ -121,12 +112,10 @@ export function TopupForm() {
               </p>
             </div>
 
-            {/* Card */}
             <form
               onSubmit={handleSubmit}
               className="mt-8 overflow-hidden rounded-lg border border-zinc-800 bg-[#0c0c0e]"
             >
-              {/* Agent */}
               <div className="border-b border-zinc-800 px-6 py-5">
                 <label className="block">
                   <span className="mb-2 block text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500">
@@ -177,7 +166,6 @@ export function TopupForm() {
                 </label>
               </div>
 
-              {/* Amount */}
               <div className="border-b border-zinc-800 px-6 py-5">
                 <label className="block">
                   <span className="mb-2 block text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500">
@@ -237,14 +225,12 @@ export function TopupForm() {
                 )}
               </div>
 
-              {/* Breakdown */}
               <BreakdownCard
                 breakdown={breakdown}
                 rateSource={rateSource}
                 loading={quoteLoading}
               />
 
-              {/* Footer */}
               <div className="flex items-center justify-between gap-2 px-6 py-4">
                 <button
                   type="button"

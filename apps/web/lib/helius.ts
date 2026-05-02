@@ -1,30 +1,6 @@
 import "server-only";
 import { env } from "@/lib/env";
 
-// Helius Enhanced Webhooks client — we keep ONE webhook configured on Helius,
-// watching a dynamic `accountAddresses` list. When a merchant signs up we GET
-// the config, add their payout wallet to the list, and PUT it back.
-//
-// Best-effort by design: if the env vars aren't configured OR the PUT fails,
-// we log and return — merchant creation still succeeds, dashboards just fall
-// back to poll-only updates until an operator re-registers addresses.
-//
-// ⚠ GET → modify → PUT is not atomic. Two concurrent signups within the same
-// ~500ms window can clobber each other's registrations — only the last PUT
-// wins. Bounded in practice by the 1-per-10s create-merchant rate limit
-// shared across /api/onboarding/role and /api/merchants. The safety-net is
-// `reconcileMerchantPayoutAddresses` below, exposed via
-// POST /api/admin/helius/reconcile — run it periodically (cron or manual) to
-// diff-merge any addresses that got dropped by a race back onto Helius.
-//
-// Setup (one-time, done on Helius dashboard or via POST /v0/webhooks):
-//   - webhookURL: https://<our-host>/api/webhooks/helius
-//   - authHeader: send the RAW HELIUS_WEBHOOK_AUTH_TOKEN value — the inbound
-//     verifier compares exact bytes. Do NOT prefix with "Bearer "; Helius
-//     passes authHeader verbatim.
-//   - transactionTypes: ["TRANSFER"] (or "Any" for belt + braces)
-//   - accountAddresses: [] (initially empty; merchants are appended on signup)
-
 const FETCH_TIMEOUT_MS = 5_000;
 
 const BASE_URL = "https://api.helius.xyz";
@@ -40,9 +16,9 @@ type HeliusWebhookConfig = {
 };
 
 /**
- * Append `pubkey` to the shared webhook's `accountAddresses`. Idempotent —
- * if the address is already in the list we skip the PUT. Does not throw on
- * network / auth failures; logs and returns.
+ * Append `pubkey` to the shared webhook's `accountAddresses`. Idempotent.
+ * GET-modify-PUT is not atomic — concurrent signups can clobber; the admin
+ * `reconcileMerchantPayoutAddresses` route is the safety net.
  */
 export async function registerMerchantPayoutAddress(
   pubkey: string,
@@ -57,7 +33,6 @@ export async function registerMerchantPayoutAddress(
   try {
     const current = await fetchWebhookConfig();
     if (current.accountAddresses.includes(pubkey)) {
-      // Already registered (e.g. previous signup retried).
       return;
     }
     const next: HeliusWebhookConfig = {
@@ -74,19 +49,10 @@ export async function registerMerchantPayoutAddress(
 }
 
 /**
- * Diff-merge reconciler for the shared webhook's `accountAddresses` list.
- * Fixes drift from the GET-modify-PUT race in `registerMerchantPayoutAddress`
- * (two concurrent signups can clobber each other: second PUT drops first's
- * addition) and surfaces any Helius-side config drift (manual edits, failed
- * signup-time registrations).
- *
- * Takes the authoritative list of payout wallets from the caller (typically
- * enumerated from the `merchants` table) and ensures every one is present in
- * Helius. Never removes addresses — a wallet missing from the merchants table
- * is more likely a stale DB read than a deletion intent, and removing it
- * silently would break real-time events for any merchant still transacting.
- *
- * Returns the diff so callers (operator cron, admin endpoint) can log it.
+ * Diff-merge reconciler for the shared webhook's `accountAddresses`. Fixes
+ * drift from the GET-modify-PUT race in `registerMerchantPayoutAddress`.
+ * Never removes addresses — a missing wallet is more likely a stale read than
+ * a deletion intent.
  */
 export type HeliusReconcileResult =
   | { ok: false; reason: "not_configured" }
@@ -138,9 +104,6 @@ async function fetchWebhookConfig(): Promise<HeliusWebhookConfig> {
   const url = `${BASE_URL}/v0/webhooks/${env.HELIUS_WEBHOOK_ID}?api-key=${env.HELIUS_API_KEY}`;
   const res = await fetch(url, {
     cache: "no-store",
-    // Timeout so a slow Helius response doesn't pin a Node worker / keep
-    // the HTTP connection open indefinitely (the caller is fire-and-forget,
-    // so there's no outer deadline to catch a hang).
     signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
   if (!res.ok) {

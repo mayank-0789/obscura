@@ -55,7 +55,6 @@ function Content({ agent }: { agent: AgentDTO }) {
 
   return (
     <div className="px-8 py-8 lg:px-12">
-      {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-[12px] text-zinc-500">
         <Link
           href="/dashboard"
@@ -83,7 +82,6 @@ function Content({ agent }: { agent: AgentDTO }) {
         <span className="truncate text-zinc-300">{agent.name}</span>
       </div>
 
-      {/* Header */}
       <header className="mt-6 flex flex-wrap items-start justify-between gap-6 border-b border-zinc-800 pb-8">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
@@ -146,12 +144,10 @@ function Content({ agent }: { agent: AgentDTO }) {
         </div>
       </header>
 
-      {/* Status banner for non-active */}
       {(agent.status === "paused" || agent.status === "cancelled") && (
         <StatusBanner status={agent.status} />
       )}
 
-      {/* Metrics strip */}
       <section className="mt-8 grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-zinc-800 bg-zinc-800 md:grid-cols-3">
         <Metric label="In wallet" render={<LiveBalance agentId={agent.id} />} sub={`${STABLECOIN_TICKER} · held by agent`} />
         <Metric
@@ -166,7 +162,6 @@ function Content({ agent }: { agent: AgentDTO }) {
         />
       </section>
 
-      {/* Credentials */}
       <section className="mt-10">
         <SectionHeader
           title="Credentials"
@@ -211,10 +206,8 @@ function Content({ agent }: { agent: AgentDTO }) {
         </div>
       </section>
 
-      {/* Recent spends */}
       <AgentSpendsSection agentId={agent.id} />
 
-      {/* Danger zone */}
       <section className="mt-10">
         <SectionHeader
           title="Danger zone"
@@ -239,8 +232,6 @@ function Content({ agent }: { agent: AgentDTO }) {
     </div>
   );
 }
-
-/* ─ subcomponents ─ */
 
 function Metric({
   label,
@@ -271,9 +262,6 @@ function LiveBalance({ agentId }: { agentId: string }) {
   return <>{isLoading ? "…" : data ? `$${formatUsdg(data.amount)}` : "$0.00"}</>;
 }
 
-// Live payment feed for this agent. Mirrors the merchant-dashboard pattern:
-// 10 most recent, prev/next handoff to /agents/[id]/spends for the full
-// paginated history.
 function AgentSpendsSection({ agentId }: { agentId: string }) {
   const spends = useAgentTransactions(agentId, { limit: 10 });
   return (
@@ -473,8 +461,6 @@ function formatDate(iso: string) {
     year: "numeric",
   });
 }
-
-/* ─ fallback states ─ */
 
 function Skeleton() {
   return (

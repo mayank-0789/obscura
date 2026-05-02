@@ -3,12 +3,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-// One-time reveal banner shown immediately after generating a new API key.
-// Mirrors the agent-side RevealApiKeyCard: the plaintext is rendered inline
-// and a dismiss action removes the card permanently.
-//
-// A `beforeunload` listener guards accidental refresh/navigation while the
-// plaintext is visible — matches agent-side reveal.
+/** One-time merchant key reveal; beforeunload guards while plaintext shows. */
 export function RevealMerchantKeyCard({
   label,
   plaintext,

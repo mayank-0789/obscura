@@ -3,26 +3,11 @@ import { env } from "@/lib/env";
 import { apiError } from "@/lib/api";
 
 /**
- * Bearer-token guard for `/api/cron/*` routes.
+ * Bearer-token guard for `/api/cron/*`. Returns a 401 Response on reject, or `null` to proceed.
  *
- * Vercel Cron fires each scheduled invocation with an `Authorization: Bearer
- * <CRON_SECRET>` header. Without this guard, anyone on the internet could
- * spam our cron endpoints — triggering Groth16 proves on demand, debiting
- * budgets, hitting the Helius RPC quota.
- *
- * Behavior:
- * - **`CRON_SECRET` set + token matches** → returns `null` (caller proceeds).
- * - **`CRON_SECRET` set + token wrong/missing** → returns 401 Response.
- * - **`CRON_SECRET` unset + `NODE_ENV !== 'production'`** → logs a warning
- *   and returns `null`. Lets you `curl` cron routes during local dev without
- *   juggling tokens.
- * - **`CRON_SECRET` unset + `NODE_ENV === 'production'`** → fails closed
- *   with 401 and a loud server log. Refusing to expose cron endpoints in
- *   production is a deliberate safety belt against forgotten env vars.
- *
- * @returns A `Response` (401) when the request is rejected, or `null` when
- *   the caller should proceed. Idiomatic shape matching `authGuard` in
- *   `lib/auth.ts`.
+ * Fail-closed safety belt: when CRON_SECRET is unset, production refuses all requests
+ * (deliberate — forgotten env var must not expose cron endpoints), while non-production
+ * allows with a warning so local `curl` works without juggling tokens.
  */
 export function cronAuthGuard(req: Request): Response | null {
   const secret = env.CRON_SECRET;
@@ -30,7 +15,7 @@ export function cronAuthGuard(req: Request): Response | null {
     if (process.env.NODE_ENV === "production") {
       console.error(
         "[cron-auth] CRON_SECRET unset in production — refusing request. " +
-          "Set CRON_SECRET in the Vercel project to enable cron routes.",
+          "Set CRON_SECRET in the deployment environment to enable cron routes.",
       );
       return apiError("missing_token");
     }

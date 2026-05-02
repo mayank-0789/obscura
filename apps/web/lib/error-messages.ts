@@ -1,6 +1,3 @@
-// Map server-issued error codes (see lib/api.ts) to user-facing copy. Keep
-// the strings short, specific, and actionable — they surface in toasts next
-// to a failed action, not in a dedicated error page.
 const FALLBACK = "Something broke on our side. Try again in a moment.";
 
 const MESSAGES: Record<string, string> = {
@@ -12,7 +9,6 @@ const MESSAGES: Record<string, string> = {
   not_found: "We couldn't find that.",
   rate_limited: "You're doing that too often. Wait a minute and retry.",
   agent_limit_reached: "You've hit the agent limit for this account.",
-  // x402 agent-flow codes — surfaced by the SDK when /api/x402/sign rejects.
   agent_inactive:
     "This agent is paused or cancelled. Reactivate it to resume payments.",
   invalid_challenge:
@@ -21,12 +17,8 @@ const MESSAGES: Record<string, string> = {
     "This payment would exceed the agent's monthly spend cap. Raise the cap or wait for the next cycle.",
   signing_failed:
     "We couldn't sign the payment. Try again; if this persists, check the agent's status.",
-  // Duplicate request collapsed mid-flight by /api/x402/sign. Terminal — the
-  // SDK never retries this. Tell the user to wait, not to retry.
   conflict:
     "This payment is already in flight. Wait for the original to finish before retrying.",
-  // Agent's encrypted balance is below the requested spend amount. Terminal —
-  // only a top-up resolves it. Avoid generic "try again" copy here.
   insufficient_funds:
     "The agent doesn't have enough balance for this payment. Top it up to continue.",
   server_error: FALLBACK,

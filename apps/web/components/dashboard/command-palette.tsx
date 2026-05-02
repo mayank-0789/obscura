@@ -73,7 +73,6 @@ export function CommandPalette({
     if (!open) return;
     setQuery("");
     setCursor(0);
-    // Next tick so the input exists
     requestAnimationFrame(() => inputRef.current?.focus());
   }, [open]);
 

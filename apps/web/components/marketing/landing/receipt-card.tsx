@@ -1,8 +1,3 @@
-/**
- * Hero-side "call ledger" — a receipt for a single agent API call.
- * Lines fade in in sequence so the card feels alive without needing JS.
- */
-
 const entries = [
   { label: "request", value: "fetch('news-api.com/v1/top')" },
   { label: "status", value: "402 Payment Required" },

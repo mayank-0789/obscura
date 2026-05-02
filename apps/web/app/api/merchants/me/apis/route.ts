@@ -8,13 +8,8 @@ import {
   type CreateApiBody,
 } from "@/lib/merchant-apis";
 
-// Ceiling on API catalog entries per merchant. High enough to cover any
-// realistic merchant taxonomy; low enough that one merchant can't flood the
-// table. Revise if merchants with extensive routes show up.
 const APIS_PER_MERCHANT_LIMIT = 200;
 
-// GET /api/merchants/me/apis — list the merchant's registered catalog.
-// Ordered newest-first (matches the keys + agents list convention).
 export async function GET(req: Request) {
   const ctx = await merchantAuthGuard(req);
   if (ctx instanceof Response) return ctx;
@@ -28,13 +23,6 @@ export async function GET(req: Request) {
   return apiOk({ apis: rows.map(serializeMerchantApi) });
 }
 
-// POST /api/merchants/me/apis — register a new API entry. Passive catalog
-// only: this row does NOT affect SDK pricing or runtime behaviour. It powers
-// friendly-name lookups + per-API analytics on the merchant dashboard.
-//
-// Dual-auth (session OR mk_): either path may create entries. An mk_ caller
-// minting their own catalog entries is fine — they can't escalate, and
-// programmatic registration is a legitimate workflow.
 export async function POST(req: Request) {
   const ctx = await merchantAuthGuard(req);
   if (ctx instanceof Response) return ctx;
@@ -46,8 +34,6 @@ export async function POST(req: Request) {
     return apiError("bad_request");
   }
 
-  // Ceiling check via SQL count — avoids pulling every row into JS just to
-  // check length. Still racy (read-then-insert) but bounded by the soft cap.
   const [countRow] = await db
     .select({ n: sql<number>`cast(count(*) as integer)` })
     .from(merchantApis)
@@ -56,11 +42,6 @@ export async function POST(req: Request) {
     return apiError("bad_request", "API catalog entry limit reached");
   }
 
-  // Uniqueness within a merchant's catalog: (merchant_id, endpoint) is the
-  // natural key — two entries with the same endpoint break the dashboard's
-  // friendly-name lookup. Enforced by a DB unique index; we use ON CONFLICT
-  // DO NOTHING so concurrent POSTs collapse to one row (the race-loser sees an
-  // empty `returning()` and surfaces the duplicate error to the client).
   const [inserted] = await db
     .insert(merchantApis)
     .values({

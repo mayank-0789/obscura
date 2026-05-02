@@ -4,11 +4,6 @@ import { useSession, signIn } from "next-auth/react";
 import { useSyncUser } from "@/hooks/use-sync-user";
 import { useSignout } from "@/hooks/use-signout";
 
-// Single component that owns the sign-in UI. Post-login routing happens at
-// /onboarding (the configured callbackUrl) — that page checks ONBOARDED_KEY
-// + role and either renders the role picker or redirects to the appropriate
-// dashboard. No onComplete-style pre-fetching here; the destination page
-// handles its own data needs.
 export function SignInButton() {
   const { data: session, status } = useSession();
   const signOut = useSignout();

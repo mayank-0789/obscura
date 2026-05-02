@@ -1,14 +1,7 @@
 import "server-only";
 
-// In-process pub/sub broker used to fan out real-time payment events from the
-// Helius webhook handler to any SSE streams currently subscribed to a given
-// merchant's ETA address.
-//
-// ⚠ Single-instance only. In a multi-replica deployment (horizontal scaling
-// across Vercel regions / multiple Node pods), the webhook lands on instance
-// A while an SSE client is connected to instance B — the event is lost.
-// For single-instance deployments this is fine. Multi-replica production
-// would swap to Redis Pub/Sub or similar without changing the call sites.
+// Single-instance only. Multi-replica deployments need Redis Pub/Sub (or similar)
+// — webhook landing on instance A while SSE client is on B will lose events.
 
 export type MerchantPaymentEvent = {
   kind: "payment";
@@ -21,16 +14,12 @@ export type MerchantPaymentEvent = {
   confirmedAt: string;
 };
 
-// DemoRunEvent — published by the /api/demo/run orchestrator after a
-// successful spend. Drives the "other judges' recent runs" side panel on
-// the /demo page without a Helius webhook round-trip.
 export type DemoRunEvent = {
   kind: "demo_run";
   endpoint: string;
   amountUsdg: string;
   queueSignature: string;
   callbackSignature: string | null;
-  // Truncated client IP for "IP …a04" display. Never stored, never logged.
   ipShort: string;
   createdAt: string;
 };
@@ -62,8 +51,7 @@ class EventBroker {
   publish(topic: string, event: BrokerEvent): void {
     const set = this.subscribers.get(topic);
     if (!set) return;
-    // Snapshot the subscriber set before iterating — a subscriber may
-    // unsubscribe itself during dispatch (e.g. on client disconnect).
+    // Snapshot before iterating — subscribers may unsubscribe themselves during dispatch.
     for (const fn of [...set]) {
       try {
         fn(event);
@@ -74,9 +62,7 @@ class EventBroker {
   }
 }
 
-// HMR-safe singleton. Next.js rebuilds modules on every hot reload in dev,
-// which would otherwise orphan active SSE subscriptions. Attaching to
-// globalThis preserves the broker across reloads.
+// Attach to globalThis so HMR reloads in dev don't orphan active SSE subscriptions.
 const GLOBAL_KEY = "__obscura_event_broker__";
 type GlobalWithBroker = { [GLOBAL_KEY]?: EventBroker };
 const g = globalThis as unknown as GlobalWithBroker;

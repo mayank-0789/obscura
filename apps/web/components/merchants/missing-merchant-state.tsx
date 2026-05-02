@@ -2,9 +2,6 @@
 
 import Link from "next/link";
 
-// Shared empty-state surfaced when an authed user reaches any /merchants/*
-// page but has no merchants row. Every merchant page mounts this (not just
-// the dashboard) so deep links don't render permanent skeletons.
 export function MissingMerchantState() {
   return (
     <div className="mx-auto max-w-[720px] px-8 py-16">

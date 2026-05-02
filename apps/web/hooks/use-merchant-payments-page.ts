@@ -6,8 +6,7 @@ import { useSession } from "next-auth/react";
 import { useAuthedFetch } from "@/hooks/use-authed-fetch";
 import type { MerchantTransactionsResponse } from "@/hooks/use-merchant-transactions";
 
-// Page-sized hook used by /merchants/payments. Advances by pushing cursors
-// onto a stack so "Back" works without refetching from the start.
+// Stack-based cursor pager so Back works without refetching from start.
 export function useMerchantPaymentsPage(pageSize = 50) {
   const [cursorStack, setCursorStack] = useState<(string | undefined)[]>([
     undefined,

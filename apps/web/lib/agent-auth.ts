@@ -28,13 +28,10 @@ export type AuthedAgentContext = {
   budget: Budget;
 };
 
-// Resolves a caller from the Bearer API key header. Scoped specifically to
-// agent-authenticated routes (/api/x402/sign, and future agent-facing RPCs).
-// Different from lib/auth.ts which expects a user JWT.
-//
-// Returns { agent, budget } or throws AgentAuthError. We eagerly load the
-// budget in the same query because every caller of this helper needs it for
-// spend-cap checks.
+/**
+ * Resolves a caller from the agent Bearer API key. Distinct from lib/auth.ts
+ * which expects a user JWT.
+ */
 export async function requireAgentApiKey(
   req: Request,
 ): Promise<AuthedAgentContext> {
@@ -66,8 +63,6 @@ export async function requireAgentApiKey(
   return { agent: row.agent, budget: row.budget };
 }
 
-// Same pattern as authGuard — one-line ergonomics in routes:
-//   const ctx = await agentAuthGuard(req); if (ctx instanceof Response) return ctx;
 export async function agentAuthGuard(
   req: Request,
 ): Promise<AuthedAgentContext | Response> {

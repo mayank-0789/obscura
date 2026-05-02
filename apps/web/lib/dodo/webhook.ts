@@ -9,13 +9,10 @@ export class WebhookVerifyError extends Error {
   }
 }
 
-// Verify a Dodo webhook signature and return the typed event payload. Throws
-// WebhookVerifyError on any failure (missing headers, bad signature, unparsable
-// body). The route handler maps this to a 401 so Dodo doesn't retry a forged
-// event forever.
-//
-// dodo.webhooks.unwrap wraps the standardwebhooks library; it uses the
-// webhookKey we set on the client singleton at construction time.
+/**
+ * Verify a Dodo webhook signature and return the typed event payload. Throws
+ * WebhookVerifyError on any failure; route maps to 401 so Dodo stops retrying.
+ */
 export function verifyDodoWebhook(
   rawBody: string,
   requestHeaders: Headers,

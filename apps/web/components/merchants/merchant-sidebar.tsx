@@ -6,9 +6,7 @@ import { usePathname } from "next/navigation";
 type NavItem = {
   label: string;
   href: string;
-  /** When true, render as disabled "soon" item — used for pages not yet built. */
   soon?: boolean;
-  /** When true, allow as the active item for deeper paths (e.g. /merchants/apis/[id]). */
   matchDeeper?: boolean;
 };
 
@@ -17,7 +15,6 @@ type NavGroup = {
   items: NavItem[];
 };
 
-// Sidebar entries. Cash-out is on the v2 roadmap.
 const GROUPS: NavGroup[] = [
   {
     title: "Workspace",
@@ -59,9 +56,6 @@ export function MerchantSidebar({ merchantEtaAddress }: { merchantEtaAddress: st
         ))}
       </nav>
 
-      {/* Payout wallet — mirror the agents-sidebar footer card. The full
-          reveal UX (copy, QR, etc.) lives on the dashboard hero card; this
-          is a persistent glance. */}
       <div className="border-t border-zinc-800/80 px-4 py-4">
         <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
           Payout wallet
@@ -87,9 +81,6 @@ export function MerchantSidebar({ merchantEtaAddress }: { merchantEtaAddress: st
             </a>
           </>
         ) : (
-          // Neutral zinc for in-progress — amber is reserved for caution
-          // states elsewhere in the app, so provisioning text in amber
-          // reads as an error rather than a loading indicator.
           <div className="mt-1.5 flex items-center gap-2 text-[12px] text-zinc-500">
             <span
               aria-hidden
@@ -115,9 +106,6 @@ function SidebarLink({
     : pathname === item.href;
 
   if (item.soon) {
-    // Use a disabled button (not a span) so screen readers announce the
-    // disabled state and the tab order correctly skips it, while still
-    // letting sighted users see what's coming.
     return (
       <button
         type="button"

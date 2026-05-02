@@ -5,9 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { useAuthedFetch } from "@/hooks/use-authed-fetch";
 
-// Stop polling after this long. If the webhook didn't land in 5 minutes, it's
-// almost certainly not going to — something else is broken and we should tell
-// the user to retry rather than spin forever.
+// 5min cutoff: if the webhook hasn't landed by then, surface retry over spin.
 const POLL_TIMEOUT_MS = 5 * 60 * 1000;
 const POLL_INTERVAL_MS = 2_000;
 
@@ -23,15 +21,11 @@ export type TopupStatus =
       agentName: string;
     };
 
-// Polls /api/topup/status/[paymentId] every 2s until state is terminal
-// (confirmed / failed) or until POLL_TIMEOUT_MS elapses since this hook
-// instance mounted. After the timeout, the query returns state='timeout'
-// so the UI can show a retry prompt.
 export function useTopupStatus(paymentId: string | null) {
   const { status } = useSession();
   const authedFetch = useAuthedFetch();
 
-  // Capture mount time once — polling-cutoff should not reset on each refetch.
+  // Capture mount time once so polling-cutoff doesn't reset on each refetch.
   const mountedAt = useMemo(() => Date.now(), []);
 
   return useQuery<TopupStatus>({

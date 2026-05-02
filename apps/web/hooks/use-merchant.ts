@@ -19,15 +19,8 @@ export type MerchantMeResponse = {
   };
 };
 
-// Fetches the authenticated merchant's identity + aggregate stats from
-// /api/merchants/me. Polls every 10s so the dashboard trails reality even
-// without the SSE push (Phase 11 adds real-time invalidation on top of this
-// polling baseline).
-//
-// 404 is surfaced as `not_found` without retry — the caller (merchant
-// dashboard) uses it to detect "you reached a merchant page without a
-// merchant record" and show a register CTA. Retrying would re-hit the same
-// 404 and just delay the UI's recovery path.
+// 404 surfaces as `not_found` without retry so the merchant dashboard can
+// show its register CTA instead of waiting for a doomed retry.
 export function useMerchant() {
   const { status } = useSession();
   const authedFetch = useAuthedFetch();

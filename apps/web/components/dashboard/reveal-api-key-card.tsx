@@ -9,9 +9,7 @@ type Props = {
   onDismiss: () => void;
 };
 
-// Plaintext API key shown once. Server stores only a hash; leaving without
-// copying means rotating from the agent page. The beforeunload handler warns
-// on navigation/refresh while this card is visible.
+/** Plaintext API key shown once; beforeunload warns before nav/refresh. */
 export function RevealApiKeyCard({ agentName, apiKey, onDismiss }: Props) {
   const [copied, setCopied] = useState(false);
 

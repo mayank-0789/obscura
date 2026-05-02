@@ -7,12 +7,7 @@ import { solscanTxUrl } from "@/lib/solscan";
 import { formatInr, formatUsdg, STABLECOIN_TICKER } from "@/lib/money-format";
 import { AppShell } from "@/components/dashboard/app-shell";
 
-/**
- * Landing page after Dodo checkout completes. Dodo redirects here with
- * ?payment_id= &status= appended. We poll server until the webhook lands
- * (transactions row with status='confirmed') and render the appropriate
- * terminal state.
- */
+/** Dodo post-checkout landing; polls until transactions row is confirmed. */
 export function TopupDone() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -52,8 +47,6 @@ function WaitingForConfirmation({ paymentId }: { paymentId: string }) {
     />
   );
 }
-
-/* ─ STATES ──────────────────────────────────────────────────────── */
 
 function Pending() {
   return (
@@ -301,8 +294,6 @@ function MissingPaymentId() {
     </Shell>
   );
 }
-
-/* ─ PRIMITIVES ──────────────────────────────────────────────────── */
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (

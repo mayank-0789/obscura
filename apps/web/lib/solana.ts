@@ -8,11 +8,6 @@ import {
 } from "@obscura-app/solana";
 import { env } from "@/lib/env";
 
-// Server-only Solana client singletons. Match the pattern used by lib/dodo/client
-// and lib/db — one cached instance per process, constructed on first use so
-// env-validation errors surface during route execution (where we can turn them
-// into a clean 500) rather than at module load.
-
 let cachedConnection: Connection | null = null;
 let cachedTreasury: Keypair | null = null;
 let cachedMint: PublicKey | null = null;
