@@ -1,5 +1,5 @@
 import { Connection } from "@solana/web3.js";
-import { and, eq, gt, isNotNull, isNull, lt, sql } from "drizzle-orm";
+import { and, eq, gt, isNotNull, lt, sql } from "drizzle-orm";
 import { db, budgets, transactions } from "@/lib/db";
 import { apiOk } from "@/lib/api";
 import { env } from "@/lib/env";
@@ -34,11 +34,13 @@ export async function GET(req: Request): Promise<Response> {
     })
     .from(transactions)
     .where(
+      // status='pending' is the source of truth — finalized rows are 'confirmed'.
+      // We don't filter on callbackSignature: pruned/timed-out callbacks can carry
+      // a sig, and excluding them would leak the cap on stuck rows.
       and(
         eq(transactions.status, "pending"),
         eq(transactions.kind, "spend"),
         isNotNull(transactions.queueSignature),
-        isNull(transactions.callbackSignature),
         lt(transactions.createdAt, sql`now() - interval '${sql.raw(`${MIN_AGE_SECONDS} seconds`)}'`),
         gt(transactions.createdAt, sql`now() - interval '${sql.raw(`${MAX_AGE_HOURS} hours`)}'`),
       ),
