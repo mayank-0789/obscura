@@ -16,7 +16,7 @@ export function MissingMerchantState() {
         earnings dashboard, and ready-to-paste SDK snippets.
       </p>
       <Link
-        href="/onboarding"
+        href="/onboarding?upgrade=1"
         className="mt-6 inline-flex items-center gap-2 rounded-md border border-emerald-400/40 bg-emerald-500/10 px-4 py-2 font-mono text-[11px] uppercase tracking-[0.22em] text-emerald-300 transition hover:bg-emerald-500/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]"
       >
         Register as merchant

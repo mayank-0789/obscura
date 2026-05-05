@@ -62,9 +62,14 @@ export async function POST(req: Request) {
     }
   }
 
+  const now = new Date();
   const [updated] = await db
     .update(users)
-    .set({ role: body.role, updatedAt: new Date() })
+    .set({
+      role: body.role,
+      onboardedAt: user.onboardedAt ?? now,
+      updatedAt: now,
+    })
     .where(eq(users.id, user.id))
     .returning();
 

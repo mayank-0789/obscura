@@ -59,6 +59,10 @@ export const users = pgTable(
     email: text("email"),
     phone: text("phone"),
     role: userRole("role").notNull().default("user"),
+    // Set the first time the user completes the role picker. Source of truth
+    // for "have they onboarded?" — the per-device localStorage flag is a
+    // flicker-avoidance hint, not a correctness signal.
+    onboardedAt: timestamp("onboarded_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

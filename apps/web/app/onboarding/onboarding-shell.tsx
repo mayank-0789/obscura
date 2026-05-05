@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { Logo } from "@/components/marketing/logo";
@@ -19,6 +19,10 @@ import {
 
 export function OnboardingShell() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // `?upgrade=1` is set by entry points like the merchant "register" CTA so an
+  // already-onboarded user can re-enter the picker to add the other side.
+  const upgrade = searchParams.get("upgrade") === "1";
   const { status } = useSession();
   const ready = status !== "loading";
   const authenticated = status === "authenticated";
@@ -40,17 +44,19 @@ export function OnboardingShell() {
     }
   }, [ready, authenticated, router]);
 
-  // Skip this screen entirely for returning users who've already completed
-  // onboarding on this device. Runs only after `me` has resolved — otherwise
-  // we could flash the picker in the gap between mount and first /me success.
+  // Skip the picker for users who have already onboarded — server-side
+  // `onboardedAt` is the source of truth (works across devices/browsers).
+  // Exception: `?upgrade=1` lets an onboarded user re-enter to add the other
+  // side (e.g., a "user" upgrading to "merchant" via MissingMerchantState).
   useEffect(() => {
     if (!meFetched || !me) return;
-    const flag =
-      typeof window !== "undefined" &&
-      localStorage.getItem(ONBOARDED_KEY) === "1";
-    if (!flag) return;
+    if (!me.user.onboardedAt) return;
+    if (upgrade) return;
+    if (typeof window !== "undefined") {
+      localStorage.setItem(ONBOARDED_KEY, "1");
+    }
     router.replace(destinationForRole(me.user.role as Role));
-  }, [meFetched, me, router]);
+  }, [meFetched, me, router, upgrade]);
 
   const choose = async (role: Role) => {
     if (pending) return;
