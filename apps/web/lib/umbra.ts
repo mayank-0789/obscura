@@ -16,7 +16,6 @@ import {
   createSignerFromPrivateKeyBytes,
   getClaimableUtxoScannerFunction,
   getEncryptedBalanceQuerierFunction,
-  getEncryptedBalanceToPublicBalanceDirectWithdrawerFunction,
   getEncryptedBalanceToReceiverClaimableUtxoCreatorFunction,
   getPublicBalanceToEncryptedBalanceDirectDepositorFunction,
   getReceiverClaimableUtxoToEncryptedBalanceClaimerFunction,
@@ -32,7 +31,6 @@ import type {
   IUmbraRelayer,
   IUmbraSigner,
   ScannedUtxoData,
-  WithdrawResult,
 } from "@umbra-privacy/sdk/interfaces";
 import type { U64 } from "@umbra-privacy/sdk/types";
 import {
@@ -45,14 +43,11 @@ import { getConnection, getStablecoinMint, getTreasury } from "@/lib/solana";
 
 export type UmbraSubject = "agent" | "merchant";
 
+// `v1` bump rotates every subject key. Trailing pipe is a delimiter that
+// prevents HMAC prefix collisions across IDs.
 const DOMAIN_SEPARATOR_PREFIX = "umbra/v1/" as const;
 
-// Trailing pipe is a delimiter that prevents prefix collisions in HMAC inputs
-// (`agent-signing-key|<id>` can't collide with `agent-signing|key<id>`).
-// Bumping `v1` rotates EVERY subject key — needs a migration plan.
-
-// Log-redaction helper for the mixer's privacy story: full ETA addresses in
-// operator logs would leak recipient identity to anyone with log access.
+// Truncate ETA addresses in logs — full addresses would leak recipient identity.
 function shortAddr(addr: string): string {
   if (addr.length <= 12) return addr;
   return `${addr.slice(0, 6)}…`;
@@ -73,10 +68,7 @@ function deriveKeypair(subject: UmbraSubject, subjectId: string): Keypair {
   return Keypair.fromSeed(deriveSeed(subject, subjectId));
 }
 
-/**
- * Pure derivation of the Umbra-side base58 pubkey for a subject. Safe inside
- * a DB batch — no I/O, no SDK init.
- */
+/** Pure derivation of the Umbra-side base58 pubkey. No I/O, safe inside a DB batch. */
 export function deriveSubjectEtaAddress(
   subject: UmbraSubject,
   subjectId: string,
@@ -98,17 +90,13 @@ async function getSubjectSigner(
   );
 }
 
-// Derive wss:// from HELIUS_RPC_URL — most providers (Helius, QuickNode, Triton)
-// mirror HTTP at the same path under wss://. Override env exists for proxies.
+// Most providers mirror HTTP at wss:// on the same path; env override for proxies.
 function resolveRpcSubscriptionsUrl(): string {
   if (env.UMBRA_RPC_SUBSCRIPTIONS_URL) return env.UMBRA_RPC_SUBSCRIPTIONS_URL;
   return env.HELIUS_RPC_URL.replace(/^https?:\/\//, "wss://");
 }
 
-/**
- * Build an Umbra client for a specific subject. Not cached — derivation is
- * cheap and subjects come and go.
- */
+/** Per-subject Umbra client. Not cached — derivation is cheap. */
 export async function buildSubjectUmbraClient(
   subject: UmbraSubject,
   subjectId: string,
@@ -125,10 +113,7 @@ export async function buildSubjectUmbraClient(
 
 let cachedTreasuryClient: Promise<IUmbraClient> | null = null;
 
-/**
- * Treasury Umbra client, cached process-wide. On rejection the cache is
- * cleared so a transient devnet boot failure doesn't poison the singleton.
- */
+/** Treasury client, cached process-wide. Rejection clears cache so a transient boot failure doesn't poison the singleton. */
 export function getTreasuryUmbraClient(): Promise<IUmbraClient> {
   if (!cachedTreasuryClient) {
     cachedTreasuryClient = buildTreasuryUmbraClient().catch((err) => {
@@ -152,11 +137,9 @@ async function buildTreasuryUmbraClient(): Promise<IUmbraClient> {
 }
 
 /**
- * Registers a subject on Umbra. Idempotent — SDK reads on-chain status bits
- * and skips already-completed steps, so re-calls are safe (e.g. upgrading
- * subjects originally registered with `anonymous: false`). Both flags are
- * required: `confidential` for direct ETA deposits, `anonymous` for the mixer
- * (Umbra error 18003 fires on either side without it).
+ * Idempotent — SDK skips already-completed steps. Both flags required:
+ * `confidential` for direct deposits, `anonymous` for the mixer (Umbra
+ * error 18003 fires on either side without it).
  */
 export async function registerSubjectOnUmbra(
   subject: UmbraSubject,
@@ -180,11 +163,7 @@ export async function registerSubjectOnUmbra(
 
 const SUBJECT_UMBRA_SOL_TARGET = 0.05 * LAMPORTS_PER_SOL;
 
-/**
- * Top up the subject's derived address with SOL from treasury so it can pay
- * its own registration fees. Idempotent — checks balance first. Without this,
- * the registration tx fails with insufficient-funds (subject signer is fee-payer).
- */
+/** Top up subject from treasury so it can pay its own registration fees. Idempotent. */
 export async function fundSubjectAddressIfNeeded(
   etaAddress: string,
 ): Promise<void> {
@@ -225,11 +204,7 @@ async function sendSolFromTreasury(
   return sendAndConfirmTransaction(connection, tx, [treasury]);
 }
 
-/**
- * Treasury → subject's encrypted balance. Only `callbackStatus = 'finalized'`
- * is a confirmed success — `pruned` / `timed-out` are uncertain (op may still
- * resolve async); verify on-chain before retrying.
- */
+/** Treasury → encrypted balance. Only `callbackStatus = 'finalized'` is a confirmed success; other states are uncertain. */
 export async function depositTreasuryToEncryptedAccount(input: {
   etaAddress: string;
   amountMicros: bigint;
@@ -258,43 +233,7 @@ export async function depositTreasuryToEncryptedAccount(input: {
   return result;
 }
 
-/** Subject's encrypted balance → public ATA. Used by employee withdraw flows. */
-export async function withdrawFromEncryptedAccount(input: {
-  subject: UmbraSubject;
-  subjectId: string;
-  destinationAddress: string;
-  amountMicros: bigint;
-}): Promise<WithdrawResult> {
-  const mintBase58 = getStablecoinMint().toBase58();
-  console.info(
-    `[umbra/withdraw] → SDK call ${input.subject}=${input.subjectId} ` +
-      `dest=${input.destinationAddress} mint=${mintBase58} ` +
-      `amountMicros=${input.amountMicros}`,
-  );
-  const startedAt = Date.now();
-  const client = await buildSubjectUmbraClient(input.subject, input.subjectId);
-  const withdraw = getEncryptedBalanceToPublicBalanceDirectWithdrawerFunction({
-    client,
-  });
-  const result = await withdraw(
-    address(input.destinationAddress),
-    address(mintBase58),
-    input.amountMicros as U64,
-  );
-  console.info(
-    `[umbra/withdraw] ${input.subject}=${input.subjectId} ` +
-      `took=${Date.now() - startedAt}ms ` +
-      `queueSig=${result.queueSignature} ` +
-      `callbackSig=${result.callbackSignature ?? "(none)"} ` +
-      `callbackStatus=${result.callbackStatus ?? "(none)"}`,
-  );
-  return result;
-}
-
-/**
- * Reads the subject's encrypted balance. Returns null when not registered or
- * never funded; otherwise the decrypted bigint balance.
- */
+/** Subject's encrypted balance, or null when not registered/funded. */
 export async function getEncryptedBalance(
   subject: UmbraSubject,
   subjectId: string,
@@ -330,10 +269,9 @@ function requireRelayer(): IUmbraRelayer {
 }
 
 /**
- * Sender-side mixer hop: deduct `amountMicros` from sender's encrypted
- * balance and insert a UTXO commitment addressed to the recipient. Recipient
- * must already be Umbra-registered. Only `callbackStatus = 'finalized'`
- * confirms on-chain credit.
+ * Sender-side mixer hop: debit sender, insert UTXO addressed to recipient.
+ * Recipient must already be Umbra-registered. Only `callbackStatus =
+ * 'finalized'` confirms on-chain credit.
  */
 export async function createReceiverClaimableUtxo(input: {
   fromSubject: UmbraSubject;
@@ -342,8 +280,7 @@ export async function createReceiverClaimableUtxo(input: {
   amountMicros: bigint;
 }): Promise<CreateUtxoFromEncryptedBalanceResult> {
   const mintBase58 = getStablecoinMint().toBase58();
-  // Privacy: never log full recipient ETA or exact amount (the mixer's threat
-  // model relies on these being unobservable).
+  // Privacy: never log full recipient ETA or exact amount (mixer threat model).
   console.info(
     `[umbra/utxo-create] → SDK call from=${input.fromSubject}=${input.fromSubjectId} ` +
       `recipient=${shortAddr(input.recipientEtaAddress)} mint=${mintBase58}`,
@@ -374,10 +311,7 @@ export async function createReceiverClaimableUtxo(input: {
   return result;
 }
 
-/**
- * Receiver-side scan from `startInsertionIndex`. Returns only `received`
- * UTXOs. Caller persists `nextScanStartIndex` between runs.
- */
+/** Receiver-side scan from `startInsertionIndex`. Caller persists `nextScanStartIndex`. */
 export async function scanReceiverClaimableUtxos(input: {
   subject: UmbraSubject;
   subjectId: string;
@@ -395,8 +329,7 @@ export async function scanReceiverClaimableUtxos(input: {
   const startedAt = Date.now();
   const client = await buildSubjectUmbraClient(input.subject, input.subjectId);
   const scan = getClaimableUtxoScannerFunction({ client });
-  // Pass BigInts not numbers — SDK's internal `treeIndex * 1_048_576n`
-  // throws "Cannot mix BigInt and other types".
+  // SDK's internal `treeIndex * 1_048_576n` requires BigInt — number throws.
   const result = await scan(
     BigInt(input.treeIndex) as unknown as Parameters<typeof scan>[0],
     BigInt(input.startInsertionIndex) as unknown as Parameters<typeof scan>[1],
@@ -414,10 +347,7 @@ export async function scanReceiverClaimableUtxos(input: {
   };
 }
 
-/**
- * Receiver-side claim: convert UTXOs into the subject's encrypted balance via
- * the relayer. No-op when `utxos` is empty.
- */
+/** Receiver-side claim via relayer. No-op when `utxos` is empty. */
 export async function claimReceiverClaimableUtxos(input: {
   subject: UmbraSubject;
   subjectId: string;

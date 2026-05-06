@@ -5,8 +5,6 @@ import { apiOk } from "@/lib/api";
 import { env } from "@/lib/env";
 import { cronAuthGuard } from "@/lib/cron-auth";
 
-// Schedule: every 5 minutes, fired by an external scheduler (Railway cron).
-
 const MIN_AGE_SECONDS = 120;
 const MAX_AGE_HOURS = 24;
 const BATCH_LIMIT = 50;
@@ -34,9 +32,8 @@ export async function GET(req: Request): Promise<Response> {
     })
     .from(transactions)
     .where(
-      // status='pending' is the source of truth — finalized rows are 'confirmed'.
-      // We don't filter on callbackSignature: pruned/timed-out callbacks can carry
-      // a sig, and excluding them would leak the cap on stuck rows.
+      // No callbackSignature filter: timed-out callbacks can still carry a sig,
+      // excluding them would leak the cap on stuck rows.
       and(
         eq(transactions.status, "pending"),
         eq(transactions.kind, "spend"),

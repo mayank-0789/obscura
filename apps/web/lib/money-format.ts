@@ -1,5 +1,4 @@
 // Display ticker for whatever STABLECOIN_MINT currently points at.
-// `formatUsdg` name is historical — formats 6-decimal micros regardless of brand.
 export const STABLECOIN_TICKER = "USDC";
 
 export function formatInr(paise: string | bigint): string {

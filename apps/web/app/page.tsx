@@ -313,9 +313,6 @@ function SplitAudience() {
   );
 }
 
-// CTA descriptor for an AudienceCard. Either a static href (for cross-links
-// like "/merchants" landing) or an auth-aware smart CTA that sends the user
-// to a specific dashboard when signed in.
 type AudienceCta =
   | { kind: "link"; href: string; label: string }
   | { kind: "dashboard"; dashboard: "agent" | "merchant"; label: string };

@@ -1,5 +1,4 @@
-// Add a code here only if /api/x402/sign (or another agent-key route) emits
-// it. User-JWT-only codes from apps/web/lib/api.ts are intentionally absent.
+// Only codes emitted by agent-key routes; user-JWT codes are intentionally absent.
 export type ObscuraErrorCode =
   | "missing_token"
   | "invalid_token"

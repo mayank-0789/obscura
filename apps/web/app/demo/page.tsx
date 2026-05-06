@@ -3,10 +3,6 @@ import { Footer } from "../../components/marketing/footer";
 import { env } from "@/lib/env";
 import { DemoClient } from "./demo-client";
 
-// /demo — judge-facing live playground. One click triggers a real x402 spend
-// from the operator's demo agent against the demo merchant, with each step
-// of the Umbra-mixer dance streamed over SSE.
-
 export const dynamic = "force-dynamic";
 
 export default function DemoPage() {

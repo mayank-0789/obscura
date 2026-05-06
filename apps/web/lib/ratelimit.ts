@@ -39,7 +39,7 @@ function getLimiter(
   return limiter;
 }
 
-// Short-circuits to allow when Upstash env vars are unset (local dev).
+// Allows when Upstash env vars are unset (dev).
 export async function checkLimit(
   name: string,
   key: string,

@@ -17,10 +17,7 @@ export type FxQuote = {
   fetchedAt: number;
 };
 
-/**
- * Fetch the live rate and convert INR paise to USDG micros. Rate is locked at
- * call time and should be stored alongside the resulting USDG amount.
- */
+/** INR paise → USDG micros. Rate is locked at call time; store alongside the result. */
 export async function quoteInrToUsdg(paise: bigint): Promise<{
   usdg: bigint;
   rate: number;
@@ -45,7 +42,7 @@ export async function getInrPerUsd(): Promise<FxQuote> {
     const body = (await res.json()) as { rates?: { INR?: number } };
     const rate = body.rates?.INR;
 
-    // INR/USD has been in [60, 110] for a decade — outside that is bad data.
+    // INR/USD has been [60,110] for a decade; outside [50,150] = bad data.
     if (typeof rate !== "number" || rate < 50 || rate > 150) {
       throw new Error(`frankfurter: implausible rate ${rate}`);
     }

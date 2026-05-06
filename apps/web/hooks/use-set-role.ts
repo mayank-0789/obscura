@@ -32,10 +32,7 @@ export function useSetRole() {
       if (!res.ok) throw new Error(await parseApiError(res));
       return res.json();
     },
-    // Seed caches so the merchant/agent dashboard renders against fresh data
-    // immediately after navigation — otherwise the dashboard reads a stale
-    // `me` (old role) and a stale 404 from /merchants/me, freezing the UI
-    // until a manual refresh.
+    // Seed caches so post-navigation reads aren't stale `me` + 404 /merchants/me.
     onSuccess: (data) => {
       queryClient.setQueryData(["me"], { user: data.user });
       if (data.merchant) {
@@ -49,7 +46,6 @@ export function useSetRole() {
           },
         });
       }
-      // Refetch in the background so polling-driven values catch up.
       void queryClient.invalidateQueries({ queryKey: ["me"] });
       void queryClient.invalidateQueries({ queryKey: ["merchant", "me"] });
     },

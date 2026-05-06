@@ -8,20 +8,12 @@ import { MerchantStatsStrip } from "@/components/merchants/merchant-stats-strip"
 import { RecentPaymentsList } from "@/components/merchants/recent-payments-list";
 import { QuickstartSnippetCard } from "@/components/merchants/quickstart-snippet-card";
 
-// Merchant dashboard content. All data flows from two polling hooks
-// (useMerchant + useMerchantTransactions) that refetch every 10s. Phase 11
-// will overlay SSE invalidation so the feed updates sub-second when a real
-// payment lands without waiting for the next poll.
 export function MerchantDashboardShell() {
   const merchantQuery = useMerchant();
   const txQuery = useMerchantTransactions({ limit: 10 });
 
   const merchant = merchantQuery.data?.merchant;
   const stats = merchantQuery.data?.stats;
-
-  // MerchantAppShell owns the missing-merchant branch now — every /merchants/*
-  // page inherits the register CTA via the shell instead of each screen
-  // re-implementing it.
 
   return (
     <MerchantAppShell>

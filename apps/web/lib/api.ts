@@ -15,7 +15,7 @@ type ErrorCode =
   | "invalid_challenge"
   | "over_cap"
   | "signing_failed"
-  // Distinct from rate_limited: SDK must NOT retry — original request is still in-flight.
+  // SDK must NOT retry — original request is still in-flight.
   | "conflict"
   | "insufficient_funds"
   | "rate_unavailable";

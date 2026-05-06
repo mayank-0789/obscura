@@ -2,8 +2,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { customAlphabet } from "nanoid";
 
-// `mk_` prefix lets dual-auth fast-route to merchant_api_keys; otherwise
-// fall through to NextAuth session.
+// `mk_` prefix lets dual-auth fast-route to merchant_api_keys vs session.
 
 const ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz";
 const KEY_LENGTH = 28;

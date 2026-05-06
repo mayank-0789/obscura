@@ -2,7 +2,7 @@ import "server-only";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { db, transactions, type Transaction } from "@/lib/db";
 
-/** Opaque pagination cursor — base64url JSON of `(createdAt, id)`. */
+/** base64url JSON of `(createdAt, id)`. */
 export type AgentTxCursor = { createdAt: string; id: string };
 
 export function encodeAgentTxCursor(c: AgentTxCursor): string {
@@ -29,7 +29,7 @@ export function decodeAgentTxCursor(s: string): AgentTxCursor | null {
   }
 }
 
-/** Paginated feed of confirmed spends originated by this agent. Tuple-compare on `(created_at, id)` for stable ordering under rapid inserts. */
+/** Confirmed spends by this agent. Tuple-compare keeps ordering stable under rapid inserts. */
 export async function getAgentTransactions(input: {
   agentId: string;
   limit: number;

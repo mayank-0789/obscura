@@ -4,7 +4,7 @@ import type { AgentDTO } from "@/types/agent";
 
 type BudgetSnapshot = Pick<Budget, "period" | "capInr" | "capUsdg" | "spentUsdg">;
 
-/** DB row → wire shape. bigints stringified; Date → ISO. Single source of truth for the agent wire contract. */
+/** DB row → wire. bigints stringified, Date → ISO. */
 export function serializeAgent(
   agent: Agent,
   budget: BudgetSnapshot | null,

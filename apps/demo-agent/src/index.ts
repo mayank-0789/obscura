@@ -1,8 +1,7 @@
 import "dotenv/config";
 import { Obscura, ObscuraError } from "@obscura-app/sdk";
 
-// Demo agent — a "news reader" that autonomously buys headlines + articles
-// from the demo merchant via Obscura. Loops forever (Ctrl-C to stop).
+// Demo agent — autonomously buys headlines/articles from demo merchant. Loops until Ctrl-C.
 
 const API_KEY = process.env.OBSCURA_KEY;
 const BASE_URL = process.env.OBSCURA_BASE_URL ?? "http://localhost:3000";
@@ -72,7 +71,7 @@ async function logResult(
   const took = `${Date.now() - startedAt}ms`;
   if (res.ok) {
     totalSpentMicros += priceMicros;
-    // Extract queue signature from umbra-mixer-v1 settlement envelope for log breadcrumb.
+    // Decode queue signature from settlement envelope for log breadcrumb.
     const sig = res.headers.get("x-payment-response");
     const sigShort = sig
       ? Buffer.from(sig, "base64")

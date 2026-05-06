@@ -55,7 +55,7 @@ The Obscura backend is the only party that ever sees plaintext amounts, and it's
 
 ## Quick demo
 
-- **Live demo:** `https://obscurapp.com/demo` *(once deployed)* — judge clicks one button to fire a real x402 transaction on Solana devnet via the Umbra mixer, watches each step stream live, gets a Solscan link to verify on-chain.
+- **Live demo:** [`https://obscurapp.com/demo`](https://obscurapp.com/demo) — judge clicks one button to fire a real x402 transaction on Solana devnet via the Umbra mixer, watches each step stream live, gets a Solscan link to verify on-chain. Deployed and live.
 - **Agent SDK demo:** `apps/demo-agent/` — a small Node script that loops forever (Ctrl-C to stop), hitting `apps/demo-merchant-news/` once every ~25s with a mix of `/headlines` ($0.005), `/article/:id` ($0.010), and an occasional `/digest` ($0.015). Run end-to-end via `pnpm dev:demo` + `cd apps/demo-agent && pnpm start`.
 - **Demo video:** *(submitted alongside this README)*
 
@@ -80,7 +80,7 @@ The Obscura backend is the only party that ever sees plaintext amounts, and it's
    │   ─ /api/agents (provisioning), /api/merchants (provisioning)   │
    │   ─ /api/topup/session, /api/webhooks/dodo (fiat in)            │
    │   ─ /api/x402/sign  ◄── HOT PATH for confidential agent pay     │
-   │   ─ /api/cron/claim-daemon  (every 2 min, claims merchant UTXOs)│
+   │   ─ /api/cron/claim-daemon  (every 5 min, claims merchant UTXOs)│
    │   ─ /api/cron/reconcile     (every 5 min, repairs stuck txs)    │
    │   ─ Drizzle ORM + Neon Postgres (transactions table = audit log)│
    └─────────┬──────────────────┬──────────────────┬─────────────────┘
@@ -125,7 +125,7 @@ The Obscura backend is the only party that ever sees plaintext amounts, and it's
 
 This is the section the privacy-track judges should read carefully. Every Umbra SDK function we call, where it's called from, and why.
 
-The bulk of the Umbra integration lives in **`apps/web/lib/umbra.ts`** (~605 lines). Two carve-outs intentionally import the SDK directly: `apps/web/app/api/cron/claim-daemon/route.ts` (scanner + claimer + relayer + claim prover, kept self-contained so the cron has no extra module graph) and `apps/web/app/api/webhooks/dodo/route.ts` (`assertU64` for the deposit amount brand). Anywhere else, fold imports back through `lib/umbra.ts`.
+The bulk of the Umbra integration lives in **`apps/web/lib/umbra.ts`** (~390 lines). Two carve-outs intentionally import the SDK directly: `apps/web/app/api/cron/claim-daemon/route.ts` (scanner + claimer + relayer + claim prover, kept self-contained so the cron has no extra module graph) and `apps/web/app/api/webhooks/dodo/route.ts` (`assertU64` for the deposit amount brand). Anywhere else, fold imports back through `lib/umbra.ts`.
 
 ### 1. Identity and key derivation
 
@@ -382,11 +382,11 @@ export async function claimReceiverClaimableUtxos(input: {
 
 The relayer is critical here: **it pays the on-chain claim fee + signs the claim transaction.** The merchant's wallet never appears as fee payer on chain. This keeps the merchant's actual wallet off the on-chain trail entirely — only the encrypted balance accumulates, and only the merchant can decrypt it.
 
-The Groth16 prove time per claim is ~30s. The cron service runs every 2 minutes and processes up to 2 merchants per invocation (bounded so a single claim run doesn't exceed any deadline cap).
+The Groth16 prove time per claim is ~30s. The cron service runs every 5 minutes (Railway's plan-minimum cron interval) and processes up to 2 merchants per invocation (bounded so a single claim run stays well under the deadline cap). On-demand `curl` against the same endpoint with `Authorization: Bearer $CRON_SECRET` is how we make the merchant dashboard tick instantly during a live demo.
 
 #### The cron service
 
-**`apps/web/app/api/cron/claim-daemon/route.ts`** — gated by `cronAuthGuard` (Bearer token), runs every 2 minutes. Pseudocode:
+**`apps/web/app/api/cron/claim-daemon/route.ts`** — gated by `cronAuthGuard` (Bearer token), runs every 5 minutes. Pseudocode:
 
 ```ts
 const merchants = await db.select().from(merchants)
@@ -439,35 +439,9 @@ The `state === "shared"` check is the SDK's signal that the per-mint encrypted b
 
 ### 7. Withdrawals
 
-Merchants and operators can move funds from their encrypted balance back to a public SPL token account. Used for cash-out flows (planned) and operator emergency drains (built).
+Withdrawals move funds from a subject's encrypted balance back to a public SPL token account, via Umbra's `getEncryptedBalanceToPublicBalanceDirectWithdrawerFunction`. Like deposits, this is a *direct* (non-mixer) operation — the withdrawal event is publicly visible on chain, only the prior encrypted balance state stays hidden. That trade-off is fine for end-of-day cash-out: by the time the merchant withdraws, the per-call payment graph is already protected.
 
-**File: `apps/web/lib/umbra.ts:335-365`**
-
-```ts
-import {
-  getEncryptedBalanceToPublicBalanceDirectWithdrawerFunction,
-} from "@umbra-privacy/sdk";
-
-export async function withdrawFromEncryptedAccount(input: {
-  subject: UmbraSubject;
-  subjectId: string;
-  destinationAddress: string;
-  amountMicros: bigint;
-}): Promise<WithdrawResult> {
-  const client = await buildSubjectUmbraClient(input.subject, input.subjectId);
-  const withdraw = getEncryptedBalanceToPublicBalanceDirectWithdrawerFunction({
-    client,
-  });
-  const result = await withdraw(
-    address(input.destinationAddress),
-    address(getStablecoinMint().toBase58()),
-    input.amountMicros as U64,
-  );
-  return result;
-}
-```
-
-Like deposits, this is a direct (non-mixer) operation. The withdrawal *event* is on-chain; only the prior encrypted balance state stays hidden. Fine for end-of-day cash-out: by the time the merchant withdraws, the per-call payment graph is already protected.
+**Status: not wired in v1.** The `withdrawFromEncryptedAccount` wrapper used to live in `lib/umbra.ts` but was removed in a dead-code cleanup pass — zero callers in the merchant cash-out UI, which is still on the roadmap. When that ships, the wrapper will return as a 15-line helper following the same `(client, address, mint, amountMicros)` shape as deposits. Operator emergency drains today require a one-off script invocation against the SDK directly.
 
 ### 8. Reconciliation
 
@@ -611,13 +585,13 @@ AGENT CODE      AGENT SDK    OBSCURA WEB    UMBRA / SOLANA    MERCHANT API
     │  (json)        │                                          │
 ```
 
-Some time later (within 2 minutes):
+Some time later (within 5 minutes, or on-demand via authenticated `curl` for live demos):
 
 ```
 RAILWAY CRON              OBSCURA WEB            UMBRA INDEXER         UMBRA RELAYER
                                                                        (devnet relayer)
      │                          │                       │                    │
-     │ ─ every 2 min ───────────►/api/cron/claim-daemon │                    │
+     │ ─ every 5 min ───────────►/api/cron/claim-daemon │                    │
      │                          │                       │                    │
      │                          │ for active merchants: │                    │
      │                          │  scanReceiverClaimable│                    │
@@ -634,7 +608,7 @@ RAILWAY CRON              OBSCURA WEB            UMBRA INDEXER         UMBRA REL
 
 ### Flow 4 — Merchant withdraws (planned)
 
-Not implemented in v1; uses `withdrawFromEncryptedAccount` to move from the merchant's encrypted balance to a public SPL ATA, then a separate fiat off-ramp (Mudrex + Dodo Payouts) handles INR delivery.
+Not implemented in v1. The flow will call Umbra's `getEncryptedBalanceToPublicBalanceDirectWithdrawerFunction` (re-introducing the `withdrawFromEncryptedAccount` wrapper in `lib/umbra.ts`) to move from the merchant's encrypted balance to a public SPL ATA, then a separate fiat off-ramp (Mudrex + Dodo Payouts) handles INR delivery.
 
 ---
 
@@ -790,8 +764,10 @@ Four services:
 
 1. **`web`** — the Next.js app, autodeployed from GitHub. Public domain → `obscurapp.com`.
 2. **`demo-merchant-news`** — the reference merchant Express server. Public domain.
-3. **`cron-claim-daemon`** — `curlimages/curl` Docker image, schedule `*/2 * * * *`, hits `/api/cron/claim-daemon` with `Authorization: Bearer $CRON_SECRET`.
-4. **`cron-reconcile`** — same shape, schedule `*/5 * * * *`, hits `/api/cron/reconcile`.
+3. **`cron-claim-daemon`** — `curlimages/curl:latest` Docker image, schedule `*/5 * * * *`, start command `sh -c 'curl -fsS --max-time 290 -H "Authorization: Bearer $CRON_SECRET" https://obscurapp.com/api/cron/claim-daemon'`, restart policy `Never`. Variables: `CRON_SECRET` matching what's set on the `web` service.
+4. **`cron-reconcile`** — same shape, schedule `*/5 * * * *`, hits `/api/cron/reconcile` with `--max-time 60`.
+
+> **Note:** Railway's plan-minimum cron interval is 5 minutes, so both crons run on `*/5`. The original design targeted `*/2` for the claim daemon; on Railway you can compensate during a live demo by manually firing the claim-daemon URL with the same Bearer header — that takes ~30s round-trip and immediately ticks the merchant dashboard.
 
 All 4 services are configured in the same Railway project so they can address each other via Railway's internal DNS (`*.railway.internal`).
 
@@ -829,7 +805,7 @@ See `project_treasury_architecture.md` for the full plan. Devnet uses a single k
 
 - **Track:** Umbra Privacy track, Colosseum Solana Frontier Hackathon 2026.
 - **Team:** Solo (jils.patel@scaler.com).
-- **Live demo:** `https://obscurapp.com` *(deployed on Railway)*.
+- **Live demo:** [`https://obscurapp.com/demo`](https://obscurapp.com/demo) — one-button live x402 transaction on Solana devnet via the Umbra mixer (deployed on Railway). The site root [`obscurapp.com`](https://obscurapp.com) is the marketing landing.
 - **Demo video:** *(linked in the submission form)*.
 - **License:** MIT (`LICENSE`).
 

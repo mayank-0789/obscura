@@ -36,8 +36,7 @@ export function DashboardTopBar({
   const canRegisterMerchant = role === "user";
   const canRegisterAgent = role === "merchant";
 
-  // Mutation always sets role='both'; keep menu open during async so error
-  // toast preserves context (closing before settle hides the retry path).
+  // Keep menu open during the mutation so an error toast retains retry context.
   const upgradeRole = async (target: "agent" | "merchant") => {
     try {
       await setRole.mutateAsync("both");
@@ -71,7 +70,6 @@ export function DashboardTopBar({
   }, [menuOpen]);
 
   return (
-    // 3-column grid keeps user menu flush-right when center slot is empty.
     <header className="sticky top-0 z-40 grid h-12 grid-cols-[1fr_auto_1fr] items-center gap-4 border-b border-zinc-800/80 bg-[#0a0a0a]/85 px-4 backdrop-blur-md">
       <div className="flex items-center gap-3 justify-self-start">
         <Link href="/" className="flex items-center gap-2">

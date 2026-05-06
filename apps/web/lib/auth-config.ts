@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import { db, users } from "@/lib/db";
 import { env } from "@/lib/env";
 
-// Explicit `NextAuthResult` annotation avoids TS2742 "inferred type cannot be named".
+// `NextAuthResult` annotation avoids TS2742 "inferred type cannot be named".
 const nextAuth: NextAuthResult = NextAuth({
   providers: [
     Google({
@@ -16,9 +16,9 @@ const nextAuth: NextAuthResult = NextAuth({
   trustHost: true,
   session: { strategy: "jwt" },
   callbacks: {
-    // Auth.js v5 trap: with no DB adapter, user.id is a fresh randomUUID() per
-    // OAuth callback. Pin token.sub to the real Google sub or every sign-in
-    // mints a new users.auth_id row.
+    // Auth.js v5 trap: without a DB adapter, user.id is a fresh randomUUID()
+    // per OAuth callback. Pin token.sub to the real Google sub or every
+    // sign-in mints a new users.auth_id row.
     async jwt({ token, account, profile }) {
       if (account?.provider === "google") {
         const googleSub =

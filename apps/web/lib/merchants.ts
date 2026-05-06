@@ -16,10 +16,7 @@ import {
   registerSubjectOnUmbra,
 } from "@/lib/umbra";
 
-/**
- * Carries only a code — raw error is logged but never stored in `message`
- * because callers tend to bubble `err.message` into HTTP responses.
- */
+/** Code-only — callers bubble `err.message` into HTTP responses. */
 export class MerchantProvisionError extends Error {
   constructor(
     public readonly code:
@@ -70,9 +67,9 @@ async function createMerchantWallet(): Promise<CreatedWallet> {
 }
 
 /**
- * Provision a merchant end-to-end: derive Umbra wallet, register on Umbra,
- * atomic batch insert (merchant row + role bump), then mint initial API key.
- * Returns `created: false` + `apiKey: null` for race-loser or pre-existing.
+ * Derive Umbra wallet → register → atomic batch insert (merchant + role
+ * bump) → mint initial API key. Returns `created:false, apiKey:null` for
+ * race-loser or pre-existing.
  */
 export async function provisionMerchant(
   user: User,
@@ -102,8 +99,7 @@ export async function provisionMerchant(
       .returning();
 
     if (needsRoleBump) {
-      // db.batch keeps role-bump atomic with merchant insert. Race-loser path:
-      // role update is an idempotent no-op against the winner's 'both'.
+      // Atomic with merchant insert; race-loser's role update no-ops against winner's 'both'.
       const [insertResult] = await db.batch([
         insertMerchant,
         db
@@ -126,9 +122,8 @@ export async function provisionMerchant(
       `[merchants/provision] ✓ merchant=${insertedRow.id} eta=${insertedRow.etaAddress} created`,
     );
 
-    // Race + FK: keep initial-key insert OUT of the merchants batch. Race-loser's
-    // onConflictDoNothing drops the merchant row, so a same-batch key insert
-    // would FK-trip on the missing merchantId and roll the whole batch back.
+    // Keep key insert OUT of merchants batch: race-loser's onConflictDoNothing
+    // drops the row, so a same-batch key insert would FK-trip and fail.
     const apiKey = generateMerchantApiKey();
     let initialKeyMinted = false;
     try {
@@ -146,8 +141,7 @@ export async function provisionMerchant(
       );
     }
 
-    // Best-effort: Helius push for legacy SPL transfers to eta_address. Mixer
-    // payments don't surface via Helius; this catches raw USDC sent direct.
+    // Helius push for legacy SPL transfers; mixer payments don't surface here.
     void registerMerchantPayoutAddress(insertedRow.etaAddress).catch((err) => {
       console.error(
         "[merchants/provision] helius register unexpected failure:",
@@ -161,8 +155,7 @@ export async function provisionMerchant(
     };
   }
 
-  // Race-loser: re-read winner. Loser's funded SOL + Umbra registration at
-  // a different eta_address are orphaned (~0.05 SOL, reconcilable manually).
+  // Race-loser: re-read winner. Loser's ~0.05 SOL + Umbra registration are orphaned.
   const winner = await getMerchantByOwner(user.id);
   if (!winner) throw new MerchantProvisionError("db_insert_failed");
   return { merchant: winner, created: false, apiKey: null };

@@ -146,7 +146,7 @@ function redactIp(ip: string): string {
 }
 
 function canonicalBaseUrl(): string {
-  // Fixed to env.NEXT_PUBLIC_APP_URL — reading X-Forwarded-Host would let a caller
-  // redirect orchestrator fetches (carrying DEMO_AGENT_API_KEY) to an attacker host.
+  // Fixed to env: trusting X-Forwarded-Host could let a caller redirect
+  // orchestrator fetches (which carry DEMO_AGENT_API_KEY) to an attacker host.
   return env.NEXT_PUBLIC_APP_URL.replace(/\/+$/, "");
 }

@@ -28,8 +28,7 @@ export function TopupForm() {
 
   const [agentId, setAgentId] = useState<string>(initialAgentId);
   const [amountInr, setAmountInr] = useState<number | "">(500);
-  // Sticky redirect flag prevents a second Dodo session from a double-click
-  // in the gap between mutation resolve and `window.location.href` unload.
+  // Sticky flag — prevents a second Dodo session if user clicks during redirect unload.
   const [redirecting, setRedirecting] = useState(false);
 
   useEffect(() => {

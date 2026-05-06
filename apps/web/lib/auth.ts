@@ -22,7 +22,7 @@ export class AuthError extends Error {
   }
 }
 
-/** Verifies the active NextAuth session. Session-only — distinct from `requireAgentApiKey` (mk_/pk_ Bearer tokens) in the dual-auth model. */
+/** Session-only auth. Distinct from `requireAgentApiKey` (pk_/mk_ Bearer). */
 export async function requireAuth(_req?: Request): Promise<{ sub: string; email: string }> {
   void _req;
   const session = await auth();
@@ -32,7 +32,7 @@ export async function requireAuth(_req?: Request): Promise<{ sub: string; email:
   return { sub: session.user.id, email: session.user.email };
 }
 
-/** Resolves a verified Google sub to our DB row. Split from `requireUser` so dual-auth callers can reuse it. */
+/** Google sub → DB row. Split from `requireUser` for dual-auth reuse. */
 export async function loadUserByAuthId(authId: string): Promise<User> {
   const [user] = await db
     .select()
@@ -43,13 +43,13 @@ export async function loadUserByAuthId(authId: string): Promise<User> {
   return user;
 }
 
-/** Verifies session AND resolves the DB user row. Throws AuthError('user_not_synced') if the row is missing — client recovers via /api/auth/sync. */
+/** Session + user-row lookup. Throws `user_not_synced` → client recovers via /api/auth/sync. */
 export async function requireUser(req?: Request): Promise<User> {
   const { sub } = await requireAuth(req);
   return loadUserByAuthId(sub);
 }
 
-/** Wraps `requireUser`, returning either the user or an error Response for direct return from a route. */
+/** Returns user or an error Response. */
 export async function authGuard(req?: Request): Promise<User | Response> {
   try {
     return await requireUser(req);

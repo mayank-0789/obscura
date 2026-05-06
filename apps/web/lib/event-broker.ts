@@ -1,7 +1,7 @@
 import "server-only";
 
-// Single-instance only. Multi-replica deployments need Redis Pub/Sub (or similar)
-// — webhook landing on instance A while SSE client is on B will lose events.
+// Single-instance only. Multi-replica needs Redis Pub/Sub — webhook on A and
+// SSE client on B will lose events.
 
 export type MerchantPaymentEvent = {
   kind: "payment";
@@ -51,7 +51,7 @@ class EventBroker {
   publish(topic: string, event: BrokerEvent): void {
     const set = this.subscribers.get(topic);
     if (!set) return;
-    // Snapshot before iterating — subscribers may unsubscribe themselves during dispatch.
+    // Snapshot — subscribers may unsubscribe during dispatch.
     for (const fn of [...set]) {
       try {
         fn(event);
@@ -62,7 +62,7 @@ class EventBroker {
   }
 }
 
-// Attach to globalThis so HMR reloads in dev don't orphan active SSE subscriptions.
+// Attached to globalThis so HMR doesn't orphan active SSE subscriptions.
 const GLOBAL_KEY = "__obscura_event_broker__";
 type GlobalWithBroker = { [GLOBAL_KEY]?: EventBroker };
 const g = globalThis as unknown as GlobalWithBroker;

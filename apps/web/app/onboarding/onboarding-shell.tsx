@@ -20,34 +20,27 @@ import {
 export function OnboardingShell() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  // `?upgrade=1` is set by entry points like the merchant "register" CTA so an
-  // already-onboarded user can re-enter the picker to add the other side.
+  // `?upgrade=1` lets an already-onboarded user re-enter the picker.
   const upgrade = searchParams.get("upgrade") === "1";
   const { status } = useSession();
   const ready = status !== "loading";
   const authenticated = status === "authenticated";
   const signOut = useSignout();
-  // Mount sync explicitly here — SignInButton isn't rendered on this page, and
-  // without it a brand-new signup could click a role card before
-  // /api/auth/sync has created the users row (the backend then returns
-  // user_not_synced → 404). Mounting here guarantees the sync fires as soon
-  // as the session resolves.
+  // SignInButton isn't on this page, so mount /api/auth/sync explicitly —
+  // otherwise a fresh signup could choose a role before the users row exists.
   useSyncUser();
   const { data: me, isLoading: meLoading, isFetched: meFetched } = useUser();
   const setRole = useSetRole();
   const [pending, setPending] = useState<Role | null>(null);
 
-  // Guard: if not signed in, bounce to the landing page.
   useEffect(() => {
     if (ready && !authenticated) {
       router.replace("/");
     }
   }, [ready, authenticated, router]);
 
-  // Skip the picker for users who have already onboarded — server-side
-  // `onboardedAt` is the source of truth (works across devices/browsers).
-  // Exception: `?upgrade=1` lets an onboarded user re-enter to add the other
-  // side (e.g., a "user" upgrading to "merchant" via MissingMerchantState).
+  // `onboardedAt` is the source of truth across devices; `?upgrade=1` opts
+  // back into the picker.
   useEffect(() => {
     if (!meFetched || !me) return;
     if (!me.user.onboardedAt) return;
@@ -67,10 +60,7 @@ export function OnboardingShell() {
       if (typeof window !== "undefined") {
         localStorage.setItem(ONBOARDED_KEY, "1");
       }
-      // replace, not push — the back button shouldn't dump them on /onboarding.
-      // Clear pending after the navigation kicks off so the spinner releases
-      // even if the RSC navigation is slow to commit (otherwise the card stays
-      // stuck on "Setting up…" until a manual refresh).
+      // replace, not push — back button shouldn't return to /onboarding.
       router.replace(destinationForRole(role));
       setPending(null);
     } catch (err) {

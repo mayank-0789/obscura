@@ -2,16 +2,13 @@ import "server-only";
 import { z } from "zod";
 import type { merchantApis } from "@/lib/db";
 
-// `%` handled via `(?:%[0-9A-Fa-f]{2})` so malformed encodings like `/foo%zz` are rejected.
+// `(?:%[0-9A-Fa-f]{2})` rejects malformed percent-encodings like `/foo%zz`.
 const ENDPOINT_RE =
   /^\/(?:[A-Za-z0-9\-._~!$&'()*+,;=:@/]|%[0-9A-Fa-f]{2})*$/;
 
 export const ApiNameSchema = z.string().trim().min(1).max(80);
 
-/**
- * Accepts a bare path (`/article/:id`) OR a full URL (normalized to its
- * pathname). Rejects anything that's neither.
- */
+/** Accepts a bare path or a full URL (normalized to its pathname). */
 export const ApiEndpointSchema = z
   .string()
   .trim()
@@ -40,7 +37,7 @@ export const ApiEndpointSchema = z
     }
   });
 
-// 100 atomic = $0.0001; 100_000_000 atomic = $100 per call.
+// 100 atomic = $0.0001; 100M atomic = $100/call.
 export const ApiPriceSchema = z
   .union([
     z.bigint(),
@@ -77,7 +74,7 @@ export const UpdateApiBodySchema = z.object({
 export type CreateApiBody = z.infer<typeof CreateApiBodySchema>;
 export type UpdateApiBody = z.infer<typeof UpdateApiBodySchema>;
 
-/** Shared serializer; bigint → decimal string for JSON transport. */
+/** bigint → string for JSON transport. */
 export function serializeMerchantApi(
   row: typeof merchantApis.$inferSelect,
 ): {

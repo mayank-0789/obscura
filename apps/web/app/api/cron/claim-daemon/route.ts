@@ -11,10 +11,7 @@ import { env } from "@/lib/env";
 import { cronAuthGuard } from "@/lib/cron-auth";
 import { buildSubjectUmbraClient } from "@/lib/umbra";
 
-// Schedule: every 2 minutes, fired by an external scheduler (Railway cron).
-
-// Per-invocation cap to keep total runtime under serverless function deadline
-// (single Groth16 claim proof ≈ 30s).
+// Bounded per tick to stay under the serverless deadline (one Groth16 claim ≈ 30s).
 const PER_INVOCATION_MERCHANT_LIMIT = 2;
 
 interface MerchantClaimSummary {
@@ -76,7 +73,7 @@ async function claimForMerchant(
   try {
     const client = await buildSubjectUmbraClient("merchant", merchantId);
     const scan = getClaimableUtxoScannerFunction({ client });
-    // Spent-nullifier: relayer rejects double-claims at submit time (correct but wasteful — one redundant prove per spent UTXO).
+    // No persistent cursor: relayer rejects spent-nullifier double-claims, so correctness is fine; one redundant prove per spent UTXO.
     const scanResult = await scan(0n as never, 0n as never);
 
     if (scanResult.received.length === 0) {

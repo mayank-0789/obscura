@@ -9,8 +9,7 @@ if (!merchantEtaAddress) {
   throw new Error("MERCHANT_ETA_ADDRESS env is required");
 }
 
-// STABLECOIN_MINT must match the Obscura backend's STABLECOIN_MINT env.
-// Devnet: WSOL (decimals=9); mainnet: USDC/USDG (decimals=6).
+// Must match Obscura backend's STABLECOIN_MINT (devnet WSOL=9 decimals, mainnet USDC=6).
 const stablecoinMint = process.env.STABLECOIN_MINT;
 if (!stablecoinMint) {
   throw new Error(
@@ -29,13 +28,11 @@ const pay = obscura({
 
 const app = express();
 
-// Behind Railway's TLS-terminating proxy, X-Forwarded-Proto = https. Without
-// this, req.protocol reports "http" and buildResourceUrl in the merchant SDK
-// produces "http://..." which fails to match the envelope's "https://..." →
-// 400 "resource URL does not match request". Fragility flagged in the audit.
+// Required behind Railway's TLS-terminating proxy: makes req.protocol respect
+// X-Forwarded-Proto so the SDK's resource-URL check matches "https://...".
 app.set("trust proxy", true);
 
-// Tags 402 vs 200 side-by-side; without this only settled requests log via logSettlement.
+// Side-by-side 402/200 logging.
 app.use((req: Request, res: Response, next: NextFunction) => {
   const startedAt = Date.now();
   console.log(`${time()} → ${req.method.padEnd(4)} ${req.path}`);

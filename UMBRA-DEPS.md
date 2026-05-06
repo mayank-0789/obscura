@@ -31,7 +31,7 @@ Every Umbra SDK function we call, with file:line of its single call site. All Um
 | 7 | `getReceiverClaimableUtxoToEncryptedBalanceClaimerFunction` | `claimReceiverClaimableUtxos` (`umbra.ts:564`) and inline at `cron/claim-daemon/route.ts` | merchant claim daemon (cron) |
 | 8 | `getUmbraRelayer` | inside `claimReceiverClaimableUtxos` and the cron route | merchant claim daemon |
 | 9 | `getEncryptedBalanceQuerierFunction` | `getEncryptedBalance` (`umbra.ts:376`) | x402 sign pre-flight + dashboard balance |
-| 10 | `getEncryptedBalanceToPublicBalanceDirectWithdrawerFunction` | `withdrawFromEncryptedAccount` (`umbra.ts:335`) | (defined; no caller wired yet — slated for merchant cash-out UI) |
+| 10 | `getEncryptedBalanceToPublicBalanceDirectWithdrawerFunction` | (no wrapper currently in `lib/umbra.ts`) | (no caller in v1 — slated for merchant cash-out UI; see §5.8) |
 
 ZK provers from `@umbra-privacy/web-zk-prover`:
 
@@ -322,21 +322,22 @@ For dashboard purposes we collapse all three into "treat as zero" — the subjec
 
 ### 5.8 Withdrawals — `getEncryptedBalanceToPublicBalanceDirectWithdrawerFunction`
 
+The Umbra SDK exposes a direct (non-mixer) withdrawer — call shape, for reference:
+
 ```ts
-// apps/web/lib/umbra.ts:335
 const withdraw = getEncryptedBalanceToPublicBalanceDirectWithdrawerFunction({
   client: subjectClient,
 });
 const result = await withdraw(
-  address(input.destinationAddress),    // public ATA receiving the funds
+  address(destinationAddress),    // public ATA receiving the funds
   address(getStablecoinMint().toBase58()),
-  input.amountMicros as U64,
+  amountMicros as U64,
 );
 ```
 
-Like deposits, this is a direct (non-mixer) operation. The withdraw event is on chain; only the prior encrypted balance state stays hidden. Fine for end-of-day cash-out: the per-call payment graph is already protected; the withdraw is a single privacy-leak point at the end.
+Like deposits, the withdraw event is on chain; only the prior encrypted balance state stays hidden. The privacy thesis: the per-call payment graph is protected through the mixer, and the withdraw is a single, expected privacy-leak point at the end (end-of-day cash-out).
 
-Defined but **no caller is wired today**. Slated for the merchant cash-out UI (planned). Until that ships, operator drains require a one-off script invocation.
+**Status: not wired in `lib/umbra.ts` today.** A `withdrawFromEncryptedAccount(...)` wrapper used to live there but was removed in a dead-code cleanup pass — there were zero callers, since the merchant cash-out UI is still on the roadmap. When that UI ships, the wrapper will return as a ~15-line helper mirroring the deposit shape. Operator emergency drains require a one-off script invocation against the SDK directly until then.
 
 ---
 

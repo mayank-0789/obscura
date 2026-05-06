@@ -44,7 +44,7 @@ export const webhookProvider = pgEnum("webhook_provider", [
   "helius",
 ]);
 
-// Reserved 'deregistered' for forward-compat (Umbra protocol supports it but doesn't expose today).
+// 'deregistered' is forward-compat for Umbra; not exposed today.
 export const umbraAccountStatus = pgEnum("umbra_account_status", [
   "active",
   "deregistered",
@@ -59,9 +59,7 @@ export const users = pgTable(
     email: text("email"),
     phone: text("phone"),
     role: userRole("role").notNull().default("user"),
-    // Set the first time the user completes the role picker. Source of truth
-    // for "have they onboarded?" — the per-device localStorage flag is a
-    // flicker-avoidance hint, not a correctness signal.
+    // Source of truth for "has the user onboarded?"; localStorage flag is just a flicker hint.
     onboardedAt: timestamp("onboarded_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
@@ -123,7 +121,6 @@ export const budgets = pgTable(
     periodStart: timestamp("period_start", { withTimezone: true })
       .notNull()
       .defaultNow(),
-    // Optional allowlist of merchant IDs/addresses (jsonb array).
     merchantAllowlist: jsonb("merchant_allowlist"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
@@ -153,7 +150,7 @@ export const agentApiKeys = pgTable(
   (t) => [index("agent_api_keys_agent_id_idx").on(t.agentId)],
 );
 
-// Solana tx is source of truth, this is a materialized view; daily reconciliation.
+// Off-chain audit log; Solana is source of truth (reconciled daily).
 export const transactions = pgTable(
   "transactions",
   {
@@ -171,8 +168,7 @@ export const transactions = pgTable(
     solanaSig: text("solana_sig"),
     queueSignature: text("queue_signature"),
     callbackSignature: text("callback_signature"),
-    // 'finalized' | 'pruned' | 'timed_out'. Only 'finalized' is success;
-    // pruned/timed_out are uncertain — verify on-chain before retry.
+    // 'finalized' = success; 'pruned' / 'timed_out' = uncertain (verify on-chain before retry).
     callbackStatus: text("callback_status"),
     dodoPaymentId: text("dodo_payment_id"),
     status: txStatus("status").notNull().default("pending"),
@@ -184,12 +180,11 @@ export const transactions = pgTable(
   },
   (t) => [
     index("transactions_agent_id_created_at_idx").on(t.agentId, t.createdAt),
-    // Multiple NULLs allowed (pending txs).
+    // Allows multiple NULLs (pending txs).
     uniqueIndex("transactions_solana_sig_idx").on(t.solanaSig),
-    // Closes concurrent-retry double-credit race in Dodo webhook: unique index
-    // ensures only one pending-tx INSERT survives so deposit can't fire twice.
+    // Dodo double-credit guard: only one INSERT with a given payment_id can survive.
     uniqueIndex("transactions_dodo_payment_id_idx").on(t.dodoPaymentId),
-    // Partial index for merchant earnings queries.
+    // Merchant-earnings query path.
     index("transactions_counterparty_confirmed_idx")
       .on(t.counterparty, t.status, t.createdAt.desc())
       .where(sql`${t.kind} = 'spend'`),
@@ -204,7 +199,7 @@ export const merchants = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     name: text("name"),
-    // Where agents pay merchants via ETA→ETA mixer.
+    // ETA→ETA mixer destination (derived server-side via HMAC).
     etaAddress: text("eta_address").notNull(),
     dodoAccountId: text("dodo_account_id"),
     umbraStatus: umbraAccountStatus("umbra_status"),
@@ -217,8 +212,7 @@ export const merchants = pgTable(
       .defaultNow(),
   },
   (t) => [
-    // Enforces 1:1 at DB level so a double-POST race on /api/merchants
-    // can't produce two rows; losing INSERT trips ON CONFLICT.
+    // 1:1 with users; double-POST race loses on ON CONFLICT.
     uniqueIndex("merchants_owner_user_id_idx").on(t.ownerUserId),
     uniqueIndex("merchants_eta_address_idx").on(t.etaAddress),
   ],
@@ -264,7 +258,7 @@ export const merchantApis = pgTable(
   },
   (t) => [
     index("merchant_apis_merchant_id_idx").on(t.merchantId),
-    // Closes read-then-write TOCTOU window in the POST route.
+    // Closes the TOCTOU window in the POST route.
     uniqueIndex("merchant_apis_merchant_id_endpoint_idx").on(
       t.merchantId,
       t.endpoint,
@@ -286,13 +280,13 @@ export const webhookLog = pgTable(
       .defaultNow(),
   },
   (t) => [
-    // Second delivery of same event is no-op.
+    // Idempotency: re-delivery of same event is a no-op.
     uniqueIndex("webhook_log_provider_event_idx").on(t.provider, t.eventId),
     index("webhook_log_unprocessed_idx").on(t.processedAt),
   ],
 );
 
-// Replay protection for x402 payments; TTL cleanup cron drops expired hourly.
+// x402 replay protection; expired rows dropped by hourly TTL cron.
 export const x402Nonces = pgTable(
   "x402_nonces",
   {

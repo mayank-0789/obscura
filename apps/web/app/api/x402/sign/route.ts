@@ -132,11 +132,9 @@ async function performSign(input: {
     );
   }
 
-  // neon-http has no .transaction() (it's a one-shot HTTP driver). Atomicity at
-  // the SQL level: the UPDATE is conditional on cap, so empty RETURNING ⇒ over_cap.
-  // Then the INSERT runs; if it fails, safeRevertCap undoes the cap increment.
-  // The revert window is microseconds and uses GREATEST(.., 0) to stay safe under
-  // contention. See also the mixer-throw path further down which uses the same helper.
+  // neon-http has no .transaction(). Atomicity is SQL-level: the UPDATE's
+  // cap predicate makes empty RETURNING ⇒ over_cap; if the INSERT fails,
+  // safeRevertCap undoes the increment via GREATEST(.., 0).
   const merchantHost = safeHost(body.resourceUrl);
   const [updatedBudget] = await db
     .update(budgets)
@@ -195,9 +193,8 @@ async function performSign(input: {
       })
       .where(eq(transactions.id, pendingTxId));
 
-    // Callback didn't finalize: the on-chain debit may still land asynchronously, so
-    // we leave the cap incremented and refuse to issue the payment header. Reverting
-    // the cap while the debit lands would let the agent double-spend.
+    // Non-final callback: on-chain debit may still land async, so we leave the
+    // cap incremented (reverting would let the agent double-spend).
     if (!finalized) {
       console.warn(
         `[x402/sign] tx=${pendingTxId} agent=${agent.id} ` +
@@ -205,7 +202,6 @@ async function performSign(input: {
           `queueSig=${result.queueSignature} — refusing to issue payment ` +
           "header; cap remains incremented (on-chain debit may have landed)",
       );
-      // Generic message — don't name infrastructure to SDK callers.
       return apiError(
         "signing_failed",
         "payment is in flight; do not retry until reconciliation completes",

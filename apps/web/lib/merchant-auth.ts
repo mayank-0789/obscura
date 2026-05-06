@@ -28,20 +28,14 @@ export class MerchantAuthError extends Error {
   }
 }
 
-/**
- * `user` is null for mk_ Bearer callers (no session). Downstream handlers
- * needing the owning user should query by `merchant.ownerUserId`.
- */
+/** `user` is null for mk_ Bearer callers; query by `merchant.ownerUserId` if needed. */
 export type MerchantContext = {
   merchant: Merchant;
   user: User | null;
   authMode: "session" | "api_key";
 };
 
-/**
- * Dual-mode auth: a Bearer header starting with `mk_` routes to API-key
- * lookup; otherwise falls back to NextAuth session cookie.
- */
+/** Dual-mode: `mk_` Bearer → API-key lookup; otherwise NextAuth session. */
 export async function requireMerchant(req: Request): Promise<MerchantContext> {
   const token = req.headers
     .get("authorization")
@@ -74,7 +68,7 @@ async function resolveByApiKey(token: string): Promise<MerchantContext> {
   const row = rows[0];
   if (!row) throw new MerchantAuthError("invalid_token");
 
-  // Best-effort lastUsedAt bump — fire-and-forget.
+  // Fire-and-forget lastUsedAt bump.
   void db
     .update(merchantApiKeys)
     .set({ lastUsedAt: new Date() })

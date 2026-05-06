@@ -28,10 +28,7 @@ export type AuthedAgentContext = {
   budget: Budget;
 };
 
-/**
- * Resolves a caller from the agent Bearer API key. Distinct from lib/auth.ts
- * which expects a user JWT.
- */
+/** Bearer pk_ key → agent context. Distinct from session-based lib/auth.ts. */
 export async function requireAgentApiKey(
   req: Request,
 ): Promise<AuthedAgentContext> {

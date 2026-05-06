@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// First-gate for protected routes. We only check for NextAuth session-cookie
-// presence here — full session verification happens inside each API route via
-// lib/auth.requireAuth (which calls Auth.js's `auth()`), and on the client via
-// `useSession`. Verifying JWTs at the edge would force pulling Auth.js's full
-// runtime into the edge bundle; not worth it when downstream layers enforce.
-// If the cookie is stale or forged, the page loads but every API call 401's
-// and triggers a sign-out.
+// Cookie-presence check only. Full JWT verification happens in each API route
+// via lib/auth.requireAuth — verifying at the edge would pull Auth.js into the
+// edge bundle. Stale/forged cookies still 401 downstream and trigger sign-out.
 export async function proxy(req: NextRequest) {
   const authed =
     req.cookies.has("authjs.session-token") ||
@@ -20,15 +16,9 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  // Each listed path is protected at the edge by a cookie-presence check.
-  //
-  // /topup is guarded so unauthenticated users can't start a checkout session.
-  // /topup/done is deliberately NOT listed — it's the return target of a
-  // redirect from Dodo's domain, and browsers do not always carry our session
-  // cookies on that cross-site top-level navigation. Gating it at the edge
-  // would bounce signed-in users off their own confirmation page. The page
-  // defers to /api/topup/status/[paymentId], which enforces auth via authGuard
-  // — so /topup/done rendering without a session is harmless.
+  // /topup/done is deliberately excluded: cross-site nav from Dodo doesn't
+  // always carry our cookies; the page defers to /api/topup/status which
+  // enforces auth itself.
   matcher: [
     "/dashboard/:path*",
     "/agents/:path*",

@@ -2,9 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-// Three button choices match the demo merchant's price tiers exactly. Keep
-// them as literals here too — duplicating with the server-side
-// DEMO_ENDPOINTS is fine; this is the canonical list judges actually see.
+// Endpoints + prices mirror the demo merchant's tiers; literal duplication is intentional.
 type DemoEndpoint = "/headlines" | "/article/47" | "/digest";
 
 type Button = {
@@ -60,9 +58,7 @@ export function DemoClient({ configured }: { configured: boolean }) {
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  // Side panel — long-lived SSE stream of all recent runs. Only mounts when
-  // the demo is configured server-side; otherwise the route returns 503 and
-  // the panel would just spam errors.
+  // SSE stream only mounts when the demo route is configured (else /api/demo/recent 503s).
   useEffect(() => {
     if (!configured) return;
     const controller = new AbortController();
@@ -379,11 +375,7 @@ async function streamRecent(
   signal: AbortSignal,
   onRun: (run: RecentRun) => void,
 ): Promise<void> {
-  // Reconnect loop. If the server closes the SSE (proxy timeout, deploy,
-  // etc.) wait briefly and reopen so the side panel keeps tracking new
-  // runs without a page reload. On a permanent 4xx (eg. 503 demo-disabled
-  // mid-session, 404 if the route is removed) we exit instead of busy-
-  // hammering — those won't recover without a page reload anyway.
+  // Reconnect on proxy timeouts; exit on permanent 4xx (won't recover without a page reload).
   while (!signal.aborted) {
     try {
       const res = await fetch("/api/demo/recent", { signal });
@@ -475,8 +467,7 @@ function formatMicros(micros: string): string {
 }
 
 function solscanUrl(sig: string): string {
-  // Client-side mirror of lib/solscan.ts (we can't import the server-only
-  // module here). Detect cluster from public env injected at build time.
+  // Client-side mirror of lib/solscan.ts (server-only); cluster from public env.
   const cluster = process.env.NEXT_PUBLIC_SOLANA_CLUSTER ?? "devnet";
   const base = `https://solscan.io/tx/${sig}`;
   return cluster === "devnet" ? `${base}?cluster=devnet` : base;

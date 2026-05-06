@@ -4,9 +4,7 @@ import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 
-// SSE merchant payment stream; manual fetch keeps a single auth path with
-// `mk_` keys. Aborts on unmount/session change so server closes its writer.
-// No reconnect loop yet — 10s polling is the fallback.
+// SSE merchant payment stream. No reconnect loop — polling is the fallback.
 export function useMerchantEvents() {
   const queryClient = useQueryClient();
   const { status } = useSession();

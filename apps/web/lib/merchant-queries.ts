@@ -2,10 +2,7 @@ import "server-only";
 import { and, countDistinct, desc, eq, sql } from "drizzle-orm";
 import { db, transactions, type Transaction } from "@/lib/db";
 
-/**
- * Aggregate stats for the merchant dashboard. Sums returned as bigint-safe
- * strings — JS `number` overflows beyond ~$9B earned.
- */
+/** Sums as bigint-safe strings — JS `number` overflows beyond ~$9B. */
 export type MerchantStats = {
   callsCount: number;
   uniquePayersCount: number;
@@ -40,10 +37,7 @@ export async function getMerchantStats(
   };
 }
 
-/**
- * Opaque cursor encoding `(created_at, id)`. The id tiebreaker prevents
- * dropped rows when multiple share the same microsecond timestamp.
- */
+/** Cursor `(created_at, id)`. id tiebreaker prevents dropped rows on microsecond ties. */
 export type MerchantTxCursor = { createdAt: string; id: string };
 
 export function encodeMerchantTxCursor(c: MerchantTxCursor): string {
@@ -72,11 +66,7 @@ export function decodeMerchantTxCursor(
   }
 }
 
-/**
- * Paginated feed of confirmed spends paid to this merchant. Row-value tuple
- * comparison `(created_at, id) < (cursor_ts, cursor_id)` matches ORDER BY
- * `(created_at DESC, id DESC)` and avoids the microsecond-tie data-loss edge.
- */
+/** Confirmed spends to this merchant. Tuple-compare keeps ordering stable on microsecond ties. */
 export async function getMerchantTransactions(input: {
   etaAddress: string;
   limit: number;

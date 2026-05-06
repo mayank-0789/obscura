@@ -16,9 +16,8 @@ type HeliusWebhookConfig = {
 };
 
 /**
- * Append `pubkey` to the shared webhook's `accountAddresses`. Idempotent.
- * GET-modify-PUT is not atomic — concurrent signups can clobber; the admin
- * `reconcileMerchantPayoutAddresses` route is the safety net.
+ * Append pubkey to webhook's `accountAddresses`. Idempotent. GET-modify-PUT
+ * isn't atomic — concurrent signups can clobber; reconciler is the safety net.
  */
 export async function registerMerchantPayoutAddress(
   pubkey: string,
@@ -49,10 +48,8 @@ export async function registerMerchantPayoutAddress(
 }
 
 /**
- * Diff-merge reconciler for the shared webhook's `accountAddresses`. Fixes
- * drift from the GET-modify-PUT race in `registerMerchantPayoutAddress`.
- * Never removes addresses — a missing wallet is more likely a stale read than
- * a deletion intent.
+ * Diff-merge reconciler for webhook drift. Never removes addresses — a missing
+ * wallet is more likely a stale read than a deletion intent.
  */
 export type HeliusReconcileResult =
   | { ok: false; reason: "not_configured" }

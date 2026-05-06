@@ -3,10 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 
-// Segment-level error boundary for every /(user) page (/dashboard, /agents/*,
-// /topup, …). Next.js wires this automatically — catches render errors thrown
-// inside this route group so the whole app doesn't white-screen on a bad agent
-// or a bad response shape.
+// Segment-level error boundary for /(user) pages — Next.js wires this automatically.
 export default function UserSegmentError({
   error,
   reset,

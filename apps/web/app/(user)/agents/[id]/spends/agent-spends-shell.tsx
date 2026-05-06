@@ -7,16 +7,11 @@ import { RecentSpendsList } from "@/components/dashboard/recent-spends-list";
 import { useAgent } from "@/hooks/use-agent";
 import { useAgentSpendsPage } from "@/hooks/use-agent-spends-page";
 
-// Full paginated spend history for a single agent. Sibling to
-// /merchants/payments — same pager pattern, same RecentSpendsList
-// component, cursor-based navigation.
 export function AgentSpendsShell({ id }: { id: string }) {
   const router = useRouter();
   const { data: agent, error } = useAgent(id);
   const spends = useAgentSpendsPage(id, 50);
 
-  // Not-found early-exit is cheaper than rendering the page shell for an
-  // inaccessible agent. Mirrors the dedicated-error branch in AgentDetail.
   if (error?.message === "not_found") {
     return (
       <AppShell
@@ -64,10 +59,6 @@ export function AgentSpendsShell({ id }: { id: string }) {
             {agent?.name ? (
               agent.name
             ) : (
-              // Subtle placeholder while `useAgent` is still loading. An
-              // empty span would collapse the breadcrumb's vertical rhythm;
-              // a pulsing pill keeps the layout stable and signals "data
-              // coming" instead of flashing the literal word "Agent".
               <span className="inline-block h-3 w-20 animate-pulse rounded bg-zinc-900 align-middle" />
             )}
           </Link>

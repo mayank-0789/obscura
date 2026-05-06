@@ -4,19 +4,6 @@ import { CodeBlock } from "@/components/docs/code-block";
 import { Callout } from "@/components/docs/callout";
 import { DocTable } from "@/components/docs/doc-table";
 
-// Global MDX provider map — every `.mdx` page in this project renders with
-// these overrides. We style every markdown element to match the editorial
-// docs aesthetic (Fraunces display for H1/H2, Geist Sans body, emerald
-// accents) so authors only have to write plain markdown.
-//
-// Custom shortcuts:
-//   <CodeBlock>, <Callout>  — existing docs primitives
-//   <Kbd>                   — keyboard shortcut chip
-//   <PackageInstall>        — per-PM tabs for install commands (new)
-//
-// Markdown overrides:
-//   h1/h2/h3 → typed headings with emerald anchors
-//   p, ul, ol, li, code, pre, a, table — themed equivalents
 export function useMDXComponents(components: MDXComponents): MDXComponents {
   return {
     ...components,
@@ -45,8 +32,10 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
       />
     ),
     ul: (props) => (
+      // Absolute-positioned bullet keeps <li> as a block element; flex made
+      // every inline child its own flex item and staircased the rendering.
       <ul
-        className="mt-5 space-y-3 pl-0 text-[17px] leading-[1.65] text-zinc-300 [&>li]:flex [&>li]:gap-3 [&>li]:before:mt-[11px] [&>li]:before:inline-block [&>li]:before:h-px [&>li]:before:w-4 [&>li]:before:shrink-0 [&>li]:before:bg-emerald-400/70 [&>li]:before:content-['']"
+        className="mt-5 space-y-3 pl-7 text-[17px] leading-[1.65] text-zinc-300 [&>li]:relative [&>li]:before:absolute [&>li]:before:left-0 [&>li]:before:top-[12px] [&>li]:before:inline-block [&>li]:before:h-px [&>li]:before:w-4 [&>li]:before:bg-emerald-400/70 [&>li]:before:content-['']"
         {...props}
       />
     ),
@@ -83,10 +72,8 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
         {...props}
       />
     ),
-    // Note: `pre` rendering is intentionally minimal; authors should reach
-    // for the <CodeBlock/> shortcut for anything user-copyable (filename,
-    // lang chip, copy button). Plain triple-backtick fences fall through to
-    // this for quick inline snippets.
+    // Plain triple-backtick fences land here; reach for <CodeBlock/> when a
+    // copy button / filename chip is needed.
     pre: (props) => (
       <pre
         className="mt-5 overflow-x-auto rounded-lg border border-zinc-800 bg-[#0b0b0d] p-5 font-mono text-[14px] leading-[1.65] text-zinc-300"
@@ -125,7 +112,6 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
     strong: (props) => (
       <strong className="font-semibold text-zinc-100" {...props} />
     ),
-    // Shared docs components exposed as MDX shortcuts.
     CodeBlock,
     Callout,
     DocTable,

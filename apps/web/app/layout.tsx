@@ -14,8 +14,6 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// Editorial display face — variable weight + optical-size axis gives us a
-// real serif with personality for headlines without pulling in a second file.
 const fraunces = Fraunces({
   variable: "--font-fraunces",
   subsets: ["latin"],

@@ -205,8 +205,8 @@ async function creditAgentForPayment(event: PaymentSucceededWebhookEvent) {
     );
   }
 
-  // Umbra has no TransferAlreadyLanded equivalent — refuse to retry while a prior
-  // deposit may be mid-flight on-chain (operator must reconcile encrypted balance).
+  // Refuse retry while a prior deposit may still be mid-flight on-chain
+  // (no TransferAlreadyLanded equivalent in Umbra; operator must reconcile).
   if (
     existingTx?.memo === DEPOSIT_IN_FLIGHT_MEMO &&
     !existingTx.callbackSignature

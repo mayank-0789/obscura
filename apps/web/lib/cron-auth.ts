@@ -3,11 +3,8 @@ import { env } from "@/lib/env";
 import { apiError } from "@/lib/api";
 
 /**
- * Bearer-token guard for `/api/cron/*`. Returns a 401 Response on reject, or `null` to proceed.
- *
- * Fail-closed safety belt: when CRON_SECRET is unset, production refuses all requests
- * (deliberate — forgotten env var must not expose cron endpoints), while non-production
- * allows with a warning so local `curl` works without juggling tokens.
+ * Bearer guard for `/api/cron/*`. Fail-closed in production (forgotten env
+ * var must not expose cron endpoints); non-prod allows with a warning.
  */
 export function cronAuthGuard(req: Request): Response | null {
   const secret = env.CRON_SECRET;

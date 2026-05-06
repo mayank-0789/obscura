@@ -60,5 +60,3 @@ export function serializeBreakdown(b: TopupBreakdown): TopupBreakdownDTO {
 
 export const SERVICE_FEE_PERCENT =
   Number(SERVICE_FEE_BPS) / Number(BPS_DENOM) * 100;
-export const RATE_SPREAD_PERCENT =
-  Number(RATE_SPREAD_BPS) / Number(BPS_DENOM) * 100;

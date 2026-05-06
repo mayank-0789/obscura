@@ -111,7 +111,7 @@ export async function runDemoSpend(input: RunDemoSpendInput): Promise<void> {
   try {
     initial = await fetch(resourceUrl);
   } catch (err) {
-    // Don't echo merchantUrl/err to public stream — may carry internal hosts.
+    // Don't echo merchantUrl to public stream — may leak internal hosts.
     console.error("[demo-orchestrator] merchant unreachable:", merchantUrl, err);
     onStep({
       phase: "error",
@@ -160,7 +160,7 @@ export async function runDemoSpend(input: RunDemoSpendInput): Promise<void> {
     recipientShort: shortAddr(requirement.payTo),
   });
 
-  // Internal HTTP hop into our own /api/x402/sign keeps auth/cap/mixer in one place.
+  // Hop into /api/x402/sign keeps auth/cap/mixer in one place.
   onStep({
     phase: "signing",
     text: "Obscura signing via Umbra mixer…",
@@ -192,7 +192,7 @@ export async function runDemoSpend(input: RunDemoSpendInput): Promise<void> {
       error?: string;
       message?: string;
     };
-    // Allowlist of safe public codes; everything else collapses to generic.
+    // Allowlist of public codes; others collapse to generic.
     const safeCodes = new Set([
       "over_cap",
       "insufficient_funds",

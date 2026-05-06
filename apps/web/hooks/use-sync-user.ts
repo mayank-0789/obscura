@@ -6,9 +6,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useAuthedFetch, UnauthorizedError } from "@/hooks/use-authed-fetch";
 
-// Idempotent /api/auth/sync. syncedRef collapses strict-mode double-invokes
-// and rapid remounts. Success invalidates ["me"] so consumers that 404'd
-// during the Auth.js v5 token.sub sync race recover without a hard refresh.
+// Idempotent /api/auth/sync; syncedRef collapses strict-mode double-invokes.
+// Recovers any consumer that 404'd during the Auth.js v5 token.sub sync race.
 export function useSyncUser() {
   const { status } = useSession();
   const authedFetch = useAuthedFetch();
