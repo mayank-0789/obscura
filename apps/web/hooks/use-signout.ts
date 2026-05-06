@@ -9,7 +9,10 @@ import { LAST_ROLE_KEY, ONBOARDED_KEY } from "@/lib/onboarding";
 // Collapses concurrent 401-triggered sign-outs into a single flow.
 let signingOut = false;
 
-// Order: server ack → cache clear → localStorage → NextAuth cookie/redirect.
+// Order: cache clear → localStorage → NextAuth cookie/redirect.
+// Audit (users.updated_at bump) lives in events.signOut in lib/auth-config.ts —
+// must NOT be a custom POST /api/auth/signout, which would shadow Auth.js's
+// own cookie-clearing handler.
 export function useSignout() {
   const queryClient = useQueryClient();
 
@@ -17,8 +20,6 @@ export function useSignout() {
     if (signingOut) return;
     signingOut = true;
     try {
-      await fetch("/api/auth/signout", { method: "POST" }).catch(() => undefined);
-
       queryClient.clear();
       if (typeof window !== "undefined") {
         localStorage.removeItem(ONBOARDED_KEY);

@@ -1,6 +1,8 @@
 import NextAuth from "next-auth";
 import type { NextAuthResult } from "next-auth";
 import Google from "next-auth/providers/google";
+import { eq } from "drizzle-orm";
+import { db, users } from "@/lib/db";
 import { env } from "@/lib/env";
 
 // Explicit `NextAuthResult` annotation avoids TS2742 "inferred type cannot be named".
@@ -30,6 +32,22 @@ const nextAuth: NextAuthResult = NextAuth({
         session.user.id = token.sub;
       }
       return session;
+    },
+  },
+  events: {
+    // Audit signout. Must NOT live at /api/auth/signout — that path shadows
+    // Auth.js's own cookie-clearing handler and silently breaks signout.
+    async signOut(message) {
+      const sub = "token" in message ? message.token?.sub : undefined;
+      if (!sub) return;
+      try {
+        await db
+          .update(users)
+          .set({ updatedAt: new Date() })
+          .where(eq(users.authId, sub));
+      } catch (err) {
+        console.error("[auth/events.signOut] db update failed", err);
+      }
     },
   },
 });
