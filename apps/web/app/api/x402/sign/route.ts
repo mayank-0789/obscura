@@ -132,46 +132,45 @@ async function performSign(input: {
     );
   }
 
-  // Atomic cap-update + pending-tx insert in one db.transaction: TOCTOU-free,
-  // and rollback fires if the tx insert throws (cap can't be left incremented orphan).
+  // neon-http has no .transaction() (it's a one-shot HTTP driver). Atomicity at
+  // the SQL level: the UPDATE is conditional on cap, so empty RETURNING ⇒ over_cap.
+  // Then the INSERT runs; if it fails, safeRevertCap undoes the cap increment.
+  // The revert window is microseconds and uses GREATEST(.., 0) to stay safe under
+  // contention. See also the mixer-throw path further down which uses the same helper.
   const merchantHost = safeHost(body.resourceUrl);
+  const [updatedBudget] = await db
+    .update(budgets)
+    .set({ spentUsdg: sql`${budgets.spentUsdg} + ${amount}` })
+    .where(
+      sql`${budgets.agentId} = ${agent.id} AND ${budgets.spentUsdg} + ${amount} <= ${budgets.capUsdg}`,
+    )
+    .returning({ id: budgets.id });
+  if (!updatedBudget) {
+    return apiError("over_cap", `amount ${amount} would exceed monthly cap`);
+  }
+
   let pendingTxId: string;
   try {
-    const result = await db.transaction(async (tx) => {
-      const [updatedBudget] = await tx
-        .update(budgets)
-        .set({ spentUsdg: sql`${budgets.spentUsdg} + ${amount}` })
-        .where(
-          sql`${budgets.agentId} = ${agent.id} AND ${budgets.spentUsdg} + ${amount} <= ${budgets.capUsdg}`,
-        )
-        .returning({ id: budgets.id });
-      if (!updatedBudget) return { kind: "over_cap" as const };
-
-      const [row] = await tx
-        .insert(transactions)
-        .values({
-          agentId: agent.id,
-          kind: "spend",
-          direction: "out",
-          amountUsdg: amount,
-          counterparty: requirements.payTo,
-          merchantHost,
-          status: "pending",
-        })
-        .returning({ id: transactions.id });
-      if (!row) throw new Error("transactions insert returned no rows");
-      return { kind: "ok" as const, txId: row.id };
-    });
-
-    if (result.kind === "over_cap") {
-      return apiError("over_cap", `amount ${amount} would exceed monthly cap`);
-    }
-    pendingTxId = result.txId;
+    const [row] = await db
+      .insert(transactions)
+      .values({
+        agentId: agent.id,
+        kind: "spend",
+        direction: "out",
+        amountUsdg: amount,
+        counterparty: requirements.payTo,
+        merchantHost,
+        status: "pending",
+      })
+      .returning({ id: transactions.id });
+    if (!row) throw new Error("transactions insert returned no rows");
+    pendingTxId = row.id;
   } catch (err) {
     console.error(
-      `[x402/sign] cap-update + pending-tx insert failed for agent=${agent.id}:`,
+      `[x402/sign] pending-tx insert failed after cap-update for agent=${agent.id}:`,
       err,
     );
+    await safeRevertCap(budget.id, amount);
     return apiError("server_error");
   }
 
