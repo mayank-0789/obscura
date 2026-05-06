@@ -29,6 +29,12 @@ const pay = obscura({
 
 const app = express();
 
+// Behind Railway's TLS-terminating proxy, X-Forwarded-Proto = https. Without
+// this, req.protocol reports "http" and buildResourceUrl in the merchant SDK
+// produces "http://..." which fails to match the envelope's "https://..." →
+// 400 "resource URL does not match request". Fragility flagged in the audit.
+app.set("trust proxy", true);
+
 // Tags 402 vs 200 side-by-side; without this only settled requests log via logSettlement.
 app.use((req: Request, res: Response, next: NextFunction) => {
   const startedAt = Date.now();
