@@ -23,7 +23,7 @@ export function AgentsSidebar({
   const count = agents?.length ?? 0;
 
   return (
-    <aside className="flex w-[280px] shrink-0 flex-col border-r border-[#1f1f1f] bg-[#0a0a0a]">
+    <aside className="flex h-[calc(100vh-3rem)] w-[280px] max-w-[85vw] shrink-0 flex-col border-r border-[#1f1f1f] bg-[#0a0a0a] md:h-auto">
       {/* Section header */}
       <div className="flex items-center justify-between border-b border-[#1f1f1f] px-5 py-4">
         <div className="flex items-baseline gap-2.5 font-mono text-[10px] uppercase tracking-[0.22em]">

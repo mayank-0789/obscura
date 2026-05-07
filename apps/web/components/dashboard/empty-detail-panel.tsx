@@ -8,7 +8,7 @@ export function EmptyDetailPanel({ hasAgents }: { hasAgents: boolean }) {
 
   if (!hasAgents) {
     return (
-      <div className="flex min-h-full items-center justify-center px-8 py-12">
+      <div className="flex min-h-full items-center justify-center px-4 py-12 sm:px-8">
         <div className="max-w-md text-center">
           <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#888]">
             <span style={{ color: "#e63946" }}>00</span>{" "}
@@ -48,7 +48,7 @@ export function EmptyDetailPanel({ hasAgents }: { hasAgents: boolean }) {
   }
 
   return (
-    <div className="flex min-h-full items-center justify-center px-8 py-12">
+    <div className="flex min-h-full items-center justify-center px-4 py-12 sm:px-8">
       <div className="max-w-sm text-center">
         <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-[#888]">
           select an agent

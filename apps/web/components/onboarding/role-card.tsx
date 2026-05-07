@@ -25,7 +25,7 @@ export function RoleCard({
       type="button"
       onClick={onClick}
       disabled={disabled || isLoading}
-      className={`group relative flex h-full flex-col gap-5 border border-[#1f1f1f] p-7 text-left transition focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60 ${
+      className={`group relative flex h-full flex-col gap-4 border border-[#1f1f1f] p-5 text-left transition focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60 sm:gap-5 sm:p-7 ${
         active ? "bg-[#141414]" : "enabled:hover:bg-[#0e0e0e]"
       }`}
     >
@@ -43,7 +43,7 @@ export function RoleCard({
 
       <h2
         style={{
-          fontSize: 24,
+          fontSize: "clamp(20px, 4vw, 24px)",
           fontWeight: 500,
           letterSpacing: "-0.015em",
           lineHeight: 1.2,

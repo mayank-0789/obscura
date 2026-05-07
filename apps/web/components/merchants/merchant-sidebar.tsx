@@ -38,7 +38,7 @@ export function MerchantSidebar({ merchantEtaAddress }: { merchantEtaAddress: st
   const pathname = usePathname();
 
   return (
-    <aside className="flex w-[240px] shrink-0 flex-col border-r border-[#1f1f1f] bg-[#0a0a0a]">
+    <aside className="flex h-[calc(100vh-3rem)] w-[240px] max-w-[85vw] shrink-0 flex-col border-r border-[#1f1f1f] bg-[#0a0a0a] md:h-auto">
       <nav className="flex-1 overflow-y-auto py-5">
         {GROUPS.map((group, gi) => (
           <div key={group.title} className="mb-6 last:mb-0">

@@ -27,20 +27,20 @@ export default function HomePage() {
 function TopBar() {
   return (
     <header className="border-b border-[#1f1f1f]">
-      <div className="mx-auto flex max-w-[1280px] items-center justify-between px-6 py-5 lg:px-10">
-        <div className="flex items-baseline gap-3">
+      <div className="mx-auto flex max-w-[1280px] items-center justify-between gap-3 px-4 py-4 sm:px-6 sm:py-5 lg:px-10">
+        <div className="flex min-w-0 items-baseline gap-3">
           <Link
             href="/"
             className="text-[15px] font-medium tracking-[-0.01em]"
           >
             obscura
           </Link>
-          <span className="font-mono text-[10px] text-[#5a5a5a]">───</span>
-          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#888]">
+          <span className="hidden font-mono text-[10px] text-[#5a5a5a] sm:inline">───</span>
+          <span className="hidden font-mono text-[10px] uppercase tracking-[0.18em] text-[#888] sm:inline">
             confidential x402
           </span>
         </div>
-        <nav className="flex items-center gap-7 font-mono text-[11px] uppercase tracking-[0.16em]">
+        <nav className="flex items-center gap-4 font-mono text-[11px] uppercase tracking-[0.16em] sm:gap-7">
           <Link href="/docs" className="text-[#888] hover:text-[#f5f5f5]">
             docs
           </Link>
@@ -62,14 +62,14 @@ const LEAK_SERIES = [
 
 function Hero() {
   return (
-    <section className="mx-auto max-w-[1280px] px-6 lg:px-10">
-      <div className="grid grid-cols-12 gap-6 pt-24 pb-16 lg:pt-32 lg:pb-24">
+    <section className="mx-auto max-w-[1280px] px-4 sm:px-6 lg:px-10">
+      <div className="grid grid-cols-12 gap-6 pt-14 pb-12 sm:pt-20 md:pt-24 md:pb-16 lg:pt-32 lg:pb-24">
         <div className="col-span-12 md:col-span-7">
           <SectionMarker index="00" label="Frontier 2026 · Umbra Privacy track" />
           <h1
-            className="mt-12 text-balance"
+            className="mt-8 text-balance md:mt-12"
             style={{
-              fontSize: "clamp(48px, 7vw, 96px)",
+              fontSize: "clamp(36px, 9vw, 96px)",
               fontWeight: 500,
               letterSpacing: "-0.035em",
               lineHeight: 0.96,
@@ -83,13 +83,13 @@ function Hero() {
               for AI agents.
             </span>
           </h1>
-          <p className="mt-10 max-w-[58ch] text-[16px] leading-[1.6] text-[#888]">
+          <p className="mt-8 max-w-[58ch] text-[15px] leading-[1.6] text-[#888] sm:text-[16px] md:mt-10">
             x402 with the public spend graph removed. Agents pay merchants per
             API call from encrypted balances; the on-chain link between sender
             and receiver is broken via the Umbra mixer commitment tree.
           </p>
 
-          <div className="mt-12 flex flex-wrap items-center gap-x-8 gap-y-4 font-mono text-[11px] uppercase tracking-[0.18em]">
+          <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-4 font-mono text-[11px] uppercase tracking-[0.18em] sm:gap-x-8 md:mt-12">
             <CtaLink dashboard="agent">start agent</CtaLink>
             <Link
               href="/demo"
@@ -101,7 +101,7 @@ function Hero() {
               />
               live demo on devnet
             </Link>
-            <span className="text-[#888]">npm i @obscura-app/sdk</span>
+            <span className="hidden text-[#888] sm:inline">npm i @obscura-app/sdk</span>
           </div>
         </div>
 
@@ -146,7 +146,7 @@ function Hero() {
 
       {/* TOC strip */}
       <div
-        className="grid grid-cols-12 gap-6 py-7 font-mono text-[11px] uppercase tracking-[0.18em] text-[#888]"
+        className="grid grid-cols-12 gap-x-4 gap-y-3 py-6 font-mono text-[10px] uppercase tracking-[0.16em] text-[#888] sm:gap-6 sm:py-7 sm:text-[11px] sm:tracking-[0.18em]"
         style={{
           borderTop: "1px solid #f5f5f5",
           borderBottom: "1px solid #1f1f1f",
@@ -199,12 +199,12 @@ const FIGURES = [
 
 function Numbers() {
   return (
-    <section className="mx-auto max-w-[1280px] px-6 py-24 lg:px-10 lg:py-28">
+    <section className="mx-auto max-w-[1280px] px-4 py-16 sm:px-6 sm:py-20 md:py-24 lg:px-10 lg:py-28">
       <SectionMarker index="01" label="The market, now" />
       <h2
-        className="mt-10 max-w-[28ch]"
+        className="mt-8 max-w-[28ch] md:mt-10"
         style={{
-          fontSize: "clamp(32px, 4vw, 48px)",
+          fontSize: "clamp(28px, 5vw, 48px)",
           fontWeight: 500,
           letterSpacing: "-0.025em",
           lineHeight: 1.05,
@@ -212,23 +212,24 @@ function Numbers() {
       >
         Agent commerce isn&apos;t theoretical.
       </h2>
-      <p className="mt-5 max-w-[56ch] text-[15px] leading-[1.6] text-[#888]">
+      <p className="mt-4 max-w-[56ch] text-[14px] leading-[1.6] text-[#888] sm:text-[15px] md:mt-5">
         It&apos;s already happening. Obscura is the rail between rupee top-ups
         and the agents that transact on Solana — confidentially.
       </p>
 
       <div
-        className="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
+        className="mt-10 grid grid-cols-1 sm:grid-cols-2 md:mt-14 lg:grid-cols-4"
         style={{ borderTop: "1px solid #f5f5f5" }}
       >
-        {FIGURES.map((f, i) => (
+        {FIGURES.map((f, i) => {
+          const isLastInRow = (i + 1) % 4 === 0;
+          return (
           <div
             key={i}
             className="px-5 py-7"
             style={{
               borderBottom: "1px solid #1f1f1f",
-              borderRight:
-                i < FIGURES.length - 1 ? "1px solid #1f1f1f" : undefined,
+              borderRight: !isLastInRow && i < FIGURES.length - 1 ? "1px solid #1f1f1f" : undefined,
             }}
           >
             <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#888]">
@@ -237,7 +238,7 @@ function Numbers() {
             <div
               className="mt-3 tabular-nums"
               style={{
-                fontSize: 44,
+                fontSize: "clamp(32px, 5vw, 44px)",
                 fontWeight: 500,
                 letterSpacing: "-0.02em",
                 lineHeight: 1,
@@ -253,7 +254,8 @@ function Numbers() {
               {f.source}
             </p>
           </div>
-        ))}
+          );
+        })}
       </div>
     </section>
   );
@@ -263,16 +265,16 @@ function Numbers() {
 function TwoSDKs() {
   return (
     <section
-      className="mx-auto max-w-[1280px] px-6 py-24 lg:px-10 lg:py-28"
+      className="mx-auto max-w-[1280px] px-4 py-16 sm:px-6 sm:py-20 md:py-24 lg:px-10 lg:py-28"
       style={{ borderTop: "1px solid #1f1f1f" }}
     >
       <div className="grid grid-cols-12 gap-6">
         <div className="col-span-12 md:col-span-4">
           <SectionMarker index="02" label="Two sides of the rail" />
           <h2
-            className="mt-10"
+            className="mt-8 md:mt-10"
             style={{
-              fontSize: "clamp(32px, 4vw, 48px)",
+              fontSize: "clamp(28px, 5vw, 48px)",
               fontWeight: 500,
               letterSpacing: "-0.025em",
               lineHeight: 1.05,
@@ -334,7 +336,7 @@ function SDKColumn({
   accent?: boolean;
 }) {
   return (
-    <article className="flex flex-col border border-[#1f1f1f] p-7">
+    <article className="flex flex-col border border-[#1f1f1f] p-5 sm:p-7">
       <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.22em]">
         <span
           className="inline-block h-1.5 w-1.5 rounded-full"
@@ -399,11 +401,11 @@ const STACK = [
 function Stack() {
   return (
     <section
-      className="mx-auto max-w-[1280px] px-6 py-24 lg:px-10"
+      className="mx-auto max-w-[1280px] px-4 py-16 sm:px-6 sm:py-20 md:py-24 lg:px-10"
       style={{ borderTop: "1px solid #1f1f1f" }}
     >
       <SectionMarker index="03" label="Built on" />
-      <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 md:mt-12 lg:grid-cols-3">
         {STACK.map(([name, role], i) => (
           <div
             key={name}
@@ -454,16 +456,16 @@ const FAQ_ITEMS = [
 function FAQSection() {
   return (
     <section
-      className="mx-auto max-w-[1280px] px-6 py-24 lg:px-10 lg:py-28"
+      className="mx-auto max-w-[1280px] px-4 py-16 sm:px-6 sm:py-20 md:py-24 lg:px-10 lg:py-28"
       style={{ borderTop: "1px solid #1f1f1f" }}
     >
       <div className="grid grid-cols-12 gap-6">
         <div className="col-span-12 md:col-span-4">
           <SectionMarker index="04" label="FAQ" />
           <h2
-            className="mt-10"
+            className="mt-8 md:mt-10"
             style={{
-              fontSize: "clamp(32px, 4vw, 44px)",
+              fontSize: "clamp(26px, 5vw, 44px)",
               fontWeight: 500,
               letterSpacing: "-0.025em",
               lineHeight: 1.05,
@@ -481,14 +483,14 @@ function FAQSection() {
                 style={{ borderBottom: "1px solid #1f1f1f" }}
               >
                 <summary
-                  className="flex cursor-pointer list-none items-baseline gap-5 px-1 py-5"
+                  className="flex cursor-pointer list-none items-baseline gap-3 px-1 py-5 sm:gap-5"
                   style={{ outline: "none" }}
                 >
                   <span className="font-mono text-[11px] tabular-nums text-[#888]">
                     0{i + 1}
                   </span>
                   <span
-                    className="flex-1 text-[15.5px]"
+                    className="flex-1 text-[14.5px] sm:text-[15.5px]"
                     style={{ fontWeight: 500 }}
                   >
                     {item.q}
@@ -498,7 +500,7 @@ function FAQSection() {
                     <span className="hidden group-open:inline">−</span>
                   </span>
                 </summary>
-                <p className="pb-6 pl-9 pr-12 text-[14px] leading-[1.65] text-[#888]">
+                <p className="pb-6 pl-7 pr-2 text-[13.5px] leading-[1.65] text-[#888] sm:pl-9 sm:pr-12 sm:text-[14px]">
                   {item.a}
                 </p>
               </details>
@@ -514,16 +516,16 @@ function FAQSection() {
 function CTA() {
   return (
     <section
-      className="mx-auto max-w-[1280px] px-6 py-28 lg:px-10 lg:py-36"
+      className="mx-auto max-w-[1280px] px-4 py-20 sm:px-6 sm:py-24 md:py-28 lg:px-10 lg:py-36"
       style={{ borderTop: "1px solid #1f1f1f" }}
     >
       <div className="grid grid-cols-12 gap-6">
         <div className="col-span-12 md:col-span-7">
           <SectionMarker index="05" label="Ship" />
           <h2
-            className="mt-10 text-balance"
+            className="mt-8 text-balance md:mt-10"
             style={{
-              fontSize: "clamp(40px, 6vw, 80px)",
+              fontSize: "clamp(32px, 8vw, 80px)",
               fontWeight: 500,
               letterSpacing: "-0.035em",
               lineHeight: 0.98,
@@ -535,11 +537,11 @@ function CTA() {
               this weekend.
             </span>
           </h2>
-          <p className="mt-8 max-w-[42ch] text-[15px] leading-[1.6] text-[#888]">
+          <p className="mt-6 max-w-[42ch] text-[14px] leading-[1.6] text-[#888] sm:text-[15px] md:mt-8">
             Free during beta. Live in two minutes. The demo costs less than a
             chai.
           </p>
-          <div className="mt-12 flex flex-wrap items-center gap-x-8 gap-y-4 font-mono text-[11px] uppercase tracking-[0.18em]">
+          <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-4 font-mono text-[11px] uppercase tracking-[0.18em] sm:gap-x-8 md:mt-12">
             <CtaLink dashboard="agent">start agent</CtaLink>
             <Link
               href="/merchants"
@@ -550,7 +552,7 @@ function CTA() {
           </div>
         </div>
         <aside className="col-span-12 md:col-span-5 md:pt-2">
-          <div className="border border-[#1f1f1f] p-6 font-mono text-[12px] leading-[1.7] text-[#f5f5f5]">
+          <div className="overflow-x-auto border border-[#1f1f1f] p-5 font-mono text-[11.5px] leading-[1.7] text-[#f5f5f5] sm:p-6 sm:text-[12px]">
             <span className="text-[#888]">$</span> npm i @obscura-app/sdk
             <br />
             <span className="text-[#888]">$</span> export OBSCURA_KEY=sk_...
@@ -574,12 +576,14 @@ function CTA() {
 function FooterRule() {
   return (
     <footer
-      className="mx-auto max-w-[1280px] px-6 py-10 lg:px-10"
+      className="mx-auto max-w-[1280px] px-4 py-8 sm:px-6 sm:py-10 lg:px-10"
       style={{ borderTop: "1px solid #f5f5f5" }}
     >
-      <div className="flex flex-wrap items-center justify-between gap-y-3 font-mono text-[10px] uppercase tracking-[0.22em] text-[#888]">
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 font-mono text-[10px] uppercase tracking-[0.22em] text-[#888]">
         <span>obscurapp.com</span>
-        <span>built with umbra · solana frontier 2026</span>
+        <span className="order-last w-full text-center sm:order-none sm:w-auto">
+          built with umbra · solana frontier 2026
+        </span>
         <span>mit</span>
       </div>
     </footer>

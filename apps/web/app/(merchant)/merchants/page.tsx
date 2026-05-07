@@ -42,13 +42,13 @@ function Hero() {
         className="pointer-events-none absolute -right-40 top-80 h-[380px] w-[380px] rounded-full bg-emerald-500/5 blur-[120px]"
       />
 
-      <div className="relative mx-auto grid max-w-[1400px] grid-cols-12 gap-x-8 gap-y-16 px-6 pb-28 pt-24 lg:px-10 lg:pb-36 lg:pt-32">
+      <div className="relative mx-auto grid max-w-[1400px] grid-cols-12 gap-x-6 gap-y-12 px-4 pb-20 pt-16 sm:gap-x-8 sm:gap-y-16 sm:px-6 sm:pb-28 sm:pt-24 lg:px-10 lg:pb-36 lg:pt-32">
         <div className="col-span-12 md:col-span-8">
-          <p className="rule-with-pip mb-10 font-mono text-[11px] uppercase tracking-[0.3em] text-zinc-400">
+          <p className="rule-with-pip mb-8 font-mono text-[11px] uppercase tracking-[0.3em] text-zinc-400 sm:mb-10">
             <span>For API providers</span>
           </p>
 
-          <h1 className="font-display text-balance text-[56px] font-light leading-[0.94] tracking-[-0.03em] text-zinc-50 md:text-[96px] lg:text-[118px]">
+          <h1 className="font-display text-balance text-[40px] font-light leading-[0.94] tracking-[-0.03em] text-zinc-50 sm:text-[56px] md:text-[96px] lg:text-[118px]">
             <span className="reveal block" style={{ animationDelay: "0.05s" }}>
               Get paid when
             </span>
@@ -61,7 +61,7 @@ function Hero() {
           </h1>
 
           <p
-            className="reveal mt-12 max-w-[60ch] text-[18px] leading-[1.65] text-zinc-300 md:text-[20px] md:leading-[1.6]"
+            className="reveal mt-8 max-w-[60ch] text-[15px] leading-[1.65] text-zinc-300 sm:mt-12 sm:text-[18px] md:text-[20px] md:leading-[1.6]"
             style={{ animationDelay: "0.35s" }}
           >
             Drop one line of middleware into your server. Earn{" "}
@@ -92,7 +92,7 @@ function Hero() {
           </div>
 
           <div
-            className="reveal mt-16 grid max-w-2xl grid-cols-3 gap-6 border-t border-zinc-800/80 pt-6"
+            className="reveal mt-12 grid max-w-2xl grid-cols-3 gap-3 border-t border-zinc-800/80 pt-6 sm:mt-16 sm:gap-6"
             style={{ animationDelay: "0.65s" }}
           >
             <Stat label="Integration" value="1 line" />
@@ -136,7 +136,7 @@ function Stat({ label, value }: { label: string; value: string }) {
       <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-500">
         {label}
       </div>
-      <div className="mt-2 font-display text-2xl font-light text-zinc-100">
+      <div className="mt-2 font-display text-xl font-light text-zinc-100 sm:text-2xl">
         {value}
       </div>
     </div>
@@ -156,15 +156,20 @@ const figures = [
 
 function Stats() {
   return (
-    <section className="border-b border-zinc-800/60 bg-[#08080a] py-24">
-      <div className="mx-auto max-w-[1400px] px-6 lg:px-10">
-        <div className="grid grid-cols-1 divide-y divide-zinc-800 border-y border-zinc-800 md:grid-cols-4 md:divide-x md:divide-y-0">
-          {figures.map((f) => (
-            <div key={f.value} className="p-8">
-              <div className="font-display text-[48px] font-light leading-none tracking-[-0.02em] text-emerald-gradient md:text-[58px]">
+    <section className="border-b border-zinc-800/60 bg-[#08080a] py-16 sm:py-24">
+      <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-10">
+        <div className="grid grid-cols-1 divide-y divide-zinc-800 border-y border-zinc-800 sm:grid-cols-2 md:grid-cols-4 md:divide-x md:divide-y-0">
+          {figures.map((f, i) => (
+            <div
+              key={f.value}
+              className={`p-6 sm:p-8 ${
+                i % 2 === 1 ? "sm:border-l sm:border-zinc-800 md:border-l-0" : ""
+              }`}
+            >
+              <div className="font-display text-[36px] font-light leading-none tracking-[-0.02em] text-emerald-gradient sm:text-[48px] md:text-[58px]">
                 {f.value}
               </div>
-              <p className="mt-4 text-[13px] leading-[1.55] text-zinc-400">
+              <p className="mt-3 text-[13px] leading-[1.55] text-zinc-400 sm:mt-4">
                 {f.label}
               </p>
             </div>
@@ -181,17 +186,17 @@ function Stats() {
 
 function HowItWorks() {
   return (
-    <section className="border-b border-zinc-800/60 bg-[#0a0a0a] py-28 lg:py-36">
-      <div className="mx-auto max-w-[1400px] px-6 lg:px-10">
-        <div className="mb-16 max-w-2xl">
+    <section className="border-b border-zinc-800/60 bg-[#0a0a0a] py-20 sm:py-28 lg:py-36">
+      <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-10">
+        <div className="mb-12 max-w-2xl sm:mb-16">
           <p className="rule-with-pip font-mono text-[11px] uppercase tracking-[0.3em] text-zinc-400">
             <span>Section I — How merchants earn</span>
           </p>
-          <h2 className="mt-8 font-display text-balance text-[44px] font-light leading-[1.02] tracking-[-0.02em] text-zinc-50 md:text-[60px]">
+          <h2 className="mt-6 font-display text-balance text-[32px] font-light leading-[1.02] tracking-[-0.02em] text-zinc-50 sm:mt-8 sm:text-[44px] md:text-[60px]">
             Register. Wrap.{" "}
             <span className="italic text-emerald-gradient">Earn.</span>
           </h2>
-          <p className="mt-6 max-w-xl text-[15px] leading-[1.7] text-zinc-400">
+          <p className="mt-5 max-w-xl text-[14px] leading-[1.7] text-zinc-400 sm:mt-6 sm:text-[15px]">
             No subscription pages. No card forms. No chargebacks. Just
             pay-per-call, settled on-chain, cashable in rupees.
           </p>
@@ -234,14 +239,14 @@ function StepCard({
   meta: string;
 }) {
   return (
-    <article className="flex h-full flex-col border border-zinc-800 bg-[#0c0c0e] p-7 md:p-8">
+    <article className="flex h-full flex-col border border-zinc-800 bg-[#0c0c0e] p-6 sm:p-7 md:p-8">
       <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-emerald-400">
         {kicker}
       </p>
-      <h3 className="mt-8 font-display text-[28px] font-light leading-[1.15] tracking-tight text-zinc-50 md:text-[30px]">
+      <h3 className="mt-6 font-display text-[24px] font-light leading-[1.15] tracking-tight text-zinc-50 sm:mt-8 sm:text-[28px] md:text-[30px]">
         {title}
       </h3>
-      <p className="mt-4 text-[14.5px] leading-[1.65] text-zinc-400">{body}</p>
+      <p className="mt-4 text-[14px] leading-[1.65] text-zinc-400 sm:text-[14.5px]">{body}</p>
       <div className="mt-auto flex items-center gap-4 border-t border-zinc-800/80 pt-5">
         <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-600">
           When
@@ -258,27 +263,27 @@ function StepCard({
 
 function Quickstart() {
   return (
-    <section className="relative overflow-hidden border-b border-zinc-800/60 bg-[#0a0a0a] py-28 lg:py-36">
+    <section className="relative overflow-hidden border-b border-zinc-800/60 bg-[#0a0a0a] py-20 sm:py-28 lg:py-36">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute -right-40 top-1/3 h-[320px] w-[320px] rounded-full bg-emerald-500/6 blur-[120px]"
       />
-      <div className="relative mx-auto max-w-[1400px] px-6 lg:px-10">
-        <div className="grid grid-cols-12 gap-x-6 gap-y-12">
+      <div className="relative mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-10">
+        <div className="grid grid-cols-12 gap-x-6 gap-y-10 sm:gap-y-12">
           <div className="col-span-12 md:col-span-5 lg:col-span-4">
             <p className="rule-with-pip font-mono text-[11px] uppercase tracking-[0.3em] text-zinc-400">
               <span>Section II — Integration</span>
             </p>
-            <h2 className="mt-8 font-display text-[40px] font-light leading-[1.02] tracking-[-0.02em] text-zinc-50 md:text-[54px]">
+            <h2 className="mt-6 font-display text-[28px] font-light leading-[1.02] tracking-[-0.02em] text-zinc-50 sm:mt-8 sm:text-[40px] md:text-[54px]">
               Payments in{" "}
               <span className="italic text-emerald-gradient">one line.</span>
             </h2>
-            <p className="mt-6 text-[15px] leading-[1.7] text-zinc-400">
+            <p className="mt-5 text-[14px] leading-[1.7] text-zinc-400 sm:mt-6 sm:text-[15px]">
               Works with Express, Fastify, and Hono out of the box. Python and
               Go middlewares ship next.
             </p>
 
-            <ul className="mt-10 space-y-4 text-[14px] text-zinc-300">
+            <ul className="mt-8 space-y-4 text-[14px] text-zinc-300 sm:mt-10">
               <BulletLine>
                 <strong className="text-zinc-100">402 handled for you.</strong>{" "}
                 Middleware returns payment terms, verifies{" "}
@@ -348,17 +353,17 @@ function BulletLine({ children }: { children: React.ReactNode }) {
 
 function Economics() {
   return (
-    <section className="border-b border-zinc-800/60 bg-[#08080a] py-28 lg:py-36">
-      <div className="mx-auto max-w-[1400px] px-6 lg:px-10">
-        <div className="mb-16 max-w-2xl">
+    <section className="border-b border-zinc-800/60 bg-[#08080a] py-20 sm:py-28 lg:py-36">
+      <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-10">
+        <div className="mb-12 max-w-2xl sm:mb-16">
           <p className="rule-with-pip font-mono text-[11px] uppercase tracking-[0.3em] text-zinc-400">
             <span>Section III — The economics</span>
           </p>
-          <h2 className="mt-8 font-display text-balance text-[44px] font-light leading-[1.02] tracking-[-0.02em] text-zinc-50 md:text-[60px]">
+          <h2 className="mt-6 font-display text-balance text-[32px] font-light leading-[1.02] tracking-[-0.02em] text-zinc-50 sm:mt-8 sm:text-[44px] md:text-[60px]">
             Micropayments, finally,{" "}
             <span className="italic text-emerald-gradient">profitable.</span>
           </h2>
-          <p className="mt-6 max-w-xl text-[15px] leading-[1.7] text-zinc-400">
+          <p className="mt-5 max-w-xl text-[14px] leading-[1.7] text-zinc-400 sm:mt-6 sm:text-[15px]">
             Card processors charge a floor of $0.30 per transaction. That
             kills pay-per-call at any realistic price. Solana fees are
             ~$0.0001. You keep the rest.
@@ -382,11 +387,11 @@ function Economics() {
           />
         </div>
 
-        <div className="mt-10 border border-zinc-800 bg-[#0c0c0e] p-8 md:p-10">
+        <div className="mt-8 border border-zinc-800 bg-[#0c0c0e] p-6 sm:mt-10 sm:p-8 md:p-10">
           <div className="rule-with-pip mb-6 font-mono text-[10px] uppercase tracking-[0.28em] text-emerald-400">
             <span>A realistic scenario</span>
           </div>
-          <p className="max-w-4xl font-display text-[24px] font-light leading-[1.45] tracking-tight text-zinc-100 md:text-[32px]">
+          <p className="max-w-4xl font-display text-[20px] font-light leading-[1.45] tracking-tight text-zinc-100 sm:text-[24px] md:text-[32px]">
             An agent hits your weather API{" "}
             <span className="text-emerald-gradient">5,000 times a day</span> at
             $0.01 a call. On Obscura that&apos;s{" "}
@@ -426,14 +431,14 @@ function ScenarioCard({
       : "border-l md:border-l";
   return (
     <article
-      className={`flex flex-col border border-zinc-800 ${borderSide} bg-[#0c0c0e] p-8 md:p-10`}
+      className={`flex flex-col border border-zinc-800 ${borderSide} bg-[#0c0c0e] p-6 sm:p-8 md:p-10`}
     >
       <p
         className={`font-mono text-[10px] uppercase tracking-[0.28em] ${accentText}`}
       >
         {tag}
       </p>
-      <h3 className="mt-6 font-display text-[28px] font-light leading-[1.15] tracking-tight text-zinc-50 md:text-[34px]">
+      <h3 className="mt-5 font-display text-[24px] font-light leading-[1.15] tracking-tight text-zinc-50 sm:mt-6 sm:text-[28px] md:text-[34px]">
         {headline}
       </h3>
       <div
@@ -479,16 +484,16 @@ const merchantFaqs: QA[] = [
 
 function FAQSection() {
   return (
-    <section className="border-b border-zinc-800/60 bg-[#0a0a0a] py-28 lg:py-36">
-      <div className="mx-auto max-w-[1400px] px-6 lg:px-10">
-        <div className="mb-12 grid grid-cols-12 items-end gap-8">
+    <section className="border-b border-zinc-800/60 bg-[#0a0a0a] py-20 sm:py-28 lg:py-36">
+      <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-10">
+        <div className="mb-10 grid grid-cols-12 items-end gap-6 sm:mb-12 sm:gap-8">
           <div className="col-span-12 md:col-span-4">
             <p className="rule-with-pip font-mono text-[11px] uppercase tracking-[0.3em] text-zinc-400">
               <span>Section IV — FAQ</span>
             </p>
           </div>
           <div className="col-span-12 md:col-span-8">
-            <h2 className="font-display text-[40px] font-light leading-[1.02] tracking-[-0.02em] text-zinc-50 md:text-[60px]">
+            <h2 className="font-display text-[28px] font-light leading-[1.02] tracking-[-0.02em] text-zinc-50 sm:text-[40px] md:text-[60px]">
               Questions, from{" "}
               <span className="italic text-zinc-500">API builders.</span>
             </h2>
@@ -506,7 +511,7 @@ function FAQSection() {
 
 function FinalCTA() {
   return (
-    <section className="relative overflow-hidden bg-[#0a0a0a] py-32 lg:py-40">
+    <section className="relative overflow-hidden bg-[#0a0a0a] py-20 sm:py-32 lg:py-40">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute left-1/2 top-1/2 h-[600px] w-[1000px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-500/10 blur-[160px]"
@@ -516,19 +521,19 @@ function FinalCTA() {
         className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:72px_72px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,black_0%,transparent_70%)]"
       />
 
-      <div className="relative mx-auto max-w-[1200px] px-6 text-center lg:px-10">
+      <div className="relative mx-auto max-w-[1200px] px-4 text-center sm:px-6 lg:px-10">
         <p className="rule-with-pip mx-auto inline-flex font-mono text-[11px] uppercase tracking-[0.3em] text-zinc-400">
           <span>Issue End · Start earning</span>
         </p>
-        <h2 className="mt-10 font-display text-balance text-[54px] font-light leading-[0.98] tracking-[-0.025em] text-zinc-50 md:text-[104px]">
+        <h2 className="mt-8 font-display text-balance text-[36px] font-light leading-[0.98] tracking-[-0.025em] text-zinc-50 sm:mt-10 sm:text-[54px] md:text-[104px]">
           Monetize your API{" "}
           <span className="italic text-emerald-gradient">this weekend.</span>
         </h2>
-        <p className="mx-auto mt-8 max-w-xl text-[16px] leading-[1.7] text-zinc-400">
+        <p className="mx-auto mt-6 max-w-xl text-[14px] leading-[1.7] text-zinc-400 sm:mt-8 sm:text-[16px]">
           Free during beta. One middleware line. USDC in your wallet before
           your next standup.
         </p>
-        <div className="mt-12 flex flex-wrap justify-center gap-3">
+        <div className="mt-10 flex flex-wrap justify-center gap-3 sm:mt-12">
           <CtaLink
             dashboard="merchant"
             variant="primary"

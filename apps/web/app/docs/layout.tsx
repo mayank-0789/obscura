@@ -21,9 +21,9 @@ export default function DocsLayout({
       style={{ fontFeatureSettings: '"ss01", "cv11", "tnum"' } as CSSProperties}
     >
       <DocsTopBar />
-      <div className="mx-auto flex max-w-[1280px] gap-x-10 px-6 lg:px-10">
+      <div className="mx-auto flex max-w-[1280px] flex-col px-4 sm:px-6 lg:flex-row lg:gap-x-10 lg:px-10">
         <DocsSidebar />
-        <main className="min-w-0 flex-1 py-10 lg:py-14">{children}</main>
+        <main className="min-w-0 flex-1 py-8 sm:py-10 lg:py-14">{children}</main>
       </div>
       <DocsFooter />
     </div>
@@ -33,17 +33,17 @@ export default function DocsLayout({
 function DocsTopBar() {
   return (
     <header className="border-b border-[#1f1f1f]">
-      <div className="mx-auto flex max-w-[1280px] items-center justify-between px-6 py-5 lg:px-10">
-        <div className="flex items-baseline gap-3">
+      <div className="mx-auto flex max-w-[1280px] items-center justify-between gap-3 px-4 py-4 sm:px-6 sm:py-5 lg:px-10">
+        <div className="flex min-w-0 items-baseline gap-3">
           <Link href="/" className="text-[15px] font-medium tracking-[-0.01em]">
             obscura
           </Link>
-          <span className="font-mono text-[10px] text-[#5a5a5a]">───</span>
-          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#888]">
+          <span className="hidden font-mono text-[10px] text-[#5a5a5a] sm:inline">───</span>
+          <span className="hidden font-mono text-[10px] uppercase tracking-[0.18em] text-[#888] sm:inline">
             docs
           </span>
         </div>
-        <nav className="flex items-center gap-7 font-mono text-[11px] uppercase tracking-[0.16em]">
+        <nav className="flex items-center gap-4 font-mono text-[11px] uppercase tracking-[0.16em] sm:gap-7">
           <Link href="/" className="text-[#888] hover:text-[#f5f5f5]">
             home
           </Link>
@@ -60,12 +60,14 @@ function DocsTopBar() {
 function DocsFooter() {
   return (
     <footer
-      className="mx-auto max-w-[1280px] px-6 py-10 lg:px-10"
+      className="mx-auto max-w-[1280px] px-4 py-8 sm:px-6 sm:py-10 lg:px-10"
       style={{ borderTop: "1px solid #f5f5f5" }}
     >
-      <div className="flex flex-wrap items-center justify-between gap-y-3 font-mono text-[10px] uppercase tracking-[0.22em] text-[#888]">
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 font-mono text-[10px] uppercase tracking-[0.22em] text-[#888]">
         <span>obscurapp.com</span>
-        <span>built with umbra · solana frontier 2026</span>
+        <span className="order-last w-full text-center sm:order-none sm:w-auto">
+          built with umbra · solana frontier 2026
+        </span>
         <span>mit</span>
       </div>
     </footer>

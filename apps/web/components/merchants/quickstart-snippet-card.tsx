@@ -48,7 +48,7 @@ app.listen(3001);`;
 
   return (
     <section aria-labelledby="quickstart-heading">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div id="quickstart-heading">
           <SectionMarker index="04" label="Quick integration" />
         </div>
@@ -82,7 +82,7 @@ app.listen(3001);`;
         }}
       >
         <pre
-          className="overflow-x-auto p-5 font-mono text-[13px] leading-[1.65] text-[#f5f5f5]"
+          className="overflow-x-auto p-4 font-mono text-[12px] leading-[1.6] text-[#f5f5f5] sm:p-5 sm:text-[13px] sm:leading-[1.65]"
           style={{ backgroundColor: "#0e0e0e" }}
         >
           <code>{snippet}</code>

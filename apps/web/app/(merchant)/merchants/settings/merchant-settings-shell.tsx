@@ -62,8 +62,8 @@ export function MerchantSettingsShell() {
 
   return (
     <MerchantAppShell>
-      <div className="mx-auto max-w-[720px] px-8 py-10">
-        <div className="mb-8">
+      <div className="mx-auto max-w-[720px] px-4 py-6 sm:px-6 sm:py-8 md:px-8 md:py-10">
+        <div className="mb-6 sm:mb-8">
           <h1 className="text-[15px] font-medium text-zinc-200">Settings</h1>
           <p className="mt-1 text-[13px] text-zinc-500">
             API keys for programmatic access to your merchant data. Use these
@@ -164,7 +164,7 @@ function KeyRow({
   revoking: boolean;
 }) {
   return (
-    <div className="flex items-center gap-4 px-5 py-4">
+    <div className="flex items-center gap-3 px-4 py-4 sm:gap-4 sm:px-5">
       <div className="min-w-0 flex-1">
         <p className="truncate text-[13px] text-zinc-200">
           {k.label ?? (
@@ -180,7 +180,7 @@ function KeyRow({
         type="button"
         onClick={onRevoke}
         disabled={revoking}
-        className="rounded-md border border-zinc-800 bg-zinc-950 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-400 transition enabled:hover:border-red-500/40 enabled:hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c0c0e]"
+        className="shrink-0 rounded-md border border-zinc-800 bg-zinc-950 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-400 transition enabled:hover:border-red-500/40 enabled:hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c0c0e]"
       >
         Revoke
       </button>

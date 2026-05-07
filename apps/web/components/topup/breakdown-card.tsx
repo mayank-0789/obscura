@@ -19,7 +19,7 @@ type Props = {
 export function BreakdownCard({ breakdown, rateSource, loading }: Props) {
   if (loading || !breakdown) {
     return (
-      <div className="border-b border-zinc-800 bg-[#0a0a0a] px-6 py-5">
+      <div className="border-b border-zinc-800 bg-[#0a0a0a] px-4 py-5 sm:px-6">
         <div className="h-20 animate-pulse rounded bg-zinc-900/40" />
       </div>
     );
@@ -28,7 +28,7 @@ export function BreakdownCard({ breakdown, rateSource, loading }: Props) {
   const { paidPaise, serviceFeePaise, usdgMicros, quotedRate } = breakdown;
 
   return (
-    <div className="border-b border-zinc-800 bg-[#0a0a0a] px-6 py-5">
+    <div className="border-b border-zinc-800 bg-[#0a0a0a] px-4 py-5 sm:px-6">
       <dl className="space-y-2.5">
         <Row label="Top-up amount" amountInr={paidPaise} bold />
 

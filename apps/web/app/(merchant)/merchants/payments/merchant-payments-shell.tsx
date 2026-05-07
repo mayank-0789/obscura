@@ -9,8 +9,8 @@ export function MerchantPaymentsShell() {
 
   return (
     <MerchantAppShell>
-      <div className="mx-auto max-w-[960px] px-8 py-10">
-        <div className="mb-8 flex items-baseline justify-between gap-4">
+      <div className="mx-auto max-w-[960px] px-4 py-6 sm:px-6 sm:py-8 md:px-8 md:py-10">
+        <div className="mb-6 flex flex-wrap items-baseline justify-between gap-3 sm:mb-8 sm:gap-4">
           <div>
             <h1 className="text-[15px] font-medium text-zinc-200">Payments</h1>
             <p className="mt-1 text-[13px] text-zinc-500">

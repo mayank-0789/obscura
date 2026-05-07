@@ -105,7 +105,7 @@ export function ApiEditModal({ mode, initial, open, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/60 p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -115,7 +115,7 @@ export function ApiEditModal({ mode, initial, open, onClose }: Props) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="api-modal-heading"
-        className="w-full max-w-[520px] rounded-lg border border-zinc-800 bg-[#0c0c0e] shadow-[0_20px_80px_-20px_rgba(0,0,0,0.9)]"
+        className="my-6 w-full max-w-[520px] rounded-lg border border-zinc-800 bg-[#0c0c0e] shadow-[0_20px_80px_-20px_rgba(0,0,0,0.9)]"
       >
         <header className="border-b border-zinc-800 px-5 py-4">
           <h2

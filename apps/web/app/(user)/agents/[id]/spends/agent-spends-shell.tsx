@@ -18,7 +18,7 @@ export function AgentSpendsShell({ id }: { id: string }) {
         selectedAgentId={id}
         onSelectAgent={(next) => router.push(`/agents/${next}`)}
       >
-        <div className="flex min-h-full items-center justify-center px-8 py-24 text-center">
+        <div className="flex min-h-full items-center justify-center px-4 py-16 text-center sm:px-8 sm:py-24">
           <div className="max-w-xl">
             <h1 className="text-[24px] font-semibold text-zinc-50">
               Agent not found
@@ -43,18 +43,18 @@ export function AgentSpendsShell({ id }: { id: string }) {
       selectedAgentId={id}
       onSelectAgent={(next) => router.push(`/agents/${next}`)}
     >
-      <div className="px-8 py-8 lg:px-12">
-        <div className="flex items-center gap-2 text-[12px] text-zinc-500">
+      <div className="px-4 py-6 sm:px-6 sm:py-8 md:px-8 lg:px-12">
+        <div className="flex items-center gap-2 overflow-x-auto text-[12px] text-zinc-500">
           <Link
             href="/dashboard"
-            className="inline-flex items-center gap-1.5 transition hover:text-zinc-200"
+            className="inline-flex items-center gap-1.5 whitespace-nowrap transition hover:text-zinc-200"
           >
             Dashboard
           </Link>
           <span className="text-zinc-700">/</span>
           <Link
             href={`/agents/${id}`}
-            className="transition hover:text-zinc-200"
+            className="truncate transition hover:text-zinc-200"
           >
             {agent?.name ? (
               agent.name
@@ -63,10 +63,10 @@ export function AgentSpendsShell({ id }: { id: string }) {
             )}
           </Link>
           <span className="text-zinc-700">/</span>
-          <span className="text-zinc-400">Spends</span>
+          <span className="whitespace-nowrap text-zinc-400">Spends</span>
         </div>
 
-        <div className="mt-6 flex items-baseline justify-between gap-4">
+        <div className="mt-6 flex flex-wrap items-baseline justify-between gap-3 sm:gap-4">
           <div>
             <h1 className="text-[22px] font-semibold tracking-[-0.01em] text-zinc-50">
               Spends

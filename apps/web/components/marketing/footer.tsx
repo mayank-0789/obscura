@@ -4,25 +4,25 @@ import { Logo } from "./logo";
 export function Footer() {
   return (
     <footer className="border-t border-zinc-800/60 bg-[#0a0a0a]">
-      <div className="mx-auto max-w-[1400px] px-6 py-16 lg:px-10">
+      <div className="mx-auto max-w-[1400px] px-4 py-12 sm:px-6 sm:py-16 lg:px-10">
         {/* Masthead row */}
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-zinc-800 pb-5 font-mono text-[10px] uppercase tracking-[0.3em] text-zinc-500">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-zinc-800 pb-5 font-mono text-[10px] uppercase tracking-[0.3em] text-zinc-500 sm:gap-x-6">
           <span className="flex items-center gap-2 text-emerald-400">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
             Obscura Journal
           </span>
           <span className="text-zinc-800">/</span>
           <span>Issue No. 001</span>
-          <span className="text-zinc-800">/</span>
-          <span>Volume I · April 2026</span>
+          <span className="hidden text-zinc-800 sm:inline">/</span>
+          <span className="hidden sm:inline">Volume I · April 2026</span>
           <span className="ml-auto hidden md:inline">
             Solana × Dodo × x402
           </span>
         </div>
 
         {/* Link grid */}
-        <div className="mt-12 grid gap-12 md:grid-cols-4">
-          <div className="md:col-span-2">
+        <div className="mt-10 grid gap-10 sm:mt-12 sm:gap-12 sm:grid-cols-2 md:grid-cols-4">
+          <div className="sm:col-span-2 md:col-span-2">
             <Link href="/" className="group inline-flex items-center gap-3">
               <Logo />
               <div>
@@ -59,7 +59,7 @@ export function Footer() {
         </div>
 
         {/* Signoff */}
-        <div className="mt-16 flex flex-wrap items-end justify-between gap-x-6 gap-y-4 border-t border-zinc-900 pt-8">
+        <div className="mt-12 flex flex-wrap items-end justify-between gap-x-6 gap-y-4 border-t border-zinc-900 pt-8 sm:mt-16">
           <div className="font-display text-[13px] italic text-zinc-500">
             — End of issue.
           </div>

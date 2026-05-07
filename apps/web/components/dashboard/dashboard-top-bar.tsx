@@ -15,11 +15,13 @@ import { LAST_ROLE_KEY, type Role } from "@/lib/onboarding";
 type Props = {
   crumb?: string;
   onOpenPalette?: () => void;
+  onToggleSidebar?: () => void;
 };
 
 export function DashboardTopBar({
   crumb = "dashboard",
   onOpenPalette,
+  onToggleSidebar,
 }: Props) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -68,23 +70,45 @@ export function DashboardTopBar({
   }, [menuOpen]);
 
   return (
-    <header className="sticky top-0 z-40 grid h-12 grid-cols-[1fr_auto_1fr] items-center gap-4 border-b border-[#1f1f1f] bg-[#0a0a0a] px-5">
-      {/* LEFT — wordmark + crumb */}
-      <div className="flex items-baseline gap-3 justify-self-start">
+    <header className="sticky top-0 z-40 grid h-12 grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-[#1f1f1f] bg-[#0a0a0a] px-3 sm:gap-4 sm:px-5">
+      {/* LEFT — hamburger (mobile) + wordmark + crumb */}
+      <div className="flex items-center gap-2 justify-self-start sm:gap-3">
+        {onToggleSidebar && (
+          <button
+            type="button"
+            onClick={onToggleSidebar}
+            aria-label="Toggle navigation"
+            className="-ml-1 flex h-8 w-8 items-center justify-center text-[#888] transition hover:text-[#f5f5f5] md:hidden"
+          >
+            <svg
+              viewBox="0 0 16 16"
+              className="h-4 w-4"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
+        )}
         <Link
           href="/"
           className="text-[13px] font-medium tracking-[-0.01em] text-[#f5f5f5]"
         >
           obscura
         </Link>
-        <span className="font-mono text-[10px] text-[#5a5a5a]">───</span>
-        <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-[#888]">
+        <span className="hidden font-mono text-[10px] text-[#5a5a5a] sm:inline">───</span>
+        <span className="hidden font-mono text-[11px] uppercase tracking-[0.16em] text-[#888] sm:inline">
           {crumb}
         </span>
       </div>
 
       {/* CENTER — role switcher + search */}
-      <div className="flex items-center gap-5 justify-self-center">
+      <div className="flex items-center gap-3 justify-self-center sm:gap-5">
         <RoleSwitcher />
         {onOpenPalette ? (
           <button

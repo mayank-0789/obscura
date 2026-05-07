@@ -48,8 +48,8 @@ export function MerchantApisShell() {
 
   return (
     <MerchantAppShell>
-      <div className="mx-auto max-w-[960px] px-8 py-10">
-        <div className="mb-8 flex items-start justify-between gap-4">
+      <div className="mx-auto max-w-[960px] px-4 py-6 sm:px-6 sm:py-8 md:px-8 md:py-10">
+        <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:mb-8 sm:flex-row sm:items-start">
           <div>
             <h1 className="text-[15px] font-medium text-zinc-200">APIs</h1>
             <p className="mt-1 max-w-[560px] text-[13px] leading-[1.6] text-zinc-500">
@@ -131,12 +131,12 @@ function ApiRow({
   const priceDisplay = `$${formatUsdg(api.defaultPriceUsdg)}`;
 
   return (
-    <div className="flex items-center gap-4 px-5 py-4">
+    <div className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-3 px-4 py-4 sm:flex sm:items-center sm:gap-4 sm:px-5">
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2.5">
           <span
             aria-hidden
-            className={`h-1.5 w-1.5 rounded-full ${
+            className={`h-1.5 w-1.5 shrink-0 rounded-full ${
               api.status === "active" ? "bg-emerald-400" : "bg-zinc-600"
             }`}
           />
@@ -161,11 +161,11 @@ function ApiRow({
           per call
         </div>
       </div>
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="col-span-2 flex shrink-0 items-center gap-2 sm:col-span-1">
         <button
           type="button"
           onClick={onEdit}
-          className="rounded-md border border-zinc-800 bg-zinc-950 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-400 transition hover:border-zinc-700 hover:text-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c0c0e]"
+          className="flex-1 rounded-md border border-zinc-800 bg-zinc-950 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-400 transition hover:border-zinc-700 hover:text-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c0c0e] sm:flex-none"
         >
           Edit
         </button>
@@ -173,7 +173,7 @@ function ApiRow({
           type="button"
           onClick={onDelete}
           disabled={deleting}
-          className="rounded-md border border-zinc-800 bg-zinc-950 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-400 transition enabled:hover:border-red-500/40 enabled:hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c0c0e]"
+          className="flex-1 rounded-md border border-zinc-800 bg-zinc-950 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-400 transition enabled:hover:border-red-500/40 enabled:hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c0c0e] sm:flex-none"
         >
           Delete
         </button>

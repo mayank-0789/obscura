@@ -139,15 +139,17 @@ export function DemoClient({ configured }: { configured: boolean }) {
               type="button"
               disabled={running !== null}
               onClick={() => onClick(btn.endpoint)}
-              style={{
-                borderBottom: "1px solid #1f1f1f",
-                borderRight:
-                  i < arr.length - 1 ? "1px solid #1f1f1f" : undefined,
-                opacity:
-                  running !== null && running !== btn.endpoint ? 0.4 : 1,
-                cursor: running === null ? "pointer" : "default",
-              }}
-              className={`group relative flex flex-col items-start gap-2 px-5 py-6 text-left transition ${
+              style={
+                {
+                  borderBottom: "1px solid #1f1f1f",
+                  ["--mr" as string]:
+                    i < arr.length - 1 ? "1px solid #1f1f1f" : "none",
+                  opacity:
+                    running !== null && running !== btn.endpoint ? 0.4 : 1,
+                  cursor: running === null ? "pointer" : "default",
+                } as React.CSSProperties
+              }
+              className={`group relative flex flex-col items-start gap-2 px-5 py-6 text-left transition sm:[border-right:var(--mr)] ${
                 running === btn.endpoint ? "bg-[#141414]" : "hover:bg-[#0e0e0e]"
               }`}
             >

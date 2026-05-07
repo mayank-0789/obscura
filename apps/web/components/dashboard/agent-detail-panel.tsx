@@ -31,23 +31,23 @@ export function AgentDetailPanel({ agent }: { agent: AgentDTO }) {
       : 0;
 
   return (
-    <div className="px-8 py-10 lg:px-12">
+    <div className="px-4 py-6 sm:px-6 sm:py-8 md:px-8 md:py-10 lg:px-12">
       {/* Header */}
       <header
-        className="flex flex-wrap items-start justify-between gap-6 pb-8"
+        className="flex flex-wrap items-start justify-between gap-4 pb-6 sm:gap-6 sm:pb-8"
         style={{ borderBottom: "1px solid #1f1f1f" }}
       >
         <div className="min-w-0">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <StatusPill status={agent.status} />
-            <span className="font-mono text-[11px] text-[#5a5a5a]">·</span>
+            <span className="hidden font-mono text-[11px] text-[#5a5a5a] sm:inline">·</span>
             <span className="font-mono text-[11px] text-[#888]">
               Created {formatDate(agent.createdAt)}
             </span>
           </div>
           <h1
-            className="mt-4 text-[32px] text-[#f5f5f5]"
-            style={{ fontWeight: 500, letterSpacing: "-0.02em", lineHeight: 1 }}
+            className="mt-4 break-words text-[24px] text-[#f5f5f5] sm:text-[28px] md:text-[32px]"
+            style={{ fontWeight: 500, letterSpacing: "-0.02em", lineHeight: 1.05 }}
           >
             {agent.name}
           </h1>
@@ -63,7 +63,7 @@ export function AgentDetailPanel({ agent }: { agent: AgentDTO }) {
           </a>
         </div>
 
-        <div className="flex flex-wrap items-center gap-4 font-mono text-[11px] uppercase tracking-[0.18em]">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-3 font-mono text-[11px] uppercase tracking-[0.18em]">
           {isActive && (
             <Link
               href={`/topup?agent_id=${agent.id}`}
@@ -94,7 +94,7 @@ export function AgentDetailPanel({ agent }: { agent: AgentDTO }) {
       </header>
 
       {/* Metric strip */}
-      <section className="mt-10">
+      <section className="mt-8 sm:mt-10">
         <SectionMarker index="01" label="Status" />
         <div
           className="mt-6 grid grid-cols-1 md:grid-cols-3"
@@ -213,11 +213,13 @@ function Metric({
 }) {
   return (
     <div
-      className="px-5 py-6"
-      style={{
-        borderBottom: "1px solid #1f1f1f",
-        borderRight: withRight ? "1px solid #1f1f1f" : undefined,
-      }}
+      className="px-5 py-5 sm:py-6 md:[border-right:var(--mr)]"
+      style={
+        {
+          borderBottom: "1px solid #1f1f1f",
+          ["--mr" as string]: withRight ? "1px solid #1f1f1f" : "none",
+        } as React.CSSProperties
+      }
     >
       <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#888]">
         {index}
@@ -225,7 +227,7 @@ function Metric({
       <div
         className="mt-3 tabular-nums text-[#f5f5f5]"
         style={{
-          fontSize: 28,
+          fontSize: "clamp(22px, 5vw, 28px)",
           fontWeight: 500,
           letterSpacing: "-0.02em",
           lineHeight: 1,

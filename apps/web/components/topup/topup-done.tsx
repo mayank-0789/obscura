@@ -131,7 +131,7 @@ function Confirmed({
         </a>
       )}
 
-      <div className="mt-10 flex items-center gap-2">
+      <div className="mt-10 flex flex-wrap items-center justify-center gap-2">
         <Link
           href={`/agents/${agentId}`}
           className="rounded-md border border-zinc-800 bg-zinc-950 px-4 py-2 text-[13px] text-zinc-200 transition hover:border-zinc-700 hover:text-zinc-100"
@@ -167,7 +167,7 @@ function DodoFailed({ status }: { status: string }) {
       <StateBody>
         Dodo reported the payment as {label}. No funds were moved.
       </StateBody>
-      <div className="mt-8 flex items-center gap-2">
+      <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
         <Link
           href="/topup"
           className="rounded-md bg-emerald-400 px-4 py-2 text-[13px] font-semibold text-black transition hover:bg-emerald-300"
@@ -297,7 +297,7 @@ function MissingPaymentId() {
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-full items-start justify-center px-6 py-20">
+    <div className="flex min-h-full items-start justify-center px-4 py-12 sm:px-6 sm:py-20">
       <div className="flex w-full max-w-md flex-col items-center text-center">
         {children}
       </div>

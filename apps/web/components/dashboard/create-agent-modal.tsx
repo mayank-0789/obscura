@@ -101,7 +101,7 @@ export function CreateAgentModal({ open, onClose, onCreated }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-[#0a0a0a]/80 px-4 pt-[12vh]"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[#0a0a0a]/80 px-4 py-8 sm:pt-[12vh]"
       onClick={() => !createAgent.isPending && onClose()}
     >
       <form
@@ -133,10 +133,18 @@ export function CreateAgentModal({ open, onClose, onCreated }: Props) {
               agent
             </h2>
           </div>
-          <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-[#888]">
+          <div className="hidden items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-[#888] sm:flex">
             <Kbd>esc</Kbd>
             <span>close</span>
           </div>
+          <button
+            type="button"
+            onClick={() => !createAgent.isPending && onClose()}
+            aria-label="Close"
+            className="font-mono text-[14px] text-[#888] transition hover:text-[#f5f5f5] sm:hidden"
+          >
+            ✕
+          </button>
         </header>
 
         <div className="px-5 py-6">
@@ -207,11 +215,11 @@ export function CreateAgentModal({ open, onClose, onCreated }: Props) {
         </div>
 
         <footer className="flex items-center justify-between gap-2 border-t border-[#1f1f1f] px-5 py-3">
-          <span className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.22em] text-[#888]">
+          <span className="hidden items-center gap-2 font-mono text-[10px] uppercase tracking-[0.22em] text-[#888] sm:flex">
             <Kbd>↵</Kbd>
             <span>create</span>
           </span>
-          <div className="flex items-center gap-5">
+          <div className="ml-auto flex items-center gap-5">
             <button
               type="button"
               onClick={onClose}

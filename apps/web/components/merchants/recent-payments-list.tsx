@@ -64,17 +64,20 @@ function PaymentRow({ tx }: { tx: MerchantTransaction }) {
 
   return (
     <div
-      className="grid grid-cols-[110px_1fr_110px_110px] items-baseline gap-4 px-1 py-3"
+      className="grid grid-cols-[1fr_auto] items-baseline gap-x-3 gap-y-1 px-1 py-3 sm:grid-cols-[110px_1fr_110px_110px] sm:gap-4"
       style={{ borderBottom: "1px solid #1f1f1f" }}
     >
-      <span className="font-mono text-[11px] text-[#888]">{when}</span>
-      <div className="min-w-0">
+      <span className="order-1 font-mono text-[11px] text-[#888] sm:order-none">{when}</span>
+      <span className="order-2 text-right font-mono text-[12px] tabular-nums text-[#f5f5f5] sm:order-4">
+        +${formatUsdg(tx.amountUsdg)}
+      </span>
+      <div className="order-3 col-span-2 min-w-0 sm:order-none sm:col-span-1">
         <div className="truncate text-[13px] text-[#f5f5f5]">{hostLabel}</div>
         <div className="mt-0.5 truncate font-mono text-[11px] text-[#5a5a5a]">
           from agent {payerShort}
         </div>
       </div>
-      <span className="text-right font-mono text-[11px] uppercase tracking-[0.18em]">
+      <span className="order-4 col-span-2 font-mono text-[11px] uppercase tracking-[0.18em] sm:order-3 sm:col-span-1 sm:text-right">
         {solscanUrl ? (
           <a
             href={solscanUrl}
@@ -90,9 +93,6 @@ function PaymentRow({ tx }: { tx: MerchantTransaction }) {
             pending
           </span>
         )}
-      </span>
-      <span className="text-right font-mono text-[12px] tabular-nums text-[#f5f5f5]">
-        +${formatUsdg(tx.amountUsdg)}
       </span>
     </div>
   );

@@ -55,35 +55,35 @@ function Content({ agent }: { agent: AgentDTO }) {
       : 0;
 
   return (
-    <div className="mx-auto max-w-[1280px] px-6 py-10 lg:px-10">
-      <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.18em] text-[#888]">
+    <div className="mx-auto max-w-[1280px] px-4 py-6 sm:px-6 sm:py-8 md:py-10 lg:px-10">
+      <div className="flex items-center gap-2 overflow-x-auto font-mono text-[11px] uppercase tracking-[0.18em] text-[#888]">
         <Link
           href="/dashboard"
-          className="inline-flex items-center gap-1.5 transition hover:text-[#f5f5f5]"
+          className="inline-flex items-center gap-1.5 whitespace-nowrap transition hover:text-[#f5f5f5]"
         >
           ← dashboard
         </Link>
         <span className="text-[#5a5a5a]">/</span>
-        <span className="text-[#888]">agents</span>
-        <span className="text-[#5a5a5a]">/</span>
+        <span className="hidden text-[#888] sm:inline">agents</span>
+        <span className="hidden text-[#5a5a5a] sm:inline">/</span>
         <span className="truncate text-[#f5f5f5]">{agent.name}</span>
       </div>
 
       <header
-        className="mt-6 flex flex-wrap items-start justify-between gap-6 pb-8"
+        className="mt-6 flex flex-wrap items-start justify-between gap-4 pb-6 sm:gap-6 sm:pb-8"
         style={{ borderBottom: "1px solid #1f1f1f" }}
       >
         <div className="min-w-0">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <StatusPill status={agent.status} />
-            <span className="font-mono text-[11px] text-[#5a5a5a]">·</span>
+            <span className="hidden font-mono text-[11px] text-[#5a5a5a] sm:inline">·</span>
             <span className="font-mono text-[11px] text-[#888]">
               Created {formatDate(agent.createdAt)}
             </span>
           </div>
           <h1
-            className="mt-4 text-[36px] text-[#f5f5f5] md:text-[44px]"
-            style={{ fontWeight: 500, letterSpacing: "-0.025em", lineHeight: 1 }}
+            className="mt-4 break-words text-[28px] text-[#f5f5f5] sm:text-[36px] md:text-[44px]"
+            style={{ fontWeight: 500, letterSpacing: "-0.025em", lineHeight: 1.05 }}
           >
             {agent.name}
           </h1>
@@ -109,7 +109,7 @@ function Content({ agent }: { agent: AgentDTO }) {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-4 font-mono text-[11px] uppercase tracking-[0.18em]">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-3 font-mono text-[11px] uppercase tracking-[0.18em]">
           {isActive && (
             <Link
               href={`/topup?agent_id=${agent.id}`}
@@ -134,7 +134,7 @@ function Content({ agent }: { agent: AgentDTO }) {
         <StatusBanner status={agent.status} />
       )}
 
-      <section className="mt-10">
+      <section className="mt-8 sm:mt-10">
         <SectionMarker index="01" label="Status" />
         <div
           className="mt-6 grid grid-cols-1 md:grid-cols-3"
@@ -167,7 +167,7 @@ function Content({ agent }: { agent: AgentDTO }) {
         </div>
       </section>
 
-      <section className="mt-10">
+      <section className="mt-8 sm:mt-10">
         <SectionMarker index="02" label="Credentials" />
         <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.22em] text-[#5a5a5a]">
           on-chain identity and api access
@@ -218,7 +218,7 @@ function Content({ agent }: { agent: AgentDTO }) {
 
       <AgentSpendsSection agentId={agent.id} />
 
-      <section className="mt-10">
+      <section className="mt-8 sm:mt-10">
         <SectionMarker index="04" label="Danger zone" />
         <p
           className="mt-3 font-mono text-[10px] uppercase tracking-[0.22em]"
@@ -262,11 +262,13 @@ function Metric({
 }) {
   return (
     <div
-      className="px-5 py-7"
-      style={{
-        borderBottom: "1px solid #1f1f1f",
-        borderRight: withRight ? "1px solid #1f1f1f" : undefined,
-      }}
+      className="px-5 py-6 sm:py-7 md:[border-right:var(--mr)]"
+      style={
+        {
+          borderBottom: "1px solid #1f1f1f",
+          ["--mr" as string]: withRight ? "1px solid #1f1f1f" : "none",
+        } as React.CSSProperties
+      }
     >
       <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#888]">
         {index}
@@ -274,7 +276,7 @@ function Metric({
       <div
         className="mt-3 tabular-nums text-[#f5f5f5]"
         style={{
-          fontSize: 32,
+          fontSize: "clamp(24px, 5vw, 32px)",
           fontWeight: 500,
           letterSpacing: "-0.02em",
           lineHeight: 1,
@@ -327,11 +329,11 @@ function CredRow({
 }) {
   return (
     <div
-      className="flex flex-wrap items-center justify-between gap-4 px-1 py-4"
+      className="flex flex-wrap items-start justify-between gap-3 px-1 py-4 sm:items-center sm:gap-4"
       style={{ borderBottom: "1px solid #1f1f1f" }}
     >
       <div className="min-w-0 flex-1">
-        <div className="flex items-baseline gap-3">
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <div className="text-[13px] text-[#f5f5f5]" style={{ fontWeight: 500 }}>
             {label}
           </div>
@@ -360,7 +362,7 @@ function DangerRow({
 }) {
   return (
     <div
-      className="flex flex-wrap items-center justify-between gap-4 px-1 py-4"
+      className="flex flex-wrap items-start justify-between gap-3 px-1 py-4 sm:items-center sm:gap-4"
       style={{ borderBottom: "1px solid #1f1f1f" }}
     >
       <div className="min-w-0 flex-1">
@@ -449,7 +451,7 @@ function formatDate(iso: string) {
 
 function Skeleton() {
   return (
-    <div className="mx-auto max-w-[1280px] space-y-6 px-6 py-10 lg:px-10">
+    <div className="mx-auto max-w-[1280px] space-y-6 px-4 py-6 sm:px-6 sm:py-8 md:py-10 lg:px-10">
       <div className="h-4 w-48 animate-pulse bg-[#141414]" />
       <div className="h-10 w-72 animate-pulse bg-[#141414]" />
       <div
@@ -473,7 +475,7 @@ function Skeleton() {
 
 function NotFound() {
   return (
-    <div className="flex min-h-full items-center justify-center px-8 py-24 text-center">
+    <div className="flex min-h-full items-center justify-center px-4 py-16 text-center sm:px-8 sm:py-24">
       <div className="max-w-xl">
         <h1
           className="text-[28px] text-[#f5f5f5]"
@@ -498,7 +500,7 @@ function NotFound() {
 
 function LoadError() {
   return (
-    <div className="flex min-h-full items-center justify-center px-8 py-24 text-center">
+    <div className="flex min-h-full items-center justify-center px-4 py-16 text-center sm:px-8 sm:py-24">
       <div className="max-w-xl">
         <h1
           className="text-[28px] text-[#f5f5f5]"

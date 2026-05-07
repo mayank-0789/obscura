@@ -96,13 +96,13 @@ export function TopupForm() {
       ) : !agents || agents.length === 0 ? (
         <NoAgentsState />
       ) : (
-        <div className="flex min-h-full items-start justify-center px-6 py-12">
+        <div className="flex min-h-full items-start justify-center px-4 py-8 sm:px-6 sm:py-12">
           <div className="w-full max-w-xl">
             <div>
               <div className="text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500">
                 Top up
               </div>
-              <h1 className="mt-2 text-[28px] font-semibold tracking-[-0.015em] text-zinc-50">
+              <h1 className="mt-2 text-[24px] font-semibold tracking-[-0.015em] text-zinc-50 sm:text-[28px]">
                 Fund an agent
               </h1>
               <p className="mt-2 text-[14px] leading-[1.55] text-zinc-400">
@@ -115,7 +115,7 @@ export function TopupForm() {
               onSubmit={handleSubmit}
               className="mt-8 overflow-hidden rounded-lg border border-zinc-800 bg-[#0c0c0e]"
             >
-              <div className="border-b border-zinc-800 px-6 py-5">
+              <div className="border-b border-zinc-800 px-4 py-5 sm:px-6">
                 <label className="block">
                   <span className="mb-2 block text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500">
                     Agent
@@ -165,7 +165,7 @@ export function TopupForm() {
                 </label>
               </div>
 
-              <div className="border-b border-zinc-800 px-6 py-5">
+              <div className="border-b border-zinc-800 px-4 py-5 sm:px-6">
                 <label className="block">
                   <span className="mb-2 block text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500">
                     Amount
@@ -230,7 +230,7 @@ export function TopupForm() {
                 loading={quoteLoading}
               />
 
-              <div className="flex items-center justify-between gap-2 px-6 py-4">
+              <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-4 sm:px-6">
                 <button
                   type="button"
                   onClick={() => router.push("/dashboard")}
@@ -287,7 +287,7 @@ export function TopupForm() {
 
 function Skeleton() {
   return (
-    <div className="flex min-h-full items-start justify-center px-6 py-12">
+    <div className="flex min-h-full items-start justify-center px-4 py-8 sm:px-6 sm:py-12">
       <div className="w-full max-w-xl space-y-6">
         <div className="h-4 w-24 animate-pulse rounded bg-zinc-900" />
         <div className="h-10 w-64 animate-pulse rounded bg-zinc-900" />
@@ -299,7 +299,7 @@ function Skeleton() {
 
 function NoAgentsState() {
   return (
-    <div className="flex min-h-full items-center justify-center px-6 py-12">
+    <div className="flex min-h-full items-center justify-center px-4 py-8 sm:px-6 sm:py-12">
       <div className="max-w-md text-center">
         <div className="mx-auto mb-6 grid h-14 w-14 place-items-center rounded-xl border border-zinc-800 bg-zinc-950">
           <svg

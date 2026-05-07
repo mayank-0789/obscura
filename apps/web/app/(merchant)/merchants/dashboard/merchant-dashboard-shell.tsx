@@ -17,15 +17,15 @@ export function MerchantDashboardShell() {
 
   return (
     <MerchantAppShell>
-      <div className="mx-auto max-w-[1280px] px-6 py-10 lg:px-10">
-        <div className="mb-8 flex items-baseline justify-between gap-4">
+      <div className="mx-auto max-w-[1280px] px-4 py-6 sm:px-6 sm:py-8 md:py-10 lg:px-10">
+        <div className="mb-6 flex items-baseline justify-between gap-4 sm:mb-8">
           <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#888]">
             <span style={{ color: "#e63946" }}>●</span>{" "}
             {merchantQuery.isFetching ? "refreshing…" : "updated now"}
           </p>
         </div>
 
-        <div className="space-y-12">
+        <div className="space-y-10 sm:space-y-12">
           <PayoutWalletCard
             merchantEtaAddress={merchant?.etaAddress ?? null}
             provisionedAt={merchant?.createdAt ?? null}

@@ -223,7 +223,7 @@ export function CommandPalette({
           )}
         </ul>
 
-        <div className="flex items-center justify-between border-t border-[#1f1f1f] px-4 py-2.5 font-mono text-[10px] uppercase tracking-[0.22em] text-[#888]">
+        <div className="hidden items-center justify-between border-t border-[#1f1f1f] px-4 py-2.5 font-mono text-[10px] uppercase tracking-[0.22em] text-[#888] sm:flex">
           <div className="flex items-center gap-5">
             <span className="flex items-center gap-1.5">
               <Kbd>↑</Kbd>

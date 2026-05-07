@@ -62,7 +62,7 @@ export function CodeBlock({
           </button>
         )}
       </header>
-      <pre className="overflow-x-auto p-5 font-mono text-[13px] leading-[1.7] text-[#f5f5f5]">
+      <pre className="overflow-x-auto p-4 font-mono text-[12px] leading-[1.65] text-[#f5f5f5] sm:p-5 sm:text-[13px] sm:leading-[1.7]">
         <code>{children}</code>
       </pre>
     </figure>

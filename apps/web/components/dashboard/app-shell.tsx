@@ -44,8 +44,18 @@ export function AppShell({ selectedAgentId, onSelectAgent, children }: Props) {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [justCreated, setJustCreated] = useState<CreateAgentResult | null>(
     null,
+  );
+
+  // Close mobile sidebar after agent selection.
+  const handleSelectAgent = useCallback(
+    (id: string) => {
+      setSidebarOpen(false);
+      onSelectAgent(id);
+    },
+    [onSelectAgent],
   );
 
   // sessionStorage bridges JUST_CREATED across the AppShell unmount/remount
@@ -117,20 +127,42 @@ export function AppShell({ selectedAgentId, onSelectAgent, children }: Props) {
   return (
     <AppShellContext.Provider value={contextValue}>
     <div className="flex h-screen flex-col bg-[#0a0a0a] text-[#f5f5f5]">
-      <DashboardTopBar onOpenPalette={() => setPaletteOpen(true)} />
+      <DashboardTopBar
+        onOpenPalette={() => setPaletteOpen(true)}
+        onToggleSidebar={() => setSidebarOpen((v) => !v)}
+      />
 
-      <div className="flex min-h-0 flex-1">
-        <AgentsSidebar
-          agents={agents}
-          selectedId={selectedAgentId}
-          onSelect={onSelectAgent}
-          onNewAgent={() => setCreateOpen(true)}
-          walletAddress={null}
-        />
+      <div className="relative flex min-h-0 flex-1">
+        {/* Backdrop for mobile drawer */}
+        {sidebarOpen && (
+          <button
+            type="button"
+            aria-label="Close sidebar"
+            className="fixed inset-0 top-12 z-30 bg-black/50 md:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
+        <div
+          className={`fixed inset-y-12 left-0 z-40 transition-transform md:static md:inset-auto md:translate-x-0 ${
+            sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+          }`}
+        >
+          <AgentsSidebar
+            agents={agents}
+            selectedId={selectedAgentId}
+            onSelect={handleSelectAgent}
+            onNewAgent={() => {
+              setSidebarOpen(false);
+              setCreateOpen(true);
+            }}
+            walletAddress={null}
+          />
+        </div>
 
         <main className="min-w-0 flex-1 overflow-y-auto bg-[#0a0a0a]">
           {justCreated && (
-            <div className="border-b border-[#1f1f1f] bg-[#0e0e0e] px-8 py-5">
+            <div className="border-b border-[#1f1f1f] bg-[#0e0e0e] px-4 py-4 sm:px-8 sm:py-5">
               <RevealApiKeyCard
                 agentName={justCreated.agent.name}
                 apiKey={justCreated.apiKey}

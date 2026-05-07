@@ -86,16 +86,16 @@ export function OnboardingShell() {
       style={{ fontFeatureSettings: '"ss01", "cv11", "tnum"' } as CSSProperties}
     >
       <header className="border-b border-[#1f1f1f]">
-        <div className="mx-auto flex max-w-[1100px] items-center justify-between px-6 py-5">
-          <div className="flex items-baseline gap-3">
+        <div className="mx-auto flex max-w-[1100px] items-center justify-between gap-3 px-4 py-4 sm:px-6 sm:py-5">
+          <div className="flex min-w-0 items-baseline gap-3">
             <Link
               href="/"
               className="text-[15px] font-medium tracking-[-0.01em] focus-visible:outline-none"
             >
               obscura
             </Link>
-            <span className="font-mono text-[10px] text-[#5a5a5a]">───</span>
-            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#888]">
+            <span className="hidden font-mono text-[10px] text-[#5a5a5a] sm:inline">───</span>
+            <span className="hidden font-mono text-[10px] uppercase tracking-[0.18em] text-[#888] sm:inline">
               welcome
             </span>
           </div>
@@ -108,7 +108,7 @@ export function OnboardingShell() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1100px] px-6 py-16 md:py-24">
+      <main className="mx-auto max-w-[1100px] px-4 py-12 sm:px-6 sm:py-16 md:py-24">
         {showSkeleton ? (
           <OnboardingSkeleton />
         ) : (
@@ -116,9 +116,9 @@ export function OnboardingShell() {
             <SectionMarker index="00" label="Pick your side of the rail" />
 
             <h1
-              className="mt-10 text-balance"
+              className="mt-8 text-balance md:mt-10"
               style={{
-                fontSize: "clamp(40px, 6vw, 64px)",
+                fontSize: "clamp(28px, 7vw, 64px)",
                 fontWeight: 500,
                 letterSpacing: "-0.025em",
                 lineHeight: 1.02,
@@ -127,14 +127,14 @@ export function OnboardingShell() {
               How will you use{" "}
               <span style={{ color: "#888", fontWeight: 300 }}>the rail?</span>
             </h1>
-            <p className="mt-8 max-w-[60ch] text-[15.5px] leading-[1.65] text-[#888]">
+            <p className="mt-6 max-w-[60ch] text-[14.5px] leading-[1.65] text-[#888] sm:mt-8 sm:text-[15.5px]">
               Obscura has two sides — pick one to start, or choose both.
             </p>
-            <p className="mt-2 text-[13px] text-[#5a5a5a]">
+            <p className="mt-2 text-[12.5px] text-[#5a5a5a] sm:text-[13px]">
               You can add the other side anytime from your dashboard.
             </p>
 
-            <div className="mt-14 grid grid-cols-1 gap-px md:grid-cols-2">
+            <div className="mt-10 grid grid-cols-1 gap-px sm:mt-14 md:grid-cols-2">
               <RoleCard
                 kicker="01 / agent developer"
                 title="Ship an agent that pays for APIs."
@@ -164,7 +164,7 @@ export function OnboardingShell() {
             </div>
 
             <div
-              className="mt-14 flex flex-col items-start gap-4 pt-10 md:flex-row md:items-center md:justify-between"
+              className="mt-10 flex flex-col items-start gap-4 pt-8 sm:mt-14 sm:pt-10 md:flex-row md:items-center md:justify-between"
               style={{ borderTop: "1px solid #1f1f1f" }}
             >
               <div>

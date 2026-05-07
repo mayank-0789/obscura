@@ -65,13 +65,19 @@ export function MerchantStatsStrip({ stats }: Props) {
         className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
         style={{ borderTop: "1px solid #f5f5f5" }}
       >
-        {cells.map((c, i) => (
+        {cells.map((c, i) => {
+          const lastInRow = (i + 1) % 4 === 0;
+          return (
           <div
             key={c.index}
-            style={{
-              borderBottom: "1px solid #1f1f1f",
-              borderRight: i < cells.length - 1 ? "1px solid #1f1f1f" : undefined,
-            }}
+            className="lg:[border-right:var(--mr-lg)]"
+            style={
+              {
+                borderBottom: "1px solid #1f1f1f",
+                ["--mr-lg" as string]:
+                  !lastInRow && i < cells.length - 1 ? "1px solid #1f1f1f" : "none",
+              } as React.CSSProperties
+            }
           >
             <StatCell
               index={c.index}
@@ -83,7 +89,8 @@ export function MerchantStatsStrip({ stats }: Props) {
               compact
             />
           </div>
-        ))}
+          );
+        })}
       </div>
     </section>
   );

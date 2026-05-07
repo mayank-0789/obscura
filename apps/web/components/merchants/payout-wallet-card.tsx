@@ -71,7 +71,7 @@ export function PayoutWalletCard({
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
             <p
-              className="truncate font-mono text-[16px] text-[#f5f5f5]"
+              className="break-all font-mono text-[14px] text-[#f5f5f5] sm:truncate sm:text-[16px]"
               title={merchantEtaAddress}
               style={{ letterSpacing: "-0.005em" }}
             >
