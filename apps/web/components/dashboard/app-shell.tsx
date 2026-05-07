@@ -116,7 +116,7 @@ export function AppShell({ selectedAgentId, onSelectAgent, children }: Props) {
 
   return (
     <AppShellContext.Provider value={contextValue}>
-    <div className="flex h-screen flex-col bg-[#0a0a0a] text-zinc-100">
+    <div className="flex h-screen flex-col bg-[#0a0a0a] text-[#f5f5f5]">
       <DashboardTopBar onOpenPalette={() => setPaletteOpen(true)} />
 
       <div className="flex min-h-0 flex-1">
@@ -130,7 +130,7 @@ export function AppShell({ selectedAgentId, onSelectAgent, children }: Props) {
 
         <main className="min-w-0 flex-1 overflow-y-auto bg-[#0a0a0a]">
           {justCreated && (
-            <div className="border-b border-zinc-800 bg-[#0a1410] px-8 py-5">
+            <div className="border-b border-[#1f1f1f] bg-[#0e0e0e] px-8 py-5">
               <RevealApiKeyCard
                 agentName={justCreated.agent.name}
                 apiKey={justCreated.apiKey}

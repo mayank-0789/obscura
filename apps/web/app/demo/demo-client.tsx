@@ -15,19 +15,19 @@ type Button = {
 const BUTTONS: Button[] = [
   {
     endpoint: "/headlines",
-    label: "Buy headlines",
+    label: "buy headlines",
     price: "$0.005",
     blurb: "List of 8 article headlines.",
   },
   {
     endpoint: "/article/47",
-    label: "Read article",
+    label: "read article",
     price: "$0.010",
     blurb: "Full body of one article.",
   },
   {
     endpoint: "/digest",
-    label: "Premium digest",
+    label: "premium digest",
     price: "$0.015",
     blurb: "Editor-curated cross-article briefing.",
   },
@@ -110,14 +110,17 @@ export function DemoClient({ configured }: { configured: boolean }) {
 
   if (!configured) {
     return (
-      <div className="rounded-lg border border-amber-400/30 bg-amber-400/5 p-6 text-amber-200">
-        <p className="font-mono text-[11px] uppercase tracking-[0.28em]">
-          Demo offline
+      <div className="border border-[#e63946] p-6">
+        <p
+          className="font-mono text-[10px] uppercase tracking-[0.28em]"
+          style={{ color: "#e63946" }}
+        >
+          demo offline
         </p>
-        <p className="mt-2 text-sm leading-relaxed text-amber-100/80">
+        <p className="mt-3 text-[14px] leading-[1.6] text-[#888]">
           The operator hasn&apos;t configured DEMO_AGENT_API_KEY +
-          DEMO_MERCHANT_URL on this deployment yet. Wire those env vars in
-          Vercel and redeploy to enable the live demo.
+          DEMO_MERCHANT_URL on this deployment yet. Wire those env vars and
+          redeploy to enable the live demo.
         </p>
       </div>
     );
@@ -126,36 +129,52 @@ export function DemoClient({ configured }: { configured: boolean }) {
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
       <div className="space-y-6">
-        <div className="grid gap-3 sm:grid-cols-3">
-          {BUTTONS.map((btn) => (
+        <div
+          className="grid grid-cols-1 sm:grid-cols-3"
+          style={{ borderTop: "1px solid #f5f5f5" }}
+        >
+          {BUTTONS.map((btn, i, arr) => (
             <button
               key={btn.endpoint}
               type="button"
               disabled={running !== null}
               onClick={() => onClick(btn.endpoint)}
-              className={[
-                "group flex flex-col items-start gap-2 rounded-lg border bg-[#0d0d0d] p-5 text-left transition",
-                running === btn.endpoint
-                  ? "border-emerald-400/60 ring-1 ring-emerald-400/40"
-                  : "border-zinc-800/80 hover:border-emerald-400/40",
-                running !== null && running !== btn.endpoint
-                  ? "opacity-40"
-                  : "",
-                running === null ? "cursor-pointer" : "cursor-default",
-              ].join(" ")}
+              style={{
+                borderBottom: "1px solid #1f1f1f",
+                borderRight:
+                  i < arr.length - 1 ? "1px solid #1f1f1f" : undefined,
+                opacity:
+                  running !== null && running !== btn.endpoint ? 0.4 : 1,
+                cursor: running === null ? "pointer" : "default",
+              }}
+              className={`group relative flex flex-col items-start gap-2 px-5 py-6 text-left transition ${
+                running === btn.endpoint ? "bg-[#141414]" : "hover:bg-[#0e0e0e]"
+              }`}
             >
-              <span className="flex w-full items-center justify-between">
-                <span className="font-display text-[17px] tracking-[-0.01em] text-zinc-100">
+              {running === btn.endpoint && (
+                <span
+                  aria-hidden
+                  className="absolute left-0 top-0 h-full w-px"
+                  style={{ backgroundColor: "#e63946" }}
+                />
+              )}
+              <span className="flex w-full items-baseline justify-between">
+                <span className="text-[15px] font-medium tracking-[-0.01em] text-[#f5f5f5]">
                   {btn.label}
                 </span>
-                <span className="font-mono text-[11px] text-emerald-300/90">
+                <span
+                  className="font-mono text-[11px] tabular-nums"
+                  style={{
+                    color: running === btn.endpoint ? "#e63946" : "#888",
+                  }}
+                >
                   {btn.price}
                 </span>
               </span>
-              <span className="text-[13px] leading-snug text-zinc-500">
+              <span className="text-[12.5px] leading-[1.5] text-[#888]">
                 {btn.blurb}
               </span>
-              <span className="mt-1 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-600">
+              <span className="mt-1 font-mono text-[10px] uppercase tracking-[0.22em] text-[#5a5a5a]">
                 GET {btn.endpoint}
               </span>
             </button>
@@ -195,53 +214,58 @@ function LogConsole({
   }, [log.length]);
 
   return (
-    <div className="rounded-lg border border-zinc-800/80 bg-[#0d0d0d]">
-      <div className="flex items-center justify-between border-b border-zinc-800/80 px-4 py-2.5">
+    <div className="border border-[#1f1f1f]">
+      <div className="flex items-center justify-between border-b border-[#1f1f1f] px-4 py-2.5">
         <div className="flex items-center gap-2.5">
           <span
-            className={[
-              "h-1.5 w-1.5 rounded-full",
-              running
-                ? "bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.9)]"
-                : "bg-zinc-600",
-            ].join(" ")}
+            className="h-1.5 w-1.5 rounded-full"
+            style={{ backgroundColor: running ? "#e63946" : "#5a5a5a" }}
           />
-          <span className="font-mono text-[11px] uppercase tracking-[0.28em] text-zinc-400">
-            {running ? `Running ${running}` : "Live log"}
+          <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#888]">
+            {running ? `running ${running}` : "live log"}
           </span>
         </div>
         {log.length > 0 && (
-          <span className="font-mono text-[10px] text-zinc-600">
+          <span className="font-mono text-[10px] tabular-nums text-[#5a5a5a]">
             {log.length} step{log.length === 1 ? "" : "s"}
           </span>
         )}
       </div>
       <div
         ref={scrollRef}
-        className="max-h-[420px] min-h-[280px] overflow-y-auto px-4 py-4 font-mono text-[12.5px] leading-relaxed"
+        className="max-h-[420px] min-h-[280px] overflow-y-auto px-4 py-4 font-mono text-[12.5px] leading-[1.6]"
       >
         {log.length === 0 && !running && (
-          <p className="text-zinc-600">
-            Click a button above to trigger a real x402 spend. Each step of
-            the Umbra mixer dance will appear here.
+          <p className="text-[#5a5a5a]">
+            Click a button above to trigger a real x402 spend. Each step of the
+            Umbra mixer dance will appear here.
           </p>
         )}
         {log.map((entry, i) => (
           <LogLine key={i} entry={entry} />
         ))}
-        {running && log.length > 0 && log[log.length - 1]?.phase !== "done" && log[log.length - 1]?.phase !== "error" && (
-          <p className="mt-2 text-zinc-500">
-            <span className="inline-block h-3 w-1.5 animate-pulse bg-emerald-400/60 align-middle" />
-            <span className="ml-2">working…</span>
-          </p>
-        )}
+        {running &&
+          log.length > 0 &&
+          log[log.length - 1]?.phase !== "done" &&
+          log[log.length - 1]?.phase !== "error" && (
+            <p className="mt-2 text-[#888]">
+              <span
+                className="inline-block h-3 w-1.5 animate-pulse align-middle"
+                style={{ backgroundColor: "#e63946" }}
+              />
+              <span className="ml-2">working…</span>
+            </p>
+          )}
         {error && (
-          <p className="mt-3 rounded border border-rose-500/30 bg-rose-500/5 px-3 py-2 text-rose-200">
+          <p
+            className="mt-3 border px-3 py-2"
+            style={{ borderColor: "#e63946", color: "#ffb4bb" }}
+          >
             {error}
           </p>
         )}
         {result !== null && (
-          <pre className="mt-4 overflow-x-auto rounded border border-zinc-800/80 bg-[#080808] p-3 text-[11.5px] leading-relaxed text-zinc-300">
+          <pre className="mt-4 overflow-x-auto border border-[#1f1f1f] bg-[#0e0e0e] p-3 text-[11.5px] leading-relaxed text-[#aaa]">
 {JSON.stringify(result, null, 2)}
           </pre>
         )}
@@ -253,12 +277,12 @@ function LogConsole({
 function LogLine({ entry }: { entry: LogEntry }) {
   const accent = phaseAccent(entry.phase);
   return (
-    <div className="flex gap-3">
-      <span className="shrink-0 text-zinc-600">{entry.ts}</span>
+    <div className="flex gap-3 py-0.5">
+      <span className="shrink-0 text-[#5a5a5a]">{entry.ts}</span>
       <div className="min-w-0 flex-1">
-        <span className={accent}>{entry.text}</span>
+        <span style={{ color: accent }}>{entry.text}</span>
         {entry.detail && (
-          <p className="mt-0.5 pl-0 text-[11.5px] text-zinc-500">{entry.detail}</p>
+          <p className="mt-0.5 text-[11.5px] text-[#888]">{entry.detail}</p>
         )}
         {entry.solscanUrl && (
           <p className="mt-0.5">
@@ -266,7 +290,8 @@ function LogLine({ entry }: { entry: LogEntry }) {
               href={entry.solscanUrl}
               target="_blank"
               rel="noreferrer"
-              className="text-emerald-300/90 underline-offset-2 hover:underline"
+              className="underline-offset-2 hover:underline"
+              style={{ color: "#e63946" }}
             >
               View on Solscan ↗
             </a>
@@ -278,48 +303,55 @@ function LogLine({ entry }: { entry: LogEntry }) {
 }
 
 function phaseAccent(phase: string): string {
-  if (phase === "done") return "text-emerald-300";
-  if (phase === "settled") return "text-emerald-300/90";
-  if (phase === "error") return "text-rose-300";
-  if (phase === "signing") return "text-amber-200/90";
-  if (phase === "payment_required") return "text-zinc-300";
-  return "text-zinc-400";
+  if (phase === "done") return "#e63946";
+  if (phase === "settled") return "#e63946";
+  if (phase === "error") return "#e63946";
+  if (phase === "signing") return "#aaa";
+  if (phase === "payment_required") return "#f5f5f5";
+  return "#888";
 }
 
 function SidePanel({ recent }: { recent: RecentRun[] }) {
   return (
-    <aside className="rounded-lg border border-zinc-800/80 bg-[#0d0d0d]">
-      <div className="border-b border-zinc-800/80 px-4 py-2.5">
-        <p className="font-mono text-[11px] uppercase tracking-[0.28em] text-zinc-400">
-          Other judges&apos; runs
+    <aside className="border border-[#1f1f1f]">
+      <div className="border-b border-[#1f1f1f] px-4 py-2.5">
+        <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#888]">
+          other judges&apos; runs
         </p>
       </div>
       <div className="max-h-[640px] overflow-y-auto px-4 py-4">
         {recent.length === 0 ? (
-          <p className="font-mono text-[11.5px] leading-relaxed text-zinc-600">
+          <p className="font-mono text-[11px] leading-[1.5] text-[#5a5a5a]">
             Nothing yet. Be the first to try it.
           </p>
         ) : (
           <ul className="space-y-3">
             {recent.map((run) => (
-              <li key={runKey(run)} className="border-l border-zinc-800 pl-3">
-                <div className="flex items-baseline justify-between gap-3 font-mono text-[11px] text-zinc-500">
+              <li
+                key={runKey(run)}
+                className="border-l border-[#1f1f1f] pl-3"
+              >
+                <div className="flex items-baseline justify-between gap-3 font-mono text-[10px] tabular-nums text-[#888]">
                   <span>{formatTime(run.createdAt)}</span>
-                  <span className="text-emerald-300/80">
+                  <span style={{ color: "#e63946" }}>
                     ${formatMicros(run.amountUsdg)}
                   </span>
                 </div>
-                <div className="mt-1 font-mono text-[12.5px] text-zinc-300">
+                <div className="mt-1 font-mono text-[12px] text-[#f5f5f5]">
                   {run.endpoint}
                 </div>
-                <div className="mt-1 flex items-center gap-2 font-mono text-[10px] text-zinc-600">
-                  <span>{run.ipShort && run.ipShort !== "—" ? `IP …${run.ipShort}` : "from history"}</span>
+                <div className="mt-1 flex items-center gap-2 font-mono text-[10px] text-[#5a5a5a]">
+                  <span>
+                    {run.ipShort && run.ipShort !== "—"
+                      ? `IP …${run.ipShort}`
+                      : "from history"}
+                  </span>
                   {run.queueSignature && (
                     <a
                       href={solscanUrl(run.callbackSignature ?? run.queueSignature)}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-emerald-400/70 hover:text-emerald-300"
+                      className="hover:text-[#e63946]"
                     >
                       tx ↗
                     </a>
@@ -334,7 +366,7 @@ function SidePanel({ recent }: { recent: RecentRun[] }) {
   );
 }
 
-/* ─── streaming helpers ─────────────────────────────────────────── */
+/* ─── streaming helpers (unchanged from prior implementation) ─────────── */
 
 type AnyStep = {
   phase: string;
@@ -375,7 +407,6 @@ async function streamRecent(
   signal: AbortSignal,
   onRun: (run: RecentRun) => void,
 ): Promise<void> {
-  // Reconnect on proxy timeouts; exit on permanent 4xx (won't recover without a page reload).
   while (!signal.aborted) {
     try {
       const res = await fetch("/api/demo/recent", { signal });
@@ -407,7 +438,6 @@ async function readSse(
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
-  // Default event name per SSE spec when no `event:` line appears.
   let currentEvent = "message";
   let currentData: string[] = [];
   const flush = () => {
@@ -467,7 +497,6 @@ function formatMicros(micros: string): string {
 }
 
 function solscanUrl(sig: string): string {
-  // Client-side mirror of lib/solscan.ts (server-only); cluster from public env.
   const cluster = process.env.NEXT_PUBLIC_SOLANA_CLUSTER ?? "devnet";
   const base = `https://solscan.io/tx/${sig}`;
   return cluster === "devnet" ? `${base}?cluster=devnet` : base;

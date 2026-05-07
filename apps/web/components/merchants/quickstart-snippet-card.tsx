@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { env } from "@/lib/env";
+import { SectionMarker } from "@/components/ui/section-marker";
 
 export function QuickstartSnippetCard({
   merchantEtaAddress,
@@ -46,52 +47,47 @@ app.listen(3001);`;
   };
 
   return (
-    <section
-      aria-labelledby="quickstart-heading"
-      className="overflow-hidden rounded-lg border border-zinc-800 bg-[#0c0c0e]"
-    >
-      <header className="flex items-center justify-between border-b border-zinc-800 px-5 py-3">
-        <div className="flex items-center gap-3 font-mono text-[10px] text-zinc-500">
-          <span
-            aria-hidden
-            className="h-1.5 w-1.5 rounded-full bg-emerald-400"
-          />
-          <span
-            id="quickstart-heading"
-            className="uppercase tracking-[0.22em]"
-          >
-            Quick integration
-          </span>
-          <span className="text-zinc-700">·</span>
-          <span className="uppercase tracking-[0.2em] text-zinc-600">TS</span>
+    <section aria-labelledby="quickstart-heading">
+      <div className="flex items-center justify-between">
+        <div id="quickstart-heading">
+          <SectionMarker index="04" label="Quick integration" />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4 font-mono text-[11px] uppercase tracking-[0.18em]">
+          <span className="text-[#5a5a5a]">ts</span>
           <button
             type="button"
             onClick={handleCopy}
             disabled={!merchantEtaAddress}
-            className={`font-mono text-[11px] uppercase tracking-[0.18em] transition disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c0c0e] rounded ${
-              copied
-                ? "text-emerald-400"
-                : "text-zinc-500 hover:text-zinc-200"
-            }`}
+            className="transition disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#e63946]"
+            style={{ color: copied ? "#e63946" : "#888" }}
             aria-label="Copy snippet"
           >
-            {copied ? "Copied ✓" : "Copy"}
+            {copied ? "copied ✓" : "copy"}
           </button>
           <a
             href="/docs/merchants/quickstart"
             target="_blank"
             rel="noopener noreferrer"
-            className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500 transition hover:text-zinc-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c0c0e] rounded"
+            className="text-[#888] transition hover:text-[#f5f5f5] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#e63946]"
           >
-            Open quickstart ↗
+            open quickstart ↗
           </a>
         </div>
-      </header>
-      <pre className="overflow-x-auto p-5 font-mono text-[13px] leading-[1.65] text-zinc-300">
-        <code>{snippet}</code>
-      </pre>
+      </div>
+      <div
+        className="mt-6"
+        style={{
+          borderTop: "1px solid #f5f5f5",
+          borderBottom: "1px solid #1f1f1f",
+        }}
+      >
+        <pre
+          className="overflow-x-auto p-5 font-mono text-[13px] leading-[1.65] text-[#f5f5f5]"
+          style={{ backgroundColor: "#0e0e0e" }}
+        >
+          <code>{snippet}</code>
+        </pre>
+      </div>
     </section>
   );
 }

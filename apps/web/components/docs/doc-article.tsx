@@ -1,36 +1,75 @@
 import Link from "next/link";
+import { SectionMarker } from "@/components/ui/section-marker";
 
-/** Flat doc nav order; drives breadcrumb + prev/next footer. */
-export type DocPage = {
-  slug: string;
-  group: string;
-  title: string;
-};
+type DocLink = { label: string; href: string };
+type DocSection = { title: string; links: DocLink[] };
 
-export const DOC_PAGES: DocPage[] = [
-  { slug: "/docs", group: "Getting started", title: "Overview" },
-
-  { slug: "/docs/agents/install", group: "Agents", title: "Install" },
-  { slug: "/docs/agents/quickstart", group: "Agents", title: "Quickstart" },
-  { slug: "/docs/agents/flow", group: "Agents", title: "How it works" },
-  { slug: "/docs/agents/errors", group: "Agents", title: "Error handling" },
-  { slug: "/docs/agents/advanced", group: "Agents", title: "Advanced usage" },
-  { slug: "/docs/agents/reference", group: "Agents", title: "API reference" },
-
-  { slug: "/docs/merchants/install", group: "Merchants", title: "Install" },
-  { slug: "/docs/merchants/quickstart", group: "Merchants", title: "Quickstart" },
-  { slug: "/docs/merchants/flow", group: "Merchants", title: "How it works" },
-  { slug: "/docs/merchants/receipts", group: "Merchants", title: "Settlement receipts" },
-  { slug: "/docs/merchants/pricing", group: "Merchants", title: "Pricing & assets" },
-  { slug: "/docs/merchants/deploy", group: "Merchants", title: "Deploy" },
-  { slug: "/docs/merchants/errors", group: "Merchants", title: "Error handling" },
-  { slug: "/docs/merchants/reference", group: "Merchants", title: "API reference" },
-
-  { slug: "/docs/concepts/x402", group: "Concepts", title: "x402 protocol" },
-  { slug: "/docs/concepts/mixer", group: "Concepts", title: "The Umbra mixer" },
-  { slug: "/docs/concepts/spend-caps", group: "Concepts", title: "Spend caps" },
-  { slug: "/docs/concepts/networks", group: "Concepts", title: "Devnet vs mainnet" },
+// Mirror of DocsSidebar's SECTIONS — kept local so the article header can
+// resolve slug → (section, label, prev, next) without importing a "use client" file.
+const SECTIONS: DocSection[] = [
+  {
+    title: "Getting started",
+    links: [
+      { label: "Overview", href: "/docs" },
+      { label: "For agent developers", href: "/docs/agents/quickstart" },
+      { label: "For API providers", href: "/docs/merchants/quickstart" },
+    ],
+  },
+  {
+    title: "Agents",
+    links: [
+      { label: "Install", href: "/docs/agents/install" },
+      { label: "Quickstart", href: "/docs/agents/quickstart" },
+      { label: "How it works", href: "/docs/agents/flow" },
+      { label: "Error handling", href: "/docs/agents/errors" },
+      { label: "Advanced usage", href: "/docs/agents/advanced" },
+      { label: "API reference", href: "/docs/agents/reference" },
+    ],
+  },
+  {
+    title: "Merchants",
+    links: [
+      { label: "Install", href: "/docs/merchants/install" },
+      { label: "Quickstart", href: "/docs/merchants/quickstart" },
+      { label: "How it works", href: "/docs/merchants/flow" },
+      { label: "Settlement receipts", href: "/docs/merchants/receipts" },
+      { label: "Pricing & assets", href: "/docs/merchants/pricing" },
+      { label: "Deploy", href: "/docs/merchants/deploy" },
+      { label: "Error handling", href: "/docs/merchants/errors" },
+      { label: "API reference", href: "/docs/merchants/reference" },
+    ],
+  },
+  {
+    title: "Concepts",
+    links: [
+      { label: "x402 protocol", href: "/docs/concepts/x402" },
+      { label: "The Umbra mixer", href: "/docs/concepts/mixer" },
+      { label: "Spend caps", href: "/docs/concepts/spend-caps" },
+      { label: "Devnet vs mainnet", href: "/docs/concepts/networks" },
+    ],
+  },
 ];
+
+const FLAT = SECTIONS.flatMap((s, sIdx) =>
+  s.links.map((link, lIdx) => ({
+    section: s.title,
+    sectionIndex: sIdx,
+    linkIndex: lIdx,
+    ...link,
+  })),
+);
+
+function lookup(slug: string) {
+  const idx = FLAT.findIndex((e) => e.href === slug);
+  if (idx === -1) {
+    return { current: null, prev: null, next: null };
+  }
+  return {
+    current: FLAT[idx]!,
+    prev: idx > 0 ? FLAT[idx - 1]! : null,
+    next: idx < FLAT.length - 1 ? FLAT[idx + 1]! : null,
+  };
+}
 
 export function DocArticle({
   slug,
@@ -39,68 +78,63 @@ export function DocArticle({
   slug: string;
   children: React.ReactNode;
 }) {
-  const idx = DOC_PAGES.findIndex((p) => p.slug === slug);
-  const page = idx === -1 ? null : DOC_PAGES[idx];
-  const prev = idx > 0 ? DOC_PAGES[idx - 1] : null;
-  const next = idx >= 0 && idx < DOC_PAGES.length - 1 ? DOC_PAGES[idx + 1] : null;
+  const { current, prev, next } = lookup(slug);
+  const sectionIndex = current
+    ? String(current.sectionIndex + 1).padStart(2, "0")
+    : "00";
+  const sectionLabel = current?.section ?? "Docs";
 
   return (
-    <article className="mx-auto max-w-[820px]">
-      {page && page.slug !== "/docs" ? (
-        <div className="mb-5 flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.24em] text-zinc-500">
-          <Link
-            href="/docs"
-            className="transition hover:text-zinc-300"
-          >
-            Docs
-          </Link>
-          <span className="text-zinc-700">/</span>
-          <span className="text-zinc-400">{page.group}</span>
-        </div>
-      ) : null}
+    <article className="max-w-[760px]">
+      <header className="mb-10">
+        <SectionMarker index={sectionIndex} label={sectionLabel} />
+        {current ? (
+          <p className="mt-6 font-mono text-[10px] uppercase tracking-[0.22em] text-[#5a5a5a]">
+            {slug}
+          </p>
+        ) : null}
+      </header>
 
-      {children}
+      <div>{children}</div>
 
       {(prev || next) && (
         <nav
-          aria-label="Page navigation"
-          className="mt-20 grid gap-4 border-t border-zinc-800 pt-8 sm:grid-cols-2"
+          className="mt-20 grid grid-cols-1 gap-px sm:grid-cols-2"
+          style={{ borderTop: "1px solid #1f1f1f" }}
+          aria-label="Article navigation"
         >
           {prev ? (
-            <DocPageLink direction="prev" page={prev} />
+            <Link
+              href={prev.href}
+              className="block px-1 py-5 transition hover:bg-[#0e0e0e]"
+            >
+              <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#888]">
+                ← previous
+              </span>
+              <span className="mt-2 block text-[14px] text-[#f5f5f5]">
+                {prev.label}
+              </span>
+            </Link>
           ) : (
-            <span aria-hidden />
+            <span />
           )}
           {next ? (
-            <DocPageLink direction="next" page={next} />
+            <Link
+              href={next.href}
+              className="block px-1 py-5 text-right transition hover:bg-[#0e0e0e] sm:border-l sm:border-[#1f1f1f]"
+            >
+              <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#888]">
+                next →
+              </span>
+              <span className="mt-2 block text-[14px] text-[#f5f5f5]">
+                {next.label}
+              </span>
+            </Link>
           ) : (
-            <span aria-hidden />
+            <span />
           )}
         </nav>
       )}
     </article>
-  );
-}
-
-function DocPageLink({
-  direction,
-  page,
-}: {
-  direction: "prev" | "next";
-  page: DocPage;
-}) {
-  const alignSelfEnd = direction === "next" ? "sm:justify-self-end sm:text-right" : "";
-  return (
-    <Link
-      href={page.slug}
-      className={`group block rounded border border-zinc-800 bg-[#0c0c0e] px-5 py-4 transition hover:border-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a] ${alignSelfEnd}`}
-    >
-      <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-500">
-        {direction === "prev" ? "← Previous" : "Next →"}
-      </div>
-      <div className="mt-1 text-[14px] text-zinc-100 transition group-hover:text-emerald-400">
-        {page.title}
-      </div>
-    </Link>
   );
 }

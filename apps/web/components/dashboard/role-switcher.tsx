@@ -35,15 +35,15 @@ export function RoleSwitcher() {
     <div
       role="group"
       aria-label="Switch workspace"
-      className="inline-flex items-center rounded-md border border-zinc-800 bg-zinc-950 p-0.5"
+      className="inline-flex items-center border border-[#1f1f1f] bg-[#0a0a0a]"
     >
       <SwitchButton
-        label="Agent"
+        label="agent"
         active={active === "agent"}
         onClick={() => flip("agent")}
       />
       <SwitchButton
-        label="Merchant"
+        label="merchant"
         active={active === "merchant"}
         onClick={() => flip("merchant")}
       />
@@ -65,10 +65,10 @@ function SwitchButton({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`rounded-[5px] px-2.5 py-1 font-mono text-[11px] uppercase tracking-[0.18em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a] ${
+      className={`px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.18em] transition focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#e63946] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a] ${
         active
-          ? "bg-emerald-500/10 text-emerald-300"
-          : "text-zinc-400 hover:text-zinc-200"
+          ? "bg-[#141414] text-[#e63946]"
+          : "text-[#888] hover:text-[#f5f5f5]"
       }`}
     >
       {label}

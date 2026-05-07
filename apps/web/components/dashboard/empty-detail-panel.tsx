@@ -10,25 +10,22 @@ export function EmptyDetailPanel({ hasAgents }: { hasAgents: boolean }) {
     return (
       <div className="flex min-h-full items-center justify-center px-8 py-12">
         <div className="max-w-md text-center">
-          <div className="mx-auto mb-6 grid h-14 w-14 place-items-center rounded-xl border border-zinc-800 bg-zinc-950">
-            <svg
-              viewBox="0 0 24 24"
-              className="h-6 w-6 text-emerald-400"
-              fill="none"
-              aria-hidden="true"
-            >
-              <path
-                d="M12 5v14M5 12h14"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-              />
-            </svg>
+          <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#888]">
+            <span style={{ color: "#e63946" }}>00</span>{" "}
+            <span
+              aria-hidden
+              className="mx-2 inline-block h-px w-8 align-middle"
+              style={{ backgroundColor: "#f5f5f5" }}
+            />
+            no agents yet
           </div>
-          <h2 className="text-[22px] font-semibold tracking-[-0.01em] text-zinc-50">
+          <h2
+            className="mt-8 text-[28px] text-[#f5f5f5]"
+            style={{ fontWeight: 500, letterSpacing: "-0.02em", lineHeight: 1.05 }}
+          >
             Create your first agent
           </h2>
-          <p className="mx-auto mt-3 max-w-sm text-[14px] leading-[1.55] text-zinc-400">
+          <p className="mx-auto mt-5 max-w-sm text-[14px] leading-[1.6] text-[#888]">
             We&apos;ll provision a dedicated Solana wallet, an API key, and a
             monthly spend cap. You fund it in rupees — your agent spends it
             on-chain.
@@ -36,13 +33,14 @@ export function EmptyDetailPanel({ hasAgents }: { hasAgents: boolean }) {
           <button
             type="button"
             onClick={openCreateModal}
-            className="mt-7 inline-flex items-center gap-2 rounded-md bg-emerald-400 px-4 py-2.5 text-[13px] font-semibold text-black transition hover:bg-emerald-300"
+            className="mt-8 inline-flex items-center gap-2 border-b pb-1 font-mono text-[11px] uppercase tracking-[0.18em] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#e63946]"
+            style={{ borderColor: "#e63946", color: "#e63946" }}
           >
-            <span>+ New agent</span>
+            <span>+ new agent</span>
             <Kbd>⌘N</Kbd>
           </button>
-          <p className="mt-5 text-[11px] text-zinc-600">
-            Takes about thirty seconds.
+          <p className="mt-6 font-mono text-[10px] uppercase tracking-[0.22em] text-[#5a5a5a]">
+            takes about thirty seconds
           </p>
         </div>
       </div>
@@ -52,10 +50,12 @@ export function EmptyDetailPanel({ hasAgents }: { hasAgents: boolean }) {
   return (
     <div className="flex min-h-full items-center justify-center px-8 py-12">
       <div className="max-w-sm text-center">
-        <p className="text-[13px] text-zinc-500">Select an agent</p>
-        <p className="mt-2 text-[12px] text-zinc-600">
-          Use <Kbd>J</Kbd> <Kbd>K</Kbd> to navigate · <Kbd>⌘N</Kbd> to create
-          · <Kbd>⌘K</Kbd> to search
+        <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-[#888]">
+          select an agent
+        </p>
+        <p className="mt-4 font-mono text-[11px] text-[#5a5a5a]">
+          <Kbd>J</Kbd> <Kbd>K</Kbd> navigate · <Kbd>⌘N</Kbd> create ·{" "}
+          <Kbd>⌘K</Kbd> search
         </p>
       </div>
     </div>

@@ -1,17 +1,23 @@
 @import "tailwindcss";
 
 @theme {
+  /* Obscura — Swiss-grid / Tufte-on-black tokens (2026-05-07).
+     Differentiated from Payrail (editorial-dark) by: no warm emerald,
+     no display serif, hairline borders, signal-red as the only accent. */
   --color-background: #0a0a0a;
-  --color-foreground: #fafafa;
-  --color-muted: #a1a1aa;
-  --color-subtle: #71717a;
-  --color-border: #27272a;
-  --color-card: #111113;
-  --color-accent: #34d399;
-  --color-accent-dim: #10b981;
+  --color-foreground: #f5f5f5;
+  --color-muted: #888888;
+  --color-subtle: #5a5a5a;
+  --color-border: #1f1f1f;     /* hairline */
+  --color-card: #0e0e0e;
+  --color-accent: #e63946;     /* signal red — the only accent */
+  --color-accent-dim: #b82e3a;
   --font-sans: var(--font-geist-sans), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
-  --font-display: var(--font-fraunces), Georgia, serif;
+  /* Display aliases to sans — Swiss-grid is sans-only. The token stays so
+     the `font-display` utility class doesn't error during the rollout; it
+     simply renders as sans until callers are migrated off it. */
+  --font-display: var(--font-geist-sans), system-ui, sans-serif;
 }
 
 /* SVG-based grain. Reusable, resolution-independent, no PNG payload. */
@@ -126,8 +132,11 @@ body {
   background: linear-gradient(to right, rgb(39 39 42), transparent);
 }
 
+/* Legacy class — kept for unmigrated callsites. Re-tinted to signal-red
+   so existing components transition cleanly during the Swiss-grid rollout.
+   Will be removed once all callers are migrated. */
 .text-emerald-gradient {
-  background: linear-gradient(135deg, #a7f3d0 0%, #34d399 55%, #059669 100%);
+  background: linear-gradient(135deg, #ffb4bb 0%, var(--color-accent) 55%, var(--color-accent-dim) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;

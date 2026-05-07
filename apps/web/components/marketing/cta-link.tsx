@@ -58,46 +58,24 @@ export function CtaLink({
     );
   };
 
-  const label = pending ? "Opening…" : children;
+  const label = pending ? "opening…" : children;
 
-  if (variant === "inline") {
-    return (
-      <button
-        type="button"
-        onClick={handleClick}
-        disabled={pending}
-        className={`inline-flex items-center gap-3 border-b border-emerald-400/40 py-1 font-mono text-[12px] uppercase tracking-[0.22em] text-zinc-300 transition hover:border-emerald-400 hover:text-emerald-400 disabled:cursor-wait disabled:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0b0d] ${className}`}
-      >
-        <span>{label}</span>
-        <span aria-hidden>{arrow}</span>
-      </button>
-    );
-  }
-
-  const base =
-    "group inline-flex items-center justify-between gap-3 px-6 py-4 text-sm transition disabled:cursor-wait disabled:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]";
-  const primary =
-    "border border-emerald-400 bg-emerald-400 font-semibold text-black hover:bg-emerald-300";
-  const secondary =
-    "border border-zinc-700 bg-transparent font-medium text-zinc-300 hover:border-zinc-500 hover:text-zinc-100";
-  const classes = `${base} ${variant === "primary" ? primary : secondary} ${className}`;
+  // Swiss-grid: every variant is the same underlined-mono CTA.
+  // `secondary` is muted (foreground → grey); `primary`/`inline` are foreground.
+  const tone =
+    variant === "secondary"
+      ? "border-[#888] text-[#888] hover:border-[#f5f5f5] hover:text-[#f5f5f5]"
+      : "border-[#f5f5f5] text-[#f5f5f5] hover:border-[#e63946] hover:text-[#e63946]";
 
   return (
     <button
       type="button"
       onClick={handleClick}
       disabled={pending}
-      className={classes}
+      className={`inline-flex items-center gap-2 border-b pb-1 font-mono text-[11px] uppercase tracking-[0.18em] transition disabled:cursor-wait disabled:opacity-60 focus-visible:outline-none focus-visible:text-[#e63946] focus-visible:border-[#e63946] ${tone} ${className}`}
     >
       <span>{label}</span>
-      <span
-        aria-hidden
-        className={`transition-transform group-hover:translate-x-1 ${
-          variant === "primary" ? "" : "text-zinc-500"
-        }`}
-      >
-        {arrow}
-      </span>
+      <span aria-hidden>{arrow}</span>
     </button>
   );
 }

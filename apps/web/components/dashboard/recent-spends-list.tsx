@@ -4,6 +4,7 @@ import Link from "next/link";
 import { formatUsdg } from "@/lib/money-format";
 import { env } from "@/lib/env";
 import type { AgentTransaction } from "@/hooks/use-agent-transactions";
+import { SectionMarker } from "@/components/ui/section-marker";
 
 type Props = {
   transactions: AgentTransaction[] | undefined;
@@ -17,47 +18,36 @@ export function RecentSpendsList({
   viewAllHref,
 }: Props) {
   return (
-    <section
-      aria-labelledby="recent-spends-heading"
-      className="rounded-lg border border-zinc-800 bg-[#0c0c0e]"
-    >
-      <header className="flex items-center justify-between border-b border-zinc-800 px-5 py-3.5">
-        <h2
-          id="recent-spends-heading"
-          className="font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-500"
-        >
-          Recent spends
-        </h2>
+    <section aria-labelledby="recent-spends-heading">
+      <div className="flex items-center justify-between">
+        <div id="recent-spends-heading">
+          <SectionMarker index="03" label="Recent spends" />
+        </div>
         {viewAllHref ? (
           <Link
             href={viewAllHref}
-            className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500 transition hover:text-zinc-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c0c0e] rounded"
+            className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#888] transition hover:text-[#f5f5f5] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#e63946]"
           >
-            View all →
+            view all →
           </Link>
         ) : null}
-      </header>
+      </div>
 
-      {isLoading && !transactions ? (
-        <LoadingRows />
-      ) : !transactions || transactions.length === 0 ? (
-        <EmptyState />
-      ) : (
-        <ul>
-          {transactions.map((tx, i) => (
-            <li
-              key={tx.id}
-              className={
-                i === transactions.length - 1
-                  ? ""
-                  : "border-b border-zinc-900"
-              }
-            >
-              <SpendRow tx={tx} />
-            </li>
-          ))}
-        </ul>
-      )}
+      <div className="mt-6" style={{ borderTop: "1px solid #f5f5f5" }}>
+        {isLoading && !transactions ? (
+          <LoadingRows />
+        ) : !transactions || transactions.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <ul>
+            {transactions.map((tx) => (
+              <li key={tx.id}>
+                <SpendRow tx={tx} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </section>
   );
 }
@@ -72,62 +62,54 @@ function SpendRow({ tx }: { tx: AgentTransaction }) {
     : null;
 
   return (
-    <div className="flex items-center gap-4 px-5 py-3.5">
-      <div className="flex min-w-0 flex-1 items-center gap-3">
-        <span
-          aria-hidden
-          className="h-1.5 w-1.5 shrink-0 rounded-full bg-zinc-500"
-        />
-        <div className="min-w-0">
-          <div className="flex items-baseline gap-2">
-            <span className="truncate font-mono text-[13px] text-zinc-200">
-              {hostLabel}
-            </span>
-            <span className="shrink-0 font-mono text-[11px] text-zinc-500">
-              {when}
-            </span>
-          </div>
-          <div
-            className="mt-0.5 truncate font-mono text-[11px] text-zinc-500"
-            title={tx.counterparty}
-          >
-            to {shortPk(tx.counterparty)}
-          </div>
+    <div
+      className="grid grid-cols-[110px_1fr_110px_110px] items-baseline gap-4 px-1 py-3"
+      style={{ borderBottom: "1px solid #1f1f1f" }}
+    >
+      <span className="font-mono text-[11px] text-[#888]">{when}</span>
+      <div className="min-w-0">
+        <div className="truncate text-[13px] text-[#f5f5f5]">{hostLabel}</div>
+        <div
+          className="mt-0.5 truncate font-mono text-[11px] text-[#5a5a5a]"
+          title={tx.counterparty}
+        >
+          to {shortPk(tx.counterparty)}
         </div>
       </div>
-      <div className="flex shrink-0 items-center gap-4">
-        <span className="font-mono text-[14px] tabular-nums text-zinc-300">
-          -${formatUsdg(tx.amountUsdg)}
-        </span>
+      <span className="text-right font-mono text-[11px] uppercase tracking-[0.18em]">
         {solscanUrl ? (
           <a
             href={solscanUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500 transition hover:text-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c0c0e] rounded"
+            className="text-[#888] transition hover:text-[#f5f5f5] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#e63946]"
             title="View on Solscan"
           >
             sig ↗
           </a>
         ) : (
-          <span
-            className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-700"
-            title="On-chain signature pending"
-          >
+          <span className="text-[#5a5a5a]" title="On-chain signature pending">
             pending
           </span>
         )}
-      </div>
+      </span>
+      <span className="text-right font-mono text-[12px] tabular-nums text-[#f5f5f5]">
+        −${formatUsdg(tx.amountUsdg)}
+      </span>
     </div>
   );
 }
 
 function LoadingRows() {
   return (
-    <div className="divide-y divide-zinc-900">
+    <div>
       {[0, 1, 2].map((i) => (
-        <div key={i} className="flex items-center gap-4 px-5 py-3.5">
-          <div className="h-9 w-full animate-pulse rounded bg-zinc-900/60" />
+        <div
+          key={i}
+          className="px-1 py-3"
+          style={{ borderBottom: "1px solid #1f1f1f" }}
+        >
+          <div className="h-5 w-full animate-pulse bg-[#141414]" />
         </div>
       ))}
     </div>
@@ -136,10 +118,13 @@ function LoadingRows() {
 
 function EmptyState() {
   return (
-    <div className="px-5 py-10 text-center">
-      <p className="text-[13px] text-zinc-500">
-        No spends yet. Once your agent calls a paid API, payments will
-        show up here with on-chain signatures.
+    <div
+      className="px-1 py-10 text-center"
+      style={{ borderBottom: "1px solid #1f1f1f" }}
+    >
+      <p className="text-[13px] text-[#888]">
+        No spends yet. Once your agent calls a paid API, payments will show up
+        here with on-chain signatures.
       </p>
     </div>
   );

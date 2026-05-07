@@ -20,8 +20,8 @@ export function MerchantAppShell({
     error instanceof Error && error.message === "not_found";
 
   return (
-    <div className="flex h-screen flex-col bg-[#0a0a0a] text-zinc-100">
-      <DashboardTopBar crumb="Merchant dashboard" />
+    <div className="flex h-screen flex-col bg-[#0a0a0a] text-[#f5f5f5]">
+      <DashboardTopBar crumb="merchant" />
 
       <div className="flex min-h-0 flex-1">
         <MerchantSidebar merchantEtaAddress={merchantEtaAddress} />

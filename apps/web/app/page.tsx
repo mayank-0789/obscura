@@ -1,311 +1,312 @@
 import Link from "next/link";
-import { Nav } from "../components/marketing/nav";
-import { Footer } from "../components/marketing/footer";
-import { CtaLink } from "../components/marketing/cta-link";
-import { FlowDiagram } from "../components/marketing/landing/flow-diagram";
-import { CodeEditor } from "../components/marketing/landing/code-editor";
-import { ReceiptCard } from "../components/marketing/landing/receipt-card";
-import { Ticker } from "../components/marketing/landing/ticker";
-import { FAQ, type QA } from "../components/marketing/landing/faq";
+import type { CSSProperties } from "react";
+import { Sparkline } from "@/components/ui/sparkline";
+import { SectionMarker } from "@/components/ui/section-marker";
+import { CtaLink } from "@/components/marketing/cta-link";
+import { SignInButton } from "@/components/auth/sign-in-button";
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-zinc-100 antialiased">
-      <Nav variant="user" />
+    <div
+      className="min-h-screen bg-[#0a0a0a] font-sans text-[#f5f5f5] antialiased"
+      style={{ fontFeatureSettings: '"ss01", "cv11", "tnum"' } as CSSProperties}
+    >
+      <TopBar />
       <Hero />
-      <Ticker />
-      <FlowDiagram />
-      <Quickstart />
-      <SplitAudience />
-      <StackStrip />
       <Numbers />
+      <TwoSDKs />
+      <Stack />
       <FAQSection />
-      <FinalCTA />
-      <Footer />
+      <CTA />
+      <FooterRule />
     </div>
   );
 }
 
-/* ========================================================================
-   HERO — magazine masthead + oversized serif display + live receipt card
-   ======================================================================== */
+
+function TopBar() {
+  return (
+    <header className="border-b border-[#1f1f1f]">
+      <div className="mx-auto flex max-w-[1280px] items-center justify-between px-6 py-5 lg:px-10">
+        <div className="flex items-baseline gap-3">
+          <Link
+            href="/"
+            className="text-[15px] font-medium tracking-[-0.01em]"
+          >
+            obscura
+          </Link>
+          <span className="font-mono text-[10px] text-[#5a5a5a]">───</span>
+          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#888]">
+            confidential x402
+          </span>
+        </div>
+        <nav className="flex items-center gap-7 font-mono text-[11px] uppercase tracking-[0.16em]">
+          <Link href="/docs" className="text-[#888] hover:text-[#f5f5f5]">
+            docs
+          </Link>
+          <Link href="/demo" className="text-[#888] hover:text-[#f5f5f5]">
+            demo
+          </Link>
+          <SignInButton />
+        </nav>
+      </div>
+    </header>
+  );
+}
+
+
+const LEAK_SERIES = [
+  3, 4, 4, 6, 7, 9, 10, 13, 16, 18, 22, 27, 33, 38, 42, 48, 55, 63, 71, 80,
+  89, 100,
+];
 
 function Hero() {
   return (
-    <section className="bg-noise relative overflow-hidden">
-      {/* Engineering grid, masked off the edges so it reads as atmosphere. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:72px_72px] [mask-image:radial-gradient(ellipse_85%_65%_at_75%_0%,black_10%,transparent_75%)]"
-      />
-      {/* Ambient emerald wash — the accent color as atmosphere, not chrome. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -left-40 -top-40 h-[560px] w-[560px] rounded-full bg-emerald-500/10 blur-[140px]"
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -right-40 top-80 h-[380px] w-[380px] rounded-full bg-emerald-500/5 blur-[120px]"
-      />
-
-      {/* ── Main hero grid ── */}
-      <div className="relative mx-auto grid max-w-[1400px] grid-cols-12 gap-x-8 gap-y-16 px-6 pb-28 pt-24 lg:px-10 lg:pb-36 lg:pt-32">
-        {/* LEFT — the headline */}
-        <div className="col-span-12 md:col-span-8">
-          <p className="rule-with-pip mb-10 font-mono text-[11px] uppercase tracking-[0.3em] text-zinc-400">
-            <span>The rail, explained</span>
-          </p>
-
-          <h1 className="font-display text-balance text-[56px] font-light leading-[0.94] tracking-[-0.03em] text-zinc-50 md:text-[96px] lg:text-[124px]">
-            <span className="reveal block" style={{ animationDelay: "0.05s" }}>
-              The payment
-            </span>
-            <span className="reveal block" style={{ animationDelay: "0.15s" }}>
-              rail for{" "}
-              <span className="italic text-emerald-gradient">AI agents.</span>
+    <section className="mx-auto max-w-[1280px] px-6 lg:px-10">
+      <div className="grid grid-cols-12 gap-6 pt-24 pb-16 lg:pt-32 lg:pb-24">
+        <div className="col-span-12 md:col-span-7">
+          <SectionMarker index="00" label="Frontier 2026 · Umbra Privacy track" />
+          <h1
+            className="mt-12 text-balance"
+            style={{
+              fontSize: "clamp(48px, 7vw, 96px)",
+              fontWeight: 500,
+              letterSpacing: "-0.035em",
+              lineHeight: 0.96,
+            }}
+          >
+            Confidential
+            <br />
+            pay-per-call
+            <br />
+            <span style={{ color: "#888", fontWeight: 300 }}>
+              for AI agents.
             </span>
           </h1>
-
-          <p
-            className="reveal mt-12 max-w-[58ch] text-[18px] leading-[1.65] text-zinc-300 md:text-[20px] md:leading-[1.6]"
-            style={{ animationDelay: "0.35s" }}
-          >
-            Your agent gets a spending account. You fund it in rupees. It
-            settles in stablecoins on Solana —{" "}
-            <span className="text-zinc-100">one API call at a time.</span>
+          <p className="mt-10 max-w-[58ch] text-[16px] leading-[1.6] text-[#888]">
+            x402 with the public spend graph removed. Agents pay merchants per
+            API call from encrypted balances; the on-chain link between sender
+            and receiver is broken via the Umbra mixer commitment tree.
           </p>
 
-          <div
-            className="reveal mt-10 flex flex-col gap-3 sm:flex-row"
-            style={{ animationDelay: "0.5s" }}
-          >
-            <CtaLink dashboard="agent" variant="primary" arrow="→">
-              Start your first agent
-            </CtaLink>
-            <Link
-              href="/merchants"
-              className="group inline-flex items-center justify-between gap-3 border border-zinc-700 bg-transparent px-6 py-4 text-sm font-medium text-zinc-300 transition hover:border-zinc-500 hover:text-zinc-100"
-            >
-              <span>For API providers</span>
-              <span
-                aria-hidden="true"
-                className="text-zinc-500 transition-transform group-hover:translate-x-1"
-              >
-                ↗
-              </span>
-            </Link>
-          </div>
-
-          <p
-            className="reveal mt-5 font-mono text-[11px] uppercase tracking-[0.28em] text-zinc-500"
-            style={{ animationDelay: "0.55s" }}
-          >
+          <div className="mt-12 flex flex-wrap items-center gap-x-8 gap-y-4 font-mono text-[11px] uppercase tracking-[0.18em]">
+            <CtaLink dashboard="agent">start agent</CtaLink>
             <Link
               href="/demo"
-              className="inline-flex items-center gap-2 text-emerald-300/90 transition hover:text-emerald-200"
+              className="inline-flex items-center gap-2 border-b border-[#e63946] pb-1 text-[#e63946]"
             >
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.9)]" />
-              Try it live · one click on devnet →
+              <span
+                className="inline-block h-1.5 w-1.5 rounded-full"
+                style={{ backgroundColor: "#e63946" }}
+              />
+              live demo on devnet
             </Link>
-          </p>
-
-          <div
-            className="reveal mt-16 grid max-w-2xl grid-cols-3 gap-6 border-t border-zinc-800/80 pt-6"
-            style={{ animationDelay: "0.65s" }}
-          >
-            <Stat label="Fiat → on-chain" value="< 30s" />
-            <Stat label="Per-call median" value="412 ms" />
-            <Stat label="Min. top-up" value="₹500" />
+            <span className="text-[#888]">npm i @obscura-app/sdk</span>
           </div>
         </div>
 
-        {/* RIGHT — live receipt card + byline */}
-        <aside
-          className="reveal col-span-12 md:col-span-4"
-          style={{ animationDelay: "0.25s" }}
-        >
-          <div className="md:sticky md:top-28">
-            <ReceiptCard />
-            <p className="mt-4 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-600">
-              Synthetic example. Real ledger entries on devnet today.
-            </p>
-
-            <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-zinc-800 pt-5 font-mono text-[10px] uppercase tracking-[0.3em] text-zinc-500">
-              <span className="flex items-center gap-2 text-emerald-400">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
-                Live
-              </span>
-              <span className="text-zinc-800">/</span>
-              <span>Solana</span>
-              <span className="text-zinc-800">×</span>
-              <span>Dodo</span>
-              <span className="text-zinc-800">×</span>
-              <span>x402</span>
-            </div>
+        <aside className="col-span-12 md:col-span-5 md:pt-2">
+          <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#888]">
+            Fig. 1 · Vanilla x402 spend graph leakage
+          </p>
+          <p className="mt-1 text-[12px] text-[#888]">
+            Public SPL transfers per agent, simulated 7-day window
+          </p>
+          <div
+            className="mt-5"
+            style={{
+              borderTop: "1px solid #f5f5f5",
+              borderBottom: "1px solid #1f1f1f",
+              padding: "20px 0",
+            }}
+          >
+            <Sparkline
+              values={LEAK_SERIES}
+              width={480}
+              height={110}
+              accent
+              area
+              endDot
+              className="!block !h-[110px] !w-full"
+            />
           </div>
+          <div className="mt-4 grid grid-cols-3 font-mono text-[10px] uppercase tracking-[0.16em] text-[#888]">
+            <span>t-7d</span>
+            <span className="text-center">today</span>
+            <span className="text-right">pred. t+1</span>
+          </div>
+          <p className="mt-8 max-w-[36ch] text-[12.5px] leading-[1.6] text-[#888]">
+            <span className="text-[#f5f5f5]">
+              Obscura collapses this curve to a flat line
+            </span>{" "}
+            from any third-party observer. See §1.1 below.
+          </p>
         </aside>
       </div>
-    </section>
-  );
-}
 
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-500">
-        {label}
-      </div>
-      <div className="mt-2 font-display text-2xl font-light text-zinc-100">
-        {value}
-      </div>
-    </div>
-  );
-}
-
-/* ========================================================================
-   QUICKSTART — code editor
-   ======================================================================== */
-
-function Quickstart() {
-  return (
-    <section className="relative overflow-hidden border-b border-zinc-800/60 bg-[#0a0a0a] py-28 lg:py-36">
+      {/* TOC strip */}
       <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -right-40 top-1/3 h-[320px] w-[320px] rounded-full bg-emerald-500/6 blur-[120px]"
-      />
-      <div className="relative mx-auto max-w-[1400px] px-6 lg:px-10">
-        <div className="grid grid-cols-12 gap-x-6 gap-y-12">
-          <div className="col-span-12 md:col-span-5 lg:col-span-4">
-            <p className="rule-with-pip font-mono text-[11px] uppercase tracking-[0.3em] text-zinc-400">
-              <span>Section III — The SDK</span>
-            </p>
-            <h2 className="mt-8 font-display text-[40px] font-light leading-[1.02] tracking-[-0.02em] text-zinc-50 md:text-[54px]">
-              A spending account in{" "}
-              <span className="italic text-emerald-gradient">three lines.</span>
-            </h2>
-            <p className="mt-6 text-[15px] leading-[1.7] text-zinc-400">
-              Drop <code className="font-mono text-emerald-400">@obscura-app/sdk</code>{" "}
-              into your agent. The wrapped{" "}
-              <code className="font-mono text-zinc-300">fetch()</code> now has
-              a budget, a signer, and a paper trail.
-            </p>
+        className="grid grid-cols-12 gap-6 py-7 font-mono text-[11px] uppercase tracking-[0.18em] text-[#888]"
+        style={{
+          borderTop: "1px solid #f5f5f5",
+          borderBottom: "1px solid #1f1f1f",
+        }}
+      >
+        {[
+          ["01", "the leak"],
+          ["02", "the fix"],
+          ["03", "two sdks"],
+          ["04", "stack"],
+          ["05", "faq"],
+          ["06", "ship"],
+        ].map(([n, l]) => (
+          <div key={n} className="col-span-6 sm:col-span-4 md:col-span-2">
+            <span className="text-[#f5f5f5]">{n}</span> &nbsp;{l}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
 
-            <ul className="mt-10 space-y-4 text-[14px] text-zinc-300">
-              <BulletLine>
-                <strong className="text-zinc-100">No wallet code.</strong> The
-                SDK ships a remote signer that calls our backend on 402.
-              </BulletLine>
-              <BulletLine>
-                <strong className="text-zinc-100">No retry logic.</strong>{" "}
-                Payments settle, the request replays with{" "}
-                <code className="font-mono text-zinc-400">X-Payment</code>.
-              </BulletLine>
-              <BulletLine>
-                <strong className="text-zinc-100">No surprise spend.</strong>{" "}
-                Per-agent monthly caps, enforced before every signature.
-              </BulletLine>
-            </ul>
 
-            <div className="mt-10 flex flex-wrap gap-3 font-mono text-[11px] uppercase tracking-[0.22em] text-zinc-500">
-              <Link
-                href="/docs/agents/quickstart"
-                className="inline-flex items-center gap-2 border-b border-zinc-700 pb-0.5 transition hover:border-emerald-400 hover:text-emerald-400"
-              >
-                Read the quickstart
-                <span aria-hidden>→</span>
-              </Link>
-              <span className="text-zinc-700">/</span>
-              <Link
-                href="https://github.com/mayank-0789/obscura"
-                className="inline-flex items-center gap-2 border-b border-zinc-700 pb-0.5 transition hover:border-emerald-400 hover:text-emerald-400"
-              >
-                View on GitHub
-                <span aria-hidden>↗</span>
-              </Link>
+const FIGURES = [
+  {
+    value: "$1.7T",
+    label: "Agentic commerce volume projected for 2030",
+    source: "McKinsey · Accenture",
+    spark: [4, 5, 6, 8, 11, 14, 17, 22, 28, 35, 44, 55],
+  },
+  {
+    value: "35M+",
+    label: "x402 transactions already settled on Solana",
+    source: "since Summer 2025",
+    spark: [1, 2, 2, 3, 5, 7, 11, 14, 19, 24, 30, 35],
+  },
+  {
+    value: "46%",
+    label: "of YC Spring 2025 were AI agent companies",
+    source: "Y Combinator",
+    spark: [12, 18, 22, 28, 30, 33, 36, 38, 41, 43, 45, 46],
+  },
+  {
+    value: "₹500",
+    label: "minimum top-up to ship your first agent",
+    source: "Obscura",
+    spark: [500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500],
+  },
+];
+
+function Numbers() {
+  return (
+    <section className="mx-auto max-w-[1280px] px-6 py-24 lg:px-10 lg:py-28">
+      <SectionMarker index="01" label="The market, now" />
+      <h2
+        className="mt-10 max-w-[28ch]"
+        style={{
+          fontSize: "clamp(32px, 4vw, 48px)",
+          fontWeight: 500,
+          letterSpacing: "-0.025em",
+          lineHeight: 1.05,
+        }}
+      >
+        Agent commerce isn&apos;t theoretical.
+      </h2>
+      <p className="mt-5 max-w-[56ch] text-[15px] leading-[1.6] text-[#888]">
+        It&apos;s already happening. Obscura is the rail between rupee top-ups
+        and the agents that transact on Solana — confidentially.
+      </p>
+
+      <div
+        className="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
+        style={{ borderTop: "1px solid #f5f5f5" }}
+      >
+        {FIGURES.map((f, i) => (
+          <div
+            key={i}
+            className="px-5 py-7"
+            style={{
+              borderBottom: "1px solid #1f1f1f",
+              borderRight:
+                i < FIGURES.length - 1 ? "1px solid #1f1f1f" : undefined,
+            }}
+          >
+            <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#888]">
+              fig. 1.{i + 1}
             </div>
-          </div>
-
-          <div className="col-span-12 md:col-span-7 lg:col-span-8">
-            <CodeEditor />
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function BulletLine({ children }: { children: React.ReactNode }) {
-  return (
-    <li className="flex gap-3 leading-[1.6]">
-      <span
-        aria-hidden="true"
-        className="mt-[10px] inline-block h-px w-4 shrink-0 bg-emerald-400"
-      />
-      <span className="text-zinc-400">{children}</span>
-    </li>
-  );
-}
-
-/* ========================================================================
-   SPLIT AUDIENCE — two sides of the rail
-   ======================================================================== */
-
-function SplitAudience() {
-  return (
-    <section className="relative overflow-hidden border-b border-zinc-800/60 bg-[#08080a] py-28 lg:py-36">
-      <div className="mx-auto max-w-[1400px] px-6 lg:px-10">
-        <div className="mb-16 grid grid-cols-12 items-end gap-8">
-          <div className="col-span-12 md:col-span-4">
-            <p className="rule-with-pip font-mono text-[11px] uppercase tracking-[0.3em] text-zinc-400">
-              <span>Section IV — Audiences</span>
+            <div
+              className="mt-3 tabular-nums"
+              style={{
+                fontSize: 44,
+                fontWeight: 500,
+                letterSpacing: "-0.02em",
+                lineHeight: 1,
+              }}
+            >
+              {f.value}
+            </div>
+            <div className="mt-4">
+              <Sparkline values={f.spark} width={120} height={28} />
+            </div>
+            <p className="mt-4 text-[12.5px] leading-[1.55]">{f.label}</p>
+            <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.18em] text-[#888]">
+              {f.source}
             </p>
           </div>
-          <div className="col-span-12 md:col-span-8">
-            <h2 className="font-display text-[40px] font-light leading-[1.02] tracking-[-0.02em] text-zinc-50 md:text-[60px]">
-              Two sides of the rail.{" "}
-              <span className="italic text-zinc-500">
-                Pick yours.
-              </span>
-            </h2>
-          </div>
-        </div>
+        ))}
+      </div>
+    </section>
+  );
+}
 
-        <div className="grid gap-6 md:grid-cols-2">
-          <AudienceCard
-            tag="01 / Operators"
-            title="Building agents"
-            subtitle="Ship autonomous software that pays its own way."
-            bullets={[
-              "One SDK call replaces wallets, signers, and payment loops.",
-              "Monthly spend caps per agent, enforced at signature time.",
-              "UPI and card top-ups via Dodo — GST-compliant, MoR-backed.",
-              "A dashboard that shows every rupee in and every 0.008 USDC out.",
-            ]}
-            cta={{
-              kind: "dashboard",
-              dashboard: "agent",
-              label: "Start your first agent",
+
+function TwoSDKs() {
+  return (
+    <section
+      className="mx-auto max-w-[1280px] px-6 py-24 lg:px-10 lg:py-28"
+      style={{ borderTop: "1px solid #1f1f1f" }}
+    >
+      <div className="grid grid-cols-12 gap-6">
+        <div className="col-span-12 md:col-span-4">
+          <SectionMarker index="02" label="Two sides of the rail" />
+          <h2
+            className="mt-10"
+            style={{
+              fontSize: "clamp(32px, 4vw, 48px)",
+              fontWeight: 500,
+              letterSpacing: "-0.025em",
+              lineHeight: 1.05,
             }}
-            arrow="→"
-            accent="emerald"
+          >
+            Two SDKs. <br />
+            <span className="text-[#888]">One rail.</span>
+          </h2>
+        </div>
+        <div className="col-span-12 grid grid-cols-1 gap-px md:col-span-8 md:grid-cols-2">
+          <SDKColumn
+            tag="for agents"
+            title="@obscura-app/sdk"
+            blurb="Wrap fetch. Get an encrypted spending account. The SDK handles the 402 dance."
+            bullets={[
+              "Per-agent monthly cap, enforced at sign time",
+              "No wallet code, no signer, no retry logic",
+              "Errors carry typed codes (over_cap, insufficient_funds…)",
+            ]}
+            cta="Start agent"
+            ctaDashboard="agent"
+            accent
           />
-          <AudienceCard
-            tag="02 / Merchants"
-            title="Selling APIs"
-            subtitle="Monetize per call. No invoicing, no chasing."
+          <SDKColumn
+            tag="for merchants"
+            title="@obscura-app/merchant-sdk"
+            blurb="One Express middleware. Issue 402, verify the umbra-mixer-v1 envelope on-chain, settle to your encrypted balance."
             bullets={[
-              "One middleware line returns 402 + quotes the price.",
-              "x402-solana settles on-chain before your handler runs.",
-              "USDC accrues in a dedicated payout wallet — no custody risk.",
-              "Cash out to bank via Dodo payouts (v2) or swap yourself today.",
+              "No facilitator dependency",
+              "Verifies queueSignature, payTo, mint, replay window",
+              "Encrypted balance only you can decrypt",
             ]}
-            cta={{
-              kind: "link",
-              href: "/merchants",
-              label: "For API providers",
-            }}
-            arrow="↗"
-            accent="amber"
+            cta="For API providers"
+            ctaHref="/merchants"
           />
         </div>
       </div>
@@ -313,81 +314,71 @@ function SplitAudience() {
   );
 }
 
-type AudienceCta =
-  | { kind: "link"; href: string; label: string }
-  | { kind: "dashboard"; dashboard: "agent" | "merchant"; label: string };
-
-function AudienceCard({
+function SDKColumn({
   tag,
   title,
-  subtitle,
+  blurb,
   bullets,
   cta,
-  arrow,
-  accent,
+  ctaHref,
+  ctaDashboard,
+  accent = false,
 }: {
   tag: string;
   title: string;
-  subtitle: string;
+  blurb: string;
   bullets: string[];
-  cta: AudienceCta;
-  arrow: "→" | "↗";
-  accent: "emerald" | "amber";
+  cta: string;
+  ctaHref?: string;
+  ctaDashboard?: "agent" | "merchant";
+  accent?: boolean;
 }) {
-  const accentText =
-    accent === "emerald" ? "text-emerald-400" : "text-amber-300";
-  const accentBorder =
-    accent === "emerald" ? "border-emerald-400/40" : "border-amber-300/40";
-  const accentHover =
-    accent === "emerald"
-      ? "hover:border-emerald-400 hover:text-emerald-400"
-      : "hover:border-amber-300 hover:text-amber-300";
-
   return (
-    <article
-      className={`group relative flex flex-col border border-zinc-800 bg-[#0b0b0d] p-8 transition hover:border-zinc-700 md:p-10`}
-    >
-      <div
-        aria-hidden="true"
-        className={`pointer-events-none absolute inset-x-0 top-0 h-[2px] ${
-          accent === "emerald" ? "bg-emerald-400" : "bg-amber-300"
-        } opacity-30 transition group-hover:opacity-100`}
-      />
-      <div className={`font-mono text-[10px] uppercase tracking-[0.28em] ${accentText}`}>
-        {tag}
+    <article className="flex flex-col border border-[#1f1f1f] p-7">
+      <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.22em]">
+        <span
+          className="inline-block h-1.5 w-1.5 rounded-full"
+          style={{ backgroundColor: accent ? "#e63946" : "#f5f5f5" }}
+        />
+        <span className="text-[#888]">{tag}</span>
       </div>
-      <h3 className="mt-6 font-display text-[34px] font-light leading-[1.05] tracking-tight text-zinc-50 md:text-[44px]">
+      <h3
+        className="mt-5 font-mono"
+        style={{
+          fontSize: 18,
+          fontWeight: 500,
+          letterSpacing: "-0.01em",
+        }}
+      >
         {title}
       </h3>
-      <p className="mt-4 max-w-sm text-[15px] leading-[1.6] text-zinc-400">
-        {subtitle}
-      </p>
-
-      <ul className="mt-10 space-y-4 text-[14.5px] leading-[1.6] text-zinc-300">
+      <p className="mt-3 text-[13.5px] leading-[1.6] text-[#888]">{blurb}</p>
+      <ul className="mt-7 space-y-3 text-[13px] leading-[1.55]">
         {bullets.map((b, i) => (
           <li key={i} className="flex gap-3">
             <span
-              className={`mt-[9px] inline-block h-px w-4 shrink-0 ${
-                accent === "emerald" ? "bg-emerald-400" : "bg-amber-300"
-              }`}
+              className="mt-[10px] inline-block h-px w-3 shrink-0"
+              style={{ backgroundColor: accent ? "#e63946" : "#f5f5f5" }}
             />
-            <span className="text-zinc-300">{b}</span>
+            <span>{b}</span>
           </li>
         ))}
       </ul>
-
-      <div className="mt-10 flex items-end">
-        {cta.kind === "dashboard" ? (
-          <CtaLink dashboard={cta.dashboard} variant="inline" arrow={arrow}>
-            {cta.label}
+      <div className="mt-auto pt-10">
+        {ctaDashboard ? (
+          <CtaLink dashboard={ctaDashboard} variant={accent ? "primary" : "secondary"}>
+            {cta}
           </CtaLink>
         ) : (
           <Link
-            href={cta.href}
-            className={`inline-flex items-center gap-3 border-b py-1 font-mono text-[12px] uppercase tracking-[0.22em] text-zinc-300 transition ${accentBorder} ${accentHover}`}
+            href={ctaHref ?? "#"}
+            className="inline-flex items-center gap-2 border-b pb-1 font-mono text-[11px] uppercase tracking-[0.18em]"
+            style={{
+              borderColor: accent ? "#e63946" : "#f5f5f5",
+              color: accent ? "#e63946" : "#f5f5f5",
+            }}
           >
-            <span>{cta.label}</span>
-            <span aria-hidden="true">{arrow}</span>
+            {cta} <span aria-hidden>→</span>
           </Link>
         )}
       </div>
@@ -395,222 +386,202 @@ function AudienceCard({
   );
 }
 
-/* ========================================================================
-   STACK STRIP — "built on" wordmarks as editorial labels
-   ======================================================================== */
 
-const stackItems = [
-  { name: "Solana", role: "L1 settlement" },
-  { name: "x402", role: "HTTP micropayments" },
-  { name: "Dodo Payments", role: "Fiat MoR" },
-  { name: "Umbra", role: "Confidential balances + mixer" },
-  { name: "Helius", role: "RPC" },
-  { name: "Arcium", role: "MPC compute" },
+const STACK = [
+  ["solana", "L1 settlement"],
+  ["umbra", "encrypted balances + mixer"],
+  ["arcium", "MPC compute"],
+  ["helius", "RPC"],
+  ["x402", "HTTP micropayments"],
+  ["dodo", "fiat MoR (top-ups)"],
 ];
 
-function StackStrip() {
+function Stack() {
   return (
-    <section className="relative border-b border-zinc-800/60 bg-[#0a0a0a] py-16">
-      <div className="mx-auto max-w-[1400px] px-6 lg:px-10">
-        <div className="grid grid-cols-12 items-center gap-8">
-          <div className="col-span-12 md:col-span-3">
-            <p className="rule-with-pip font-mono text-[11px] uppercase tracking-[0.3em] text-zinc-400">
-              <span>Section V — Built on</span>
-            </p>
-            <p className="mt-3 font-display text-xl italic text-zinc-400">
-              Infra you already trust.
-            </p>
-          </div>
-          <div className="col-span-12 md:col-span-9">
-            <ul className="flex flex-wrap items-center gap-x-10 gap-y-6">
-              {stackItems.map((s) => (
-                <li key={s.name} className="group">
-                  <div className="font-display text-[22px] font-light text-zinc-200 transition group-hover:text-emerald-300">
-                    {s.name}
-                  </div>
-                  <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-600">
-                    {s.role}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ========================================================================
-   NUMBERS — market sizing, stated with editorial restraint
-   ======================================================================== */
-
-const figures = [
-  {
-    value: "$1.7T",
-    label: "Agentic commerce volume projected for 2030",
-    source: "McKinsey · Accenture",
-  },
-  {
-    value: "35M+",
-    label: "x402 transactions already settled on Solana",
-    source: "since Summer 2025",
-  },
-  {
-    value: "46%",
-    label: "of YC Spring 2025 were AI agent companies",
-    source: "Y Combinator",
-  },
-  {
-    value: "₹500",
-    label: "minimum top-up to ship your first agent",
-    source: "Obscura",
-  },
-];
-
-function Numbers() {
-  return (
-    <section className="relative overflow-hidden border-b border-zinc-800/60 bg-[#08080a] py-28 lg:py-36">
-      <div className="mx-auto max-w-[1400px] px-6 lg:px-10">
-        <div className="mb-16 max-w-2xl">
-          <p className="rule-with-pip font-mono text-[11px] uppercase tracking-[0.3em] text-zinc-400">
-            <span>Section VI — The market, now</span>
-          </p>
-          <h2 className="mt-8 font-display text-[40px] font-light leading-[1.02] tracking-[-0.02em] text-zinc-50 md:text-[60px]">
-            Agent commerce isn&apos;t{" "}
-            <span className="italic text-zinc-500">theoretical.</span>
-          </h2>
-          <p className="mt-6 text-[15px] leading-[1.7] text-zinc-400">
-            It&apos;s already happening. Obscura is the rail between the 900M
-            Indians who transact in rupees and the agents that transact on
-            Solana.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 divide-y divide-zinc-800 border-y border-zinc-800 md:grid-cols-4 md:divide-x md:divide-y-0">
-          {figures.map((f, i) => (
-            <div key={i} className="p-8">
-              <div className="font-display text-[52px] font-light leading-none tracking-[-0.02em] text-emerald-gradient md:text-[64px]">
-                {f.value}
-              </div>
-              <p className="mt-4 text-[13px] leading-[1.55] text-zinc-300">
-                {f.label}
-              </p>
-              <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-600">
-                {f.source}
-              </p>
+    <section
+      className="mx-auto max-w-[1280px] px-6 py-24 lg:px-10"
+      style={{ borderTop: "1px solid #1f1f1f" }}
+    >
+      <SectionMarker index="03" label="Built on" />
+      <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+        {STACK.map(([name, role], i) => (
+          <div
+            key={name}
+            className="px-2 py-5"
+            style={{ borderTop: i < 3 ? "none" : "1px solid #1f1f1f" }}
+          >
+            <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#888]">
+              0{i + 1}
             </div>
-          ))}
-        </div>
+            <div
+              className="mt-3"
+              style={{
+                fontSize: 22,
+                fontWeight: 500,
+                letterSpacing: "-0.015em",
+              }}
+            >
+              {name}
+            </div>
+            <div className="mt-1 text-[13px] text-[#888]">{role}</div>
+          </div>
+        ))}
       </div>
     </section>
   );
 }
 
-/* ========================================================================
-   FAQ
-   ======================================================================== */
 
-function FAQSection() {
-  return (
-    <section className="relative border-b border-zinc-800/60 bg-[#0a0a0a] py-28 lg:py-36">
-      <div className="mx-auto max-w-[1400px] px-6 lg:px-10">
-        <div className="mb-12 grid grid-cols-12 items-end gap-8">
-          <div className="col-span-12 md:col-span-4">
-            <p className="rule-with-pip font-mono text-[11px] uppercase tracking-[0.3em] text-zinc-400">
-              <span>Section VII — FAQ</span>
-            </p>
-          </div>
-          <div className="col-span-12 md:col-span-8">
-            <h2 className="font-display text-[40px] font-light leading-[1.02] tracking-[-0.02em] text-zinc-50 md:text-[60px]">
-              Questions, fielded{" "}
-              <span className="italic text-zinc-500">in order.</span>
-            </h2>
-          </div>
-        </div>
-        <FAQ items={userFaqs} />
-      </div>
-    </section>
-  );
-}
-
-const userFaqs: QA[] = [
+const FAQ_ITEMS = [
   {
     q: "Does my user need a crypto wallet?",
-    a: "No. Every agent gets a server-derived Umbra encrypted token account, provisioned on sign-up. Your users fund it with UPI or card. They never see a seed phrase or a browser extension.",
-  },
-  {
-    q: "What stablecoin do agents actually hold?",
-    a: "USDC on Solana devnet today, USDG on mainnet once it lists. The mint is set via env — swapping is a one-line change, and the SDK never cares which token it is.",
+    a: "No. Every agent gets a server-derived Umbra encrypted token account, provisioned on sign-up. Users fund it with UPI or card. They never see a seed phrase.",
   },
   {
     q: "Who controls the money?",
-    a: "The operator. Each agent's Umbra-side keypair is derived server-side from a master seed (HMAC-SHA-256, domain-separated per subject) and never leaves Obscura's backend. Every outgoing transfer runs through a spend-cap check before signing. No cap, no signature.",
+    a: "The operator (custodial in v1). Each agent's Umbra keypair is HMAC-derived server-side from a master seed and never leaves the backend. Every outgoing transfer runs through a spend-cap check before signing.",
   },
   {
-    q: "What happens when an agent hits its monthly cap?",
-    a: "The signer rejects further transactions with a clean 402 back to the agent, and the operator gets a dashboard alert. Caps are set per-agent and enforced off-chain in v1; the v2 roadmap migrates them into an Anchor program for trustless enforcement.",
+    q: "What happens at the monthly cap?",
+    a: "The signer rejects further transactions with a clean 402 back to the agent and the operator gets a dashboard alert. Caps are enforced off-chain in v1; v2 migrates them into an Anchor program for trustless enforcement.",
   },
   {
     q: "What does it cost?",
     a: "Free during private beta. Production pricing is 2% platform fee on the fiat leg plus ~1% network + FX, surfaced upfront on the top-up screen. Merchants receive the full USDC amount minus Solana fees.",
   },
-  {
-    q: "Why India first?",
-    a: "900M internet users, UPI as the default rail, and Dodo Payments as an MoR that handles GST, compliance, and payouts out of the box. That's a distribution edge Stripe + Bridge + Tempo don't have here. International support follows the same architecture.",
-  },
 ];
 
-/* ========================================================================
-   FINAL CTA
-   ======================================================================== */
-
-function FinalCTA() {
+function FAQSection() {
   return (
-    <section className="relative overflow-hidden bg-[#0a0a0a] py-32 lg:py-40">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute left-1/2 top-1/2 h-[600px] w-[1000px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-500/10 blur-[160px]"
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:72px_72px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,black_0%,transparent_70%)]"
-      />
-
-      <div className="relative mx-auto max-w-[1200px] px-6 text-center lg:px-10">
-        <p className="rule-with-pip mx-auto inline-flex font-mono text-[11px] uppercase tracking-[0.3em] text-zinc-400">
-          <span>Issue End · Call to ship</span>
-        </p>
-        <h2 className="mt-10 font-display text-balance text-[54px] font-light leading-[0.98] tracking-[-0.025em] text-zinc-50 md:text-[104px]">
-          Ship your agent{" "}
-          <span className="italic text-emerald-gradient">this weekend.</span>
-        </h2>
-        <p className="mx-auto mt-8 max-w-xl text-[16px] leading-[1.7] text-zinc-400">
-          Free during beta. Live in two minutes. The demo costs less than a
-          chai.
-        </p>
-        <div className="mt-12 flex flex-wrap justify-center gap-3">
-          <CtaLink dashboard="agent" variant="primary" arrow="→" className="px-7">
-            Start your first agent
-          </CtaLink>
-          <Link
-            href="/merchants"
-            className="group inline-flex items-center justify-between gap-3 border border-zinc-700 px-7 py-4 text-sm font-medium text-zinc-300 transition hover:border-zinc-500 hover:text-zinc-100"
+    <section
+      className="mx-auto max-w-[1280px] px-6 py-24 lg:px-10 lg:py-28"
+      style={{ borderTop: "1px solid #1f1f1f" }}
+    >
+      <div className="grid grid-cols-12 gap-6">
+        <div className="col-span-12 md:col-span-4">
+          <SectionMarker index="04" label="FAQ" />
+          <h2
+            className="mt-10"
+            style={{
+              fontSize: "clamp(32px, 4vw, 44px)",
+              fontWeight: 500,
+              letterSpacing: "-0.025em",
+              lineHeight: 1.05,
+            }}
           >
-            <span>For API providers</span>
-            <span
-              aria-hidden="true"
-              className="text-zinc-500 transition-transform group-hover:translate-x-1"
-            >
-              ↗
-            </span>
-          </Link>
+            Questions, fielded in order.
+          </h2>
         </div>
-
-        <p className="mt-16 font-mono text-[10px] uppercase tracking-[0.26em] text-zinc-600">
-          Solana × Dodo · Shipped from India
-        </p>
+        <div className="col-span-12 md:col-span-8">
+          <div style={{ borderTop: "1px solid #f5f5f5" }}>
+            {FAQ_ITEMS.map((item, i) => (
+              <details
+                key={i}
+                className="group"
+                style={{ borderBottom: "1px solid #1f1f1f" }}
+              >
+                <summary
+                  className="flex cursor-pointer list-none items-baseline gap-5 px-1 py-5"
+                  style={{ outline: "none" }}
+                >
+                  <span className="font-mono text-[11px] tabular-nums text-[#888]">
+                    0{i + 1}
+                  </span>
+                  <span
+                    className="flex-1 text-[15.5px]"
+                    style={{ fontWeight: 500 }}
+                  >
+                    {item.q}
+                  </span>
+                  <span className="font-mono text-[12px] text-[#888]">
+                    <span className="group-open:hidden">+</span>
+                    <span className="hidden group-open:inline">−</span>
+                  </span>
+                </summary>
+                <p className="pb-6 pl-9 pr-12 text-[14px] leading-[1.65] text-[#888]">
+                  {item.a}
+                </p>
+              </details>
+            ))}
+          </div>
+        </div>
       </div>
     </section>
+  );
+}
+
+
+function CTA() {
+  return (
+    <section
+      className="mx-auto max-w-[1280px] px-6 py-28 lg:px-10 lg:py-36"
+      style={{ borderTop: "1px solid #1f1f1f" }}
+    >
+      <div className="grid grid-cols-12 gap-6">
+        <div className="col-span-12 md:col-span-7">
+          <SectionMarker index="05" label="Ship" />
+          <h2
+            className="mt-10 text-balance"
+            style={{
+              fontSize: "clamp(40px, 6vw, 80px)",
+              fontWeight: 500,
+              letterSpacing: "-0.035em",
+              lineHeight: 0.98,
+            }}
+          >
+            Ship your agent
+            <br />
+            <span style={{ color: "#888", fontWeight: 300 }}>
+              this weekend.
+            </span>
+          </h2>
+          <p className="mt-8 max-w-[42ch] text-[15px] leading-[1.6] text-[#888]">
+            Free during beta. Live in two minutes. The demo costs less than a
+            chai.
+          </p>
+          <div className="mt-12 flex flex-wrap items-center gap-x-8 gap-y-4 font-mono text-[11px] uppercase tracking-[0.18em]">
+            <CtaLink dashboard="agent">start agent</CtaLink>
+            <Link
+              href="/merchants"
+              className="inline-flex items-center gap-2 border-b border-[#888] pb-1 text-[#888] hover:text-[#f5f5f5] hover:border-[#f5f5f5]"
+            >
+              for api providers <span aria-hidden>↗</span>
+            </Link>
+          </div>
+        </div>
+        <aside className="col-span-12 md:col-span-5 md:pt-2">
+          <div className="border border-[#1f1f1f] p-6 font-mono text-[12px] leading-[1.7] text-[#f5f5f5]">
+            <span className="text-[#888]">$</span> npm i @obscura-app/sdk
+            <br />
+            <span className="text-[#888]">$</span> export OBSCURA_KEY=sk_...
+            <br />
+            <br />
+            <span style={{ color: "#e63946" }}>const</span> agent ={" "}
+            <span style={{ color: "#e63946" }}>new</span> Obscura(&#123; apiKey &#125;);
+            <br />
+            <span style={{ color: "#e63946" }}>await</span> agent.fetch(url);
+          </div>
+          <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.22em] text-[#888]">
+            Fig. 5.1 · the entire integration
+          </p>
+        </aside>
+      </div>
+    </section>
+  );
+}
+
+
+function FooterRule() {
+  return (
+    <footer
+      className="mx-auto max-w-[1280px] px-6 py-10 lg:px-10"
+      style={{ borderTop: "1px solid #f5f5f5" }}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-y-3 font-mono text-[10px] uppercase tracking-[0.22em] text-[#888]">
+        <span>obscurapp.com</span>
+        <span>built with umbra · solana frontier 2026</span>
+        <span>mit</span>
+      </div>
+    </footer>
   );
 }

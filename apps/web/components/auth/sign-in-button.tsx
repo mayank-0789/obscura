@@ -13,7 +13,7 @@ export function SignInButton() {
     return (
       <div
         aria-hidden
-        className="h-8 w-20 animate-pulse rounded-md bg-zinc-800/60"
+        className="h-[18px] w-24 animate-pulse bg-[#1f1f1f]"
       />
     );
   }
@@ -22,9 +22,14 @@ export function SignInButton() {
     return (
       <button
         onClick={() => signIn("google", { callbackUrl: "/onboarding" })}
-        className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-sm font-medium text-zinc-100 transition hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]"
+        className="inline-flex items-center gap-2 border-b border-[#f5f5f5] pb-1 font-mono text-[11px] uppercase tracking-[0.18em] text-[#f5f5f5] focus-visible:outline-none focus-visible:text-[#e63946] focus-visible:border-[#e63946]"
       >
-        Sign in
+        <span
+          aria-hidden
+          className="inline-block h-1.5 w-1.5 rounded-full"
+          style={{ backgroundColor: "#e63946" }}
+        />
+        sign in
       </button>
     );
   }
@@ -32,15 +37,15 @@ export function SignInButton() {
   const identity = session?.user?.email ?? "Signed in";
 
   return (
-    <div className="flex items-center gap-3 text-sm">
-      <span className="hidden max-w-[180px] truncate text-zinc-400 md:inline">
+    <div className="flex items-center gap-4 font-mono text-[11px] uppercase tracking-[0.16em]">
+      <span className="hidden max-w-[180px] truncate normal-case tracking-normal text-[#888] md:inline">
         {identity}
       </span>
       <button
         onClick={signOut}
-        className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-100 transition hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]"
+        className="text-[#888] hover:text-[#f5f5f5] focus-visible:outline-none focus-visible:text-[#f5f5f5]"
       >
-        Sign out
+        sign out
       </button>
     </div>
   );

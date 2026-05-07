@@ -16,6 +16,7 @@ import type { AgentDTO } from "@/types/agent";
 import { AppShell } from "@/components/dashboard/app-shell";
 import { Kbd } from "@/components/dashboard/kbd";
 import { RecentSpendsList } from "@/components/dashboard/recent-spends-list";
+import { SectionMarker } from "@/components/ui/section-marker";
 
 export function AgentDetail({ id }: { id: string }) {
   const { data: agent, isLoading, error } = useAgent(id);
@@ -54,92 +55,77 @@ function Content({ agent }: { agent: AgentDTO }) {
       : 0;
 
   return (
-    <div className="px-8 py-8 lg:px-12">
-      <div className="flex items-center gap-2 text-[12px] text-zinc-500">
+    <div className="mx-auto max-w-[1280px] px-6 py-10 lg:px-10">
+      <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.18em] text-[#888]">
         <Link
           href="/dashboard"
-          className="inline-flex items-center gap-1.5 transition hover:text-zinc-200"
+          className="inline-flex items-center gap-1.5 transition hover:text-[#f5f5f5]"
         >
-          <svg
-            viewBox="0 0 12 12"
-            className="h-3 w-3"
-            fill="none"
-            aria-hidden="true"
-          >
-            <path
-              d="M7.5 2.5 L3 6 L7.5 9.5"
-              stroke="currentColor"
-              strokeWidth="1.4"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-          Dashboard
+          ← dashboard
         </Link>
-        <span className="text-zinc-700">/</span>
-        <span className="text-zinc-400">Agents</span>
-        <span className="text-zinc-700">/</span>
-        <span className="truncate text-zinc-300">{agent.name}</span>
+        <span className="text-[#5a5a5a]">/</span>
+        <span className="text-[#888]">agents</span>
+        <span className="text-[#5a5a5a]">/</span>
+        <span className="truncate text-[#f5f5f5]">{agent.name}</span>
       </div>
 
-      <header className="mt-6 flex flex-wrap items-start justify-between gap-6 border-b border-zinc-800 pb-8">
+      <header
+        className="mt-6 flex flex-wrap items-start justify-between gap-6 pb-8"
+        style={{ borderBottom: "1px solid #1f1f1f" }}
+      >
         <div className="min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <StatusPill status={agent.status} />
-            <span className="font-mono text-[11px] text-zinc-600">·</span>
-            <span className="font-mono text-[11px] text-zinc-500">
+            <span className="font-mono text-[11px] text-[#5a5a5a]">·</span>
+            <span className="font-mono text-[11px] text-[#888]">
               Created {formatDate(agent.createdAt)}
             </span>
           </div>
-          <h1 className="mt-3 text-[32px] font-semibold tracking-[-0.015em] text-zinc-50 md:text-[36px]">
+          <h1
+            className="mt-4 text-[36px] text-[#f5f5f5] md:text-[44px]"
+            style={{ fontWeight: 500, letterSpacing: "-0.025em", lineHeight: 1 }}
+          >
             {agent.name}
           </h1>
-          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
             <button
               type="button"
               onClick={() => copy(agent.etaAddress)}
-              className="inline-flex items-center gap-1.5 font-mono text-[12px] text-zinc-400 transition hover:text-zinc-200"
+              className="inline-flex items-center gap-1.5 font-mono text-[12px] text-[#888] transition hover:text-[#f5f5f5]"
               title={agent.etaAddress}
             >
               {shortPk(agent.etaAddress)}
-              <svg
-                viewBox="0 0 12 12"
-                className="h-3 w-3 text-zinc-600"
-                fill="none"
-                aria-hidden="true"
-              >
-                <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.2" />
-                <path d="M2 8.5 L2 2 L8.5 2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-              </svg>
+              <span aria-hidden="true" className="text-[#5a5a5a]">⧉</span>
             </button>
-            <span className="text-zinc-700">·</span>
+            <span className="text-[#5a5a5a]">·</span>
             <a
               href={solscanUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 font-mono text-[12px] text-zinc-400 transition hover:text-emerald-400"
+              className="inline-flex items-center gap-1 font-mono text-[12px] text-[#888] transition hover:text-[#f5f5f5]"
             >
-              Solscan
-              <span aria-hidden="true" className="text-zinc-600">↗</span>
+              solscan <span aria-hidden="true" className="text-[#5a5a5a]">↗</span>
             </a>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-4 font-mono text-[11px] uppercase tracking-[0.18em]">
           {isActive && (
             <Link
               href={`/topup?agent_id=${agent.id}`}
-              className="inline-flex items-center gap-2 rounded-md border border-emerald-400/60 bg-emerald-400/10 px-3.5 py-2 text-[13px] font-medium text-emerald-300 transition hover:border-emerald-400 hover:bg-emerald-400/20 hover:text-emerald-200"
+              className="inline-flex items-center gap-2 border-b pb-1"
+              style={{ borderColor: "#e63946", color: "#e63946" }}
             >
-              Fund
+              fund
               <Kbd>⌘F</Kbd>
             </Link>
           )}
           <Link
             href={`/dashboard?agent=${agent.id}`}
-            className="inline-flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-950 px-3.5 py-2 text-[13px] text-zinc-300 transition hover:border-zinc-700 hover:text-zinc-100"
+            className="inline-flex items-center gap-2 border-b pb-1"
+            style={{ borderColor: "#888", color: "#888" }}
           >
-            Open in dashboard
+            open in dashboard
           </Link>
         </div>
       </header>
@@ -148,43 +134,65 @@ function Content({ agent }: { agent: AgentDTO }) {
         <StatusBanner status={agent.status} />
       )}
 
-      <section className="mt-8 grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-zinc-800 bg-zinc-800 md:grid-cols-3">
-        <Metric label="In wallet" render={<LiveBalance agentId={agent.id} />} sub={`${STABLECOIN_TICKER} · held by agent`} />
-        <Metric
-          label="Spent this cycle"
-          value={budget ? `$${formatUsdg(budget.spentUsdg)}` : "—"}
-          sub={budget ? `${percent.toFixed(0)}% of cap` : ""}
-        />
-        <Metric
-          label={budget ? `${budget.period} cap` : "Cap"}
-          value={budget ? `₹${formatInr(budget.capInr)}` : "—"}
-          sub={budget ? `≈ $${formatUsdg(budget.capUsdg)} ${STABLECOIN_TICKER}` : ""}
-        />
+      <section className="mt-10">
+        <SectionMarker index="01" label="Status" />
+        <div
+          className="mt-6 grid grid-cols-1 md:grid-cols-3"
+          style={{ borderTop: "1px solid #f5f5f5" }}
+        >
+          <Metric
+            index="fig. 1.1"
+            label="In wallet"
+            render={<LiveBalance agentId={agent.id} />}
+            sub={`${STABLECOIN_TICKER} · held by agent`}
+            withRight
+          />
+          <Metric
+            index="fig. 1.2"
+            label="Spent this cycle"
+            value={budget ? `$${formatUsdg(budget.spentUsdg)}` : "—"}
+            sub={budget ? `${percent.toFixed(0)}% of cap` : ""}
+            withRight
+          />
+          <Metric
+            index="fig. 1.3"
+            label={budget ? `${budget.period} cap` : "Cap"}
+            value={budget ? `₹${formatInr(budget.capInr)}` : "—"}
+            sub={
+              budget
+                ? `≈ $${formatUsdg(budget.capUsdg)} ${STABLECOIN_TICKER}`
+                : ""
+            }
+          />
+        </div>
       </section>
 
       <section className="mt-10">
-        <SectionHeader
-          title="Credentials"
-          hint="On-chain identity and API access"
-        />
-        <div className="mt-4 overflow-hidden rounded-lg border border-zinc-800">
+        <SectionMarker index="02" label="Credentials" />
+        <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.22em] text-[#5a5a5a]">
+          on-chain identity and api access
+        </p>
+        <div className="mt-6" style={{ borderTop: "1px solid #f5f5f5" }}>
           <CredRow
             label="Encrypted account"
             hint="Solana pubkey of the agent's Umbra-side keypair · payments land here as encrypted balance"
             value={agent.etaAddress}
             trailing={
-              <div className="flex items-center gap-2">
-                <GhostButton onClick={() => copy(agent.etaAddress)}>
-                  Copy
-                </GhostButton>
+              <div className="flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.18em]">
+                <button
+                  type="button"
+                  onClick={() => copy(agent.etaAddress)}
+                  className="text-[#888] transition hover:text-[#f5f5f5]"
+                >
+                  copy
+                </button>
                 <a
                   href={solscanUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 rounded-md border border-zinc-800 px-3 py-1.5 text-[12px] text-zinc-300 transition hover:border-zinc-700 hover:text-zinc-100"
+                  className="text-[#888] transition hover:text-[#f5f5f5]"
                 >
-                  Solscan
-                  <span aria-hidden="true" className="text-zinc-500">↗</span>
+                  solscan ↗
                 </a>
               </div>
             }
@@ -193,14 +201,16 @@ function Content({ agent }: { agent: AgentDTO }) {
             label="API key"
             hint="Only the hash is stored · rotate to generate a new one"
             value={`${agent.id.slice(0, 8)}••••••••••••••••`}
-            valueClass="text-zinc-500"
+            valueMuted
             trailing={
-              <GhostButton
+              <button
+                type="button"
                 disabled
                 title="Key rotation ships in v2"
+                className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#5a5a5a] disabled:cursor-not-allowed"
               >
-                Rotate · soon
-              </GhostButton>
+                rotate · soon
+              </button>
             }
           />
         </div>
@@ -209,21 +219,23 @@ function Content({ agent }: { agent: AgentDTO }) {
       <AgentSpendsSection agentId={agent.id} />
 
       <section className="mt-10">
-        <SectionHeader
-          title="Danger zone"
-          hint="Irreversible or disruptive · stubs, wired in v2"
-          tone="danger"
-        />
-        <div className="mt-4 overflow-hidden rounded-lg border border-rose-900/40">
+        <SectionMarker index="04" label="Danger zone" />
+        <p
+          className="mt-3 font-mono text-[10px] uppercase tracking-[0.22em]"
+          style={{ color: "#e63946" }}
+        >
+          irreversible or disruptive · stubs, wired in v2
+        </p>
+        <div className="mt-6" style={{ borderTop: "1px solid #e63946" }}>
           <DangerRow
             title="Pause agent"
             body="Temporarily reject new x402 payments. Re-activate anytime."
-            cta="Pause · soon"
+            cta="pause · soon"
           />
           <DangerRow
             title="Cancel agent"
             body="Archives the agent. The on-chain wallet remains but will not sign again."
-            cta="Cancel · soon"
+            cta="cancel · soon"
           />
         </div>
       </section>
@@ -234,25 +246,50 @@ function Content({ agent }: { agent: AgentDTO }) {
 }
 
 function Metric({
+  index,
   label,
   value,
   render,
   sub,
+  withRight = false,
 }: {
+  index: string;
   label: string;
   value?: string;
   render?: React.ReactNode;
   sub?: string;
+  withRight?: boolean;
 }) {
   return (
-    <div className="bg-[#0a0a0a] p-6">
-      <div className="text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500">
-        {label}
+    <div
+      className="px-5 py-7"
+      style={{
+        borderBottom: "1px solid #1f1f1f",
+        borderRight: withRight ? "1px solid #1f1f1f" : undefined,
+      }}
+    >
+      <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#888]">
+        {index}
       </div>
-      <div className="mt-2 font-mono text-[26px] font-semibold tracking-tight text-zinc-50 md:text-[30px]">
+      <div
+        className="mt-3 tabular-nums text-[#f5f5f5]"
+        style={{
+          fontSize: 32,
+          fontWeight: 500,
+          letterSpacing: "-0.02em",
+          lineHeight: 1,
+        }}
+      >
         {render ?? value}
       </div>
-      {sub && <div className="mt-2 text-[12px] text-zinc-500">{sub}</div>}
+      <p className="mt-4 text-[12.5px] leading-[1.55] text-[#f5f5f5]">
+        {label}
+      </p>
+      {sub ? (
+        <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.18em] text-[#888]">
+          {sub}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -266,41 +303,12 @@ function AgentSpendsSection({ agentId }: { agentId: string }) {
   const spends = useAgentTransactions(agentId, { limit: 10 });
   return (
     <section className="mt-10">
-      <SectionHeader
-        title="Recent spends"
-        hint="Last 10 · polls every 10s"
+      <RecentSpendsList
+        transactions={spends.data?.transactions}
+        isLoading={spends.isLoading}
+        viewAllHref={`/agents/${agentId}/spends`}
       />
-      <div className="mt-4">
-        <RecentSpendsList
-          transactions={spends.data?.transactions}
-          isLoading={spends.isLoading}
-          viewAllHref={`/agents/${agentId}/spends`}
-        />
-      </div>
     </section>
-  );
-}
-
-function SectionHeader({
-  title,
-  hint,
-  tone = "default",
-}: {
-  title: string;
-  hint?: string;
-  tone?: "default" | "danger";
-}) {
-  return (
-    <div className="flex items-baseline justify-between">
-      <div
-        className={`text-[11px] font-medium uppercase tracking-[0.12em] ${
-          tone === "danger" ? "text-rose-300" : "text-zinc-400"
-        }`}
-      >
-        {title}
-      </div>
-      {hint && <div className="font-mono text-[10.5px] text-zinc-600">{hint}</div>}
-    </div>
   );
 }
 
@@ -308,26 +316,30 @@ function CredRow({
   label,
   hint,
   value,
-  valueClass,
+  valueMuted,
   trailing,
 }: {
   label: string;
   hint: string;
   value: string;
-  valueClass?: string;
+  valueMuted?: boolean;
   trailing: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4 border-b border-zinc-800 bg-[#0c0c0e] px-5 py-4 last:border-b-0">
+    <div
+      className="flex flex-wrap items-center justify-between gap-4 px-1 py-4"
+      style={{ borderBottom: "1px solid #1f1f1f" }}
+    >
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-3">
-          <div className="text-[13px] font-medium text-zinc-200">{label}</div>
-          <div className="text-[11.5px] text-zinc-500">{hint}</div>
+          <div className="text-[13px] text-[#f5f5f5]" style={{ fontWeight: 500 }}>
+            {label}
+          </div>
+          <div className="text-[11.5px] text-[#888]">{hint}</div>
         </div>
         <div
-          className={`mt-2 truncate font-mono text-[12.5px] ${
-            valueClass ?? "text-zinc-300"
-          }`}
+          className="mt-2 truncate font-mono text-[12.5px]"
+          style={{ color: valueMuted ? "#5a5a5a" : "#f5f5f5" }}
         >
           {value}
         </div>
@@ -347,15 +359,21 @@ function DangerRow({
   cta: string;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4 border-b border-rose-900/30 bg-[#120a0c] px-5 py-4 last:border-b-0">
+    <div
+      className="flex flex-wrap items-center justify-between gap-4 px-1 py-4"
+      style={{ borderBottom: "1px solid #1f1f1f" }}
+    >
       <div className="min-w-0 flex-1">
-        <div className="text-[13px] font-medium text-zinc-100">{title}</div>
-        <div className="mt-1 text-[12.5px] text-zinc-400">{body}</div>
+        <div className="text-[13px] text-[#f5f5f5]" style={{ fontWeight: 500 }}>
+          {title}
+        </div>
+        <div className="mt-1 text-[12.5px] text-[#888]">{body}</div>
       </div>
       <button
         type="button"
         disabled
-        className="inline-flex items-center gap-2 rounded-md border border-rose-900/60 bg-rose-950/30 px-3.5 py-1.5 text-[12.5px] font-medium text-rose-300 opacity-70"
+        className="font-mono text-[11px] uppercase tracking-[0.18em] disabled:cursor-not-allowed"
+        style={{ color: "#e63946", opacity: 0.6 }}
       >
         {cta}
       </button>
@@ -363,57 +381,19 @@ function DangerRow({
   );
 }
 
-function GhostButton({
-  children,
-  onClick,
-  disabled,
-  title,
-}: {
-  children: React.ReactNode;
-  onClick?: () => void;
-  disabled?: boolean;
-  title?: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      title={title}
-      className="inline-flex items-center gap-1.5 rounded-md border border-zinc-800 bg-zinc-950 px-3 py-1.5 text-[12px] text-zinc-300 transition enabled:hover:border-zinc-700 enabled:hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-60"
-    >
-      {children}
-    </button>
-  );
-}
-
 function StatusPill({ status }: { status: AgentDTO["status"] }) {
   const map = {
-    active: {
-      dot: "bg-emerald-400",
-      text: "text-emerald-400",
-      bg: "bg-emerald-400/10 border-emerald-400/30",
-      label: "Active",
-    },
-    paused: {
-      dot: "bg-amber-400",
-      text: "text-amber-300",
-      bg: "bg-amber-400/10 border-amber-400/30",
-      label: "Paused",
-    },
-    cancelled: {
-      dot: "bg-zinc-600",
-      text: "text-zinc-400",
-      bg: "bg-zinc-800/30 border-zinc-700",
-      label: "Cancelled",
-    },
+    active: { dot: "#e63946", label: "Active" },
+    paused: { dot: "#888", label: "Paused" },
+    cancelled: { dot: "#5a5a5a", label: "Cancelled" },
   } as const;
   const s = map[status];
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10.5px] font-medium uppercase tracking-[0.1em] ${s.text} ${s.bg}`}
-    >
-      <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
+    <span className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.22em] text-[#888]">
+      <span
+        className="h-1.5 w-1.5 rounded-full"
+        style={{ backgroundColor: s.dot }}
+      />
       {s.label}
     </span>
   );
@@ -432,12 +412,17 @@ function StatusBanner({ status }: { status: "paused" | "cancelled" }) {
         };
 
   return (
-    <div className="mt-6 rounded-lg border border-amber-900/40 bg-amber-950/20 p-4">
-      <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.12em] text-amber-300">
-        <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+    <div className="mt-8 p-5" style={{ border: "1px solid #1f1f1f" }}>
+      <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.22em] text-[#888]">
+        <span
+          className="h-1.5 w-1.5 rounded-full"
+          style={{ backgroundColor: "#888" }}
+        />
         {copy.title}
       </div>
-      <p className="mt-1.5 text-[13px] leading-[1.55] text-zinc-300">{copy.body}</p>
+      <p className="mt-3 text-[13px] leading-[1.55] text-[#f5f5f5]">
+        {copy.body}
+      </p>
     </div>
   );
 }
@@ -464,15 +449,24 @@ function formatDate(iso: string) {
 
 function Skeleton() {
   return (
-    <div className="space-y-6 px-8 py-8 lg:px-12">
-      <div className="h-4 w-48 animate-pulse rounded bg-zinc-900" />
-      <div className="h-10 w-72 animate-pulse rounded bg-zinc-900" />
-      <div className="grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-zinc-800 bg-zinc-800 md:grid-cols-3">
+    <div className="mx-auto max-w-[1280px] space-y-6 px-6 py-10 lg:px-10">
+      <div className="h-4 w-48 animate-pulse bg-[#141414]" />
+      <div className="h-10 w-72 animate-pulse bg-[#141414]" />
+      <div
+        className="grid grid-cols-1 md:grid-cols-3"
+        style={{ borderTop: "1px solid #f5f5f5" }}
+      >
         {[0, 1, 2].map((i) => (
-          <div key={i} className="h-[108px] animate-pulse bg-zinc-950/60" />
+          <div
+            key={i}
+            className="h-[140px] animate-pulse bg-[#0e0e0e]"
+            style={{
+              borderBottom: "1px solid #1f1f1f",
+              borderRight: i < 2 ? "1px solid #1f1f1f" : undefined,
+            }}
+          />
         ))}
       </div>
-      <div className="h-32 animate-pulse rounded-lg border border-zinc-800 bg-zinc-950/60" />
     </div>
   );
 }
@@ -481,17 +475,21 @@ function NotFound() {
   return (
     <div className="flex min-h-full items-center justify-center px-8 py-24 text-center">
       <div className="max-w-xl">
-        <h1 className="text-[24px] font-semibold text-zinc-50">
+        <h1
+          className="text-[28px] text-[#f5f5f5]"
+          style={{ fontWeight: 500, letterSpacing: "-0.02em" }}
+        >
           Agent not found
         </h1>
-        <p className="mt-2 text-[14px] text-zinc-500">
+        <p className="mt-3 text-[14px] text-[#888]">
           This agent doesn&apos;t exist or isn&apos;t yours.
         </p>
         <Link
           href="/dashboard"
-          className="mt-6 inline-flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-950 px-4 py-2 text-[13px] text-zinc-200 transition hover:border-zinc-700"
+          className="mt-8 inline-flex items-center gap-2 border-b pb-1 font-mono text-[11px] uppercase tracking-[0.18em]"
+          style={{ borderColor: "#f5f5f5", color: "#f5f5f5" }}
         >
-          ← Back to dashboard
+          ← back to dashboard
         </Link>
       </div>
     </div>
@@ -502,10 +500,13 @@ function LoadError() {
   return (
     <div className="flex min-h-full items-center justify-center px-8 py-24 text-center">
       <div className="max-w-xl">
-        <h1 className="text-[24px] font-semibold text-zinc-50">
+        <h1
+          className="text-[28px] text-[#f5f5f5]"
+          style={{ fontWeight: 500, letterSpacing: "-0.02em" }}
+        >
           Couldn&apos;t load this agent
         </h1>
-        <p className="mt-2 text-[14px] text-zinc-500">Try refreshing the page.</p>
+        <p className="mt-3 text-[14px] text-[#888]">Try refreshing the page.</p>
       </div>
     </div>
   );

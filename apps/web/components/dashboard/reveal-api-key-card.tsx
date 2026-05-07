@@ -33,44 +33,51 @@ export function RevealApiKeyCard({ agentName, apiKey, onDismiss }: Props) {
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-x-5 gap-y-3 rounded-lg border border-emerald-400/40 bg-emerald-400/5 px-4 py-3">
-      <div className="flex items-center gap-2">
-        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-        <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-emerald-300">
-          Save this key
+    <div
+      className="flex flex-wrap items-center gap-x-5 gap-y-3 px-4 py-3"
+      style={{ border: "1px solid #e63946", backgroundColor: "#0e0e0e" }}
+    >
+      <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.22em]">
+        <span
+          className="h-1.5 w-1.5 rounded-full"
+          style={{ backgroundColor: "#e63946" }}
+        />
+        <span style={{ color: "#e63946" }}>save this key</span>
+      </div>
+
+      <div className="flex min-w-0 flex-1 items-center gap-2 text-[12.5px]">
+        <span className="text-[#888]">
+          API key for{" "}
+          <span className="text-[#f5f5f5]">{agentName}</span> — shown once.
         </span>
       </div>
 
-      <div className="flex min-w-0 flex-1 items-center gap-2 text-[12.5px] text-zinc-300">
-        <span className="text-zinc-500">
-          API key for <span className="text-zinc-200">{agentName}</span> —
-          shown once.
-        </span>
-      </div>
-
-      <div className="flex min-w-0 items-center gap-2 rounded-md border border-zinc-800 bg-zinc-950 pl-3">
-        <code className="min-w-0 truncate font-mono text-[12.5px] text-zinc-100">
+      <div
+        className="flex min-w-0 items-center gap-2 pl-3"
+        style={{ border: "1px solid #1f1f1f", backgroundColor: "#0a0a0a" }}
+      >
+        <code className="min-w-0 truncate font-mono text-[12.5px] text-[#f5f5f5]">
           {apiKey}
         </code>
         <button
           type="button"
           onClick={handleCopy}
-          className={`rounded-r-md px-3 py-1.5 font-mono text-[11px] font-medium transition ${
-            copied
-              ? "bg-emerald-400 text-black"
-              : "bg-zinc-900 text-zinc-200 hover:bg-zinc-800"
-          }`}
+          className="px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.18em] transition focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#e63946]"
+          style={{
+            backgroundColor: copied ? "#e63946" : "#141414",
+            color: copied ? "#0a0a0a" : "#f5f5f5",
+          }}
         >
-          {copied ? "Copied ✓" : "Copy"}
+          {copied ? "copied ✓" : "copy"}
         </button>
       </div>
 
       <button
         type="button"
         onClick={onDismiss}
-        className="text-[11.5px] text-zinc-500 transition hover:text-zinc-200"
+        className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#888] transition hover:text-[#f5f5f5] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#e63946]"
       >
-        Dismiss
+        dismiss
       </button>
     </div>
   );

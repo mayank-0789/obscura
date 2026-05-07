@@ -1,16 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { Logo } from "@/components/marketing/logo";
 import { useSignout } from "@/hooks/use-signout";
 import { useSyncUser } from "@/hooks/use-sync-user";
 import { useUser } from "@/hooks/use-user";
 import { useSetRole } from "@/hooks/use-set-role";
 import { RoleCard } from "@/components/onboarding/role-card";
+import { SectionMarker } from "@/components/ui/section-marker";
 import {
   ONBOARDED_KEY,
   destinationForRole,
@@ -81,50 +81,62 @@ export function OnboardingShell() {
   const showSkeleton = !ready || meLoading || (!meFetched && authenticated);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-zinc-100 antialiased">
-      <header className="border-b border-zinc-900">
-        <div className="mx-auto flex h-14 max-w-[1100px] items-center justify-between px-6">
-          <Link
-            href="/"
-            className="flex items-center gap-2.5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]"
-          >
-            <Logo size="sm" />
-            <span className="font-display text-[17px] font-light tracking-tight">
-              Obscura
+    <div
+      className="min-h-screen bg-[#0a0a0a] font-sans text-[#f5f5f5] antialiased"
+      style={{ fontFeatureSettings: '"ss01", "cv11", "tnum"' } as CSSProperties}
+    >
+      <header className="border-b border-[#1f1f1f]">
+        <div className="mx-auto flex max-w-[1100px] items-center justify-between px-6 py-5">
+          <div className="flex items-baseline gap-3">
+            <Link
+              href="/"
+              className="text-[15px] font-medium tracking-[-0.01em] focus-visible:outline-none"
+            >
+              obscura
+            </Link>
+            <span className="font-mono text-[10px] text-[#5a5a5a]">───</span>
+            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#888]">
+              welcome
             </span>
-          </Link>
+          </div>
           <button
             onClick={signOut}
-            className="rounded-md border border-zinc-800 bg-zinc-950 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-400 transition hover:border-zinc-700 hover:text-zinc-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]"
+            className="font-mono text-[11px] uppercase tracking-[0.16em] text-[#888] transition hover:text-[#f5f5f5] focus-visible:outline-none"
           >
-            Sign out
+            sign out
           </button>
         </div>
       </header>
 
-      <main className="mx-auto max-w-[900px] px-6 py-16 md:py-24">
+      <main className="mx-auto max-w-[1100px] px-6 py-16 md:py-24">
         {showSkeleton ? (
           <OnboardingSkeleton />
         ) : (
           <>
-            <div className="mb-4 flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.28em] text-emerald-400">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]" />
-              Welcome
-            </div>
-            <h1 className="font-display text-[48px] font-light leading-[1.05] tracking-[-0.02em] text-zinc-50 md:text-[56px]">
+            <SectionMarker index="00" label="Pick your side of the rail" />
+
+            <h1
+              className="mt-10 text-balance"
+              style={{
+                fontSize: "clamp(40px, 6vw, 64px)",
+                fontWeight: 500,
+                letterSpacing: "-0.025em",
+                lineHeight: 1.02,
+              }}
+            >
               How will you use{" "}
-              <span className="italic text-emerald-gradient">the rail?</span>
+              <span style={{ color: "#888", fontWeight: 300 }}>the rail?</span>
             </h1>
-            <p className="mt-5 max-w-[560px] text-[17px] leading-[1.65] text-zinc-300">
+            <p className="mt-8 max-w-[60ch] text-[15.5px] leading-[1.65] text-[#888]">
               Obscura has two sides — pick one to start, or choose both.
             </p>
-            <p className="mt-2 text-[13px] text-zinc-500">
+            <p className="mt-2 text-[13px] text-[#5a5a5a]">
               You can add the other side anytime from your dashboard.
             </p>
 
-            <div className="mt-14 grid gap-5 md:grid-cols-2">
+            <div className="mt-14 grid grid-cols-1 gap-px md:grid-cols-2">
               <RoleCard
-                kicker="01 / Agent developer"
+                kicker="01 / agent developer"
                 title="Ship an agent that pays for APIs."
                 body="Install @obscura-app/sdk, drop in an API key, point fetch at a paid endpoint. Your agent pays in stablecoins automatically — no wallet code."
                 features={[
@@ -137,7 +149,7 @@ export function OnboardingShell() {
                 disabled={!!pending && pending !== "user"}
               />
               <RoleCard
-                kicker="02 / API provider"
+                kicker="02 / api provider"
                 title="Charge per API call."
                 body="Install @obscura-app/merchant-sdk, wrap an Express route with pay.charge. Get paid in USDC on Solana directly to your Obscura-managed wallet."
                 features={[
@@ -151,12 +163,15 @@ export function OnboardingShell() {
               />
             </div>
 
-            <div className="mt-10 flex flex-col items-start gap-3 border-t border-zinc-900 pt-10 md:flex-row md:items-center md:justify-between">
+            <div
+              className="mt-14 flex flex-col items-start gap-4 pt-10 md:flex-row md:items-center md:justify-between"
+              style={{ borderTop: "1px solid #1f1f1f" }}
+            >
               <div>
-                <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-zinc-500">
-                  Doing both?
-                </p>
-                <p className="mt-1.5 text-[14px] text-zinc-400">
+                <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#888]">
+                  doing both?
+                </div>
+                <p className="mt-2 text-[14px] leading-[1.55] text-[#888]">
                   Get both dashboards with one account. Switch between them
                   from the top bar.
                 </p>
@@ -164,24 +179,23 @@ export function OnboardingShell() {
               <button
                 onClick={() => choose("both")}
                 disabled={!!pending}
-                className="inline-flex items-center gap-2 border border-zinc-800 bg-zinc-950 px-5 py-2.5 font-mono text-[11px] uppercase tracking-[0.22em] text-zinc-300 transition enabled:hover:border-emerald-400/40 enabled:hover:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]"
+                className="inline-flex items-center gap-2 border-b border-[#f5f5f5] pb-1 font-mono text-[11px] uppercase tracking-[0.18em] text-[#f5f5f5] transition disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none"
               >
                 <span>
-                  {pending === "both" ? "Setting up…" : "Set up both"}
+                  {pending === "both" ? "setting up…" : "set up both"}
                 </span>
                 <span aria-hidden>→</span>
               </button>
             </div>
 
-            <p className="mt-12 text-[13px] text-zinc-600">
-              New here?{" "}
+            <p className="mt-12 font-mono text-[11px] uppercase tracking-[0.16em] text-[#5a5a5a]">
+              new here?{" "}
               <Link
                 href="/docs"
-                className="text-zinc-400 underline decoration-zinc-700 underline-offset-4 hover:text-zinc-200 hover:decoration-zinc-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a] rounded"
+                className="text-[#888] hover:text-[#f5f5f5] focus-visible:outline-none"
               >
-                Read the docs first
+                read the docs first →
               </Link>
-              .
             </p>
           </>
         )}
@@ -193,12 +207,12 @@ export function OnboardingShell() {
 function OnboardingSkeleton() {
   return (
     <div aria-hidden>
-      <div className="mb-4 h-3 w-20 rounded bg-zinc-900" />
-      <div className="h-12 w-3/4 rounded bg-zinc-900" />
-      <div className="mt-3 h-5 w-1/2 rounded bg-zinc-900/70" />
-      <div className="mt-14 grid gap-5 md:grid-cols-2">
-        <div className="h-[300px] rounded border border-zinc-900 bg-[#0c0c0e]" />
-        <div className="h-[300px] rounded border border-zinc-900 bg-[#0c0c0e]" />
+      <div className="mb-4 h-3 w-20 bg-[#141414]" />
+      <div className="h-12 w-3/4 bg-[#141414]" />
+      <div className="mt-3 h-5 w-1/2 bg-[#0e0e0e]" />
+      <div className="mt-14 grid grid-cols-1 gap-px md:grid-cols-2">
+        <div className="h-[300px] border border-[#1f1f1f]" />
+        <div className="h-[300px] border border-[#1f1f1f]" />
       </div>
     </div>
   );

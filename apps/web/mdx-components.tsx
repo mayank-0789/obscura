@@ -9,25 +9,25 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
     ...components,
     h1: (props) => (
       <h1
-        className="mt-2 font-display text-[52px] font-light leading-[1.05] tracking-[-0.02em] text-zinc-50"
+        className="mt-2 text-[44px] font-medium leading-[1.05] tracking-[-0.025em] text-[#f5f5f5]"
         {...props}
       />
     ),
     h2: (props) => (
       <h2
-        className="group mt-14 scroll-mt-24 font-display text-[32px] font-light leading-[1.15] tracking-tight text-zinc-50"
+        className="group mt-14 scroll-mt-24 text-[28px] font-medium leading-[1.2] tracking-[-0.02em] text-[#f5f5f5]"
         {...props}
       />
     ),
     h3: (props) => (
       <h3
-        className="group mt-10 scroll-mt-24 text-[18px] font-medium tracking-tight text-zinc-100"
+        className="group mt-10 scroll-mt-24 text-[18px] font-medium tracking-[-0.01em] text-[#f5f5f5]"
         {...props}
       />
     ),
     p: (props) => (
       <p
-        className="mt-5 text-[17px] leading-[1.7] text-zinc-300"
+        className="mt-5 text-[16px] leading-[1.65] text-[#aaa]"
         {...props}
       />
     ),
@@ -35,40 +35,36 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
       // Absolute-positioned bullet keeps <li> as a block element; flex made
       // every inline child its own flex item and staircased the rendering.
       <ul
-        className="mt-5 space-y-3 pl-7 text-[17px] leading-[1.65] text-zinc-300 [&>li]:relative [&>li]:before:absolute [&>li]:before:left-0 [&>li]:before:top-[12px] [&>li]:before:inline-block [&>li]:before:h-px [&>li]:before:w-4 [&>li]:before:bg-emerald-400/70 [&>li]:before:content-['']"
+        className="mt-5 space-y-3 pl-7 text-[16px] leading-[1.6] text-[#aaa] [&>li]:relative [&>li]:before:absolute [&>li]:before:left-0 [&>li]:before:top-[12px] [&>li]:before:inline-block [&>li]:before:h-px [&>li]:before:w-4 [&>li]:before:bg-[#e63946] [&>li]:before:content-['']"
         {...props}
       />
     ),
     ol: (props) => (
       <ol
-        className="mt-5 list-decimal space-y-3 pl-5 text-[17px] leading-[1.65] text-zinc-300 marker:text-zinc-600"
+        className="mt-5 list-decimal space-y-3 pl-5 text-[16px] leading-[1.6] text-[#aaa] marker:text-[#5a5a5a]"
         {...props}
       />
     ),
     a: ({ href = "", ...props }) => {
       const external = /^https?:\/\//.test(href);
+      const className =
+        "text-[#e63946] underline decoration-[#e63946]/40 underline-offset-4 transition hover:decoration-[#e63946]";
       if (external) {
         return (
           <a
             href={href}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-emerald-400 underline decoration-emerald-400/40 underline-offset-4 transition hover:decoration-emerald-400"
+            className={className}
             {...props}
           />
         );
       }
-      return (
-        <Link
-          href={href}
-          className="text-emerald-400 underline decoration-emerald-400/40 underline-offset-4 transition hover:decoration-emerald-400"
-          {...props}
-        />
-      );
+      return <Link href={href} className={className} {...props} />;
     },
     code: (props) => (
       <code
-        className="rounded border border-zinc-800 bg-zinc-950 px-1.5 py-0.5 font-mono text-[13.5px] text-emerald-300"
+        className="border border-[#1f1f1f] bg-[#0e0e0e] px-1.5 py-0.5 font-mono text-[13px] text-[#e63946]"
         {...props}
       />
     ),
@@ -76,21 +72,19 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
     // copy button / filename chip is needed.
     pre: (props) => (
       <pre
-        className="mt-5 overflow-x-auto rounded-lg border border-zinc-800 bg-[#0b0b0d] p-5 font-mono text-[14px] leading-[1.65] text-zinc-300"
+        className="mt-5 overflow-x-auto border border-[#1f1f1f] bg-[#0e0e0e] p-5 font-mono text-[13px] leading-[1.65] text-[#f5f5f5]"
         {...props}
       />
     ),
-    hr: () => (
-      <hr className="mt-12 border-zinc-800" />
-    ),
+    hr: () => <hr className="mt-12 border-[#1f1f1f]" />,
     blockquote: (props) => (
       <blockquote
-        className="mt-6 border-l-2 border-emerald-400/60 pl-4 text-[17px] italic leading-[1.7] text-zinc-400"
+        className="mt-6 border-l border-[#e63946] pl-4 text-[16px] leading-[1.65] text-[#888]"
         {...props}
       />
     ),
     table: (props) => (
-      <div className="mt-6 overflow-x-auto rounded-lg border border-zinc-800">
+      <div className="mt-6 overflow-x-auto border border-[#1f1f1f]">
         <table
           className="w-full border-collapse text-left text-[13.5px]"
           {...props}
@@ -99,18 +93,18 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
     ),
     th: (props) => (
       <th
-        className="border-b border-zinc-800 bg-[#0c0c0e] px-4 py-3 text-left font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-500"
+        className="border-b border-[#1f1f1f] bg-[#0e0e0e] px-4 py-3 text-left font-mono text-[10px] uppercase tracking-[0.22em] text-[#888]"
         {...props}
       />
     ),
     td: (props) => (
       <td
-        className="border-b border-zinc-900 px-4 py-3 align-top text-zinc-300 last:border-0"
+        className="border-b border-[#1f1f1f] px-4 py-3 align-top text-[#aaa] last:border-0"
         {...props}
       />
     ),
     strong: (props) => (
-      <strong className="font-semibold text-zinc-100" {...props} />
+      <strong className="font-semibold text-[#f5f5f5]" {...props} />
     ),
     CodeBlock,
     Callout,
@@ -121,7 +115,7 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
 
 function Kbd({ children }: { children: React.ReactNode }) {
   return (
-    <kbd className="inline-flex min-w-[18px] items-center justify-center rounded border border-zinc-700 bg-zinc-950 px-1.5 py-px font-mono text-[11px] font-medium text-zinc-300 shadow-[inset_0_-1px_0_0_rgba(255,255,255,0.04)]">
+    <kbd className="inline-flex min-w-[18px] items-center justify-center border border-[#1f1f1f] bg-[#0a0a0a] px-1.5 py-px font-mono text-[10px] font-medium text-[#888]">
       {children}
     </kbd>
   );

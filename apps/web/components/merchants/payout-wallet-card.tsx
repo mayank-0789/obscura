@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { env } from "@/lib/env";
+import { SectionMarker } from "@/components/ui/section-marker";
 
 export function PayoutWalletCard({
   merchantEtaAddress,
@@ -26,18 +27,27 @@ export function PayoutWalletCard({
 
   if (!merchantEtaAddress) {
     return (
-      <div className="rounded-lg border border-zinc-800 bg-[#0c0c0e] p-6">
-        <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-500">
-          Payout wallet
+      <section aria-labelledby="payout-wallet-heading">
+        <div id="payout-wallet-heading">
+          <SectionMarker index="00" label="Payout wallet" />
         </div>
-        <div className="mt-3 flex items-center gap-2 text-[14px] text-zinc-500">
-          <span
-            aria-hidden
-            className="h-1.5 w-1.5 animate-pulse rounded-full bg-zinc-600"
-          />
-          Provisioning your Solana wallet…
+        <div
+          className="mt-6 px-1 py-6"
+          style={{
+            borderTop: "1px solid #f5f5f5",
+            borderBottom: "1px solid #1f1f1f",
+          }}
+        >
+          <div className="flex items-center gap-2 text-[14px] text-[#888]">
+            <span
+              aria-hidden
+              className="h-1.5 w-1.5 animate-pulse rounded-full"
+              style={{ backgroundColor: "#888" }}
+            />
+            Provisioning your Solana wallet…
+          </div>
         </div>
-      </div>
+      </section>
     );
   }
 
@@ -47,57 +57,63 @@ export function PayoutWalletCard({
       : `https://solscan.io/account/${merchantEtaAddress}?cluster=devnet`;
 
   return (
-    <section
-      aria-labelledby="payout-wallet-heading"
-      className="rounded-lg border border-zinc-800 bg-[#0c0c0e] p-6"
-    >
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <h2
-            id="payout-wallet-heading"
-            className="font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-500"
-          >
-            Payout wallet
-          </h2>
-          <p
-            className="mt-2 truncate font-mono text-[16px] text-zinc-100"
-            title={merchantEtaAddress}
-          >
-            {merchantEtaAddress}
-          </p>
-          <p className="mt-1.5 text-[12px] text-zinc-500">
-            Provisioned{" "}
-            {provisionedAt
-              ? new Date(provisionedAt).toLocaleDateString(undefined, {
-                  year: "numeric",
-                  month: "short",
-                  day: "numeric",
-                })
-              : "—"}{" "}
-            · Paste this into your @obscura-app/merchant-sdk config.
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <button
-            type="button"
-            onClick={handleCopy}
-            className={`rounded-md border px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.18em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c0c0e] ${
-              copied
-                ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-300"
-                : "border-zinc-800 bg-zinc-950 text-zinc-300 hover:border-zinc-700 hover:text-zinc-100"
-            }`}
-            aria-label="Copy payout wallet address"
-          >
-            {copied ? "Copied ✓" : "Copy"}
-          </button>
-          <a
-            href={solscanUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-md border border-zinc-800 bg-zinc-950 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-300 transition hover:border-zinc-700 hover:text-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c0c0e]"
-          >
-            Solscan ↗
-          </a>
+    <section aria-labelledby="payout-wallet-heading">
+      <div id="payout-wallet-heading">
+        <SectionMarker index="00" label="Payout wallet" />
+      </div>
+      <div
+        className="mt-6 px-1 py-6"
+        style={{
+          borderTop: "1px solid #f5f5f5",
+          borderBottom: "1px solid #1f1f1f",
+        }}
+      >
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <p
+              className="truncate font-mono text-[16px] text-[#f5f5f5]"
+              title={merchantEtaAddress}
+              style={{ letterSpacing: "-0.005em" }}
+            >
+              {merchantEtaAddress}
+            </p>
+            <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.22em] text-[#888]">
+              <span style={{ color: "#5a5a5a" }}>provisioned</span>{" "}
+              {provisionedAt
+                ? new Date(provisionedAt).toLocaleDateString(undefined, {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                  })
+                : "—"}
+            </p>
+            <p className="mt-2 text-[12px] leading-[1.55] text-[#888]">
+              Paste this into your @obscura-app/merchant-sdk config.
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-4 font-mono text-[11px] uppercase tracking-[0.18em]">
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="border-b pb-1 transition focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#e63946]"
+              style={{
+                borderColor: copied ? "#e63946" : "#f5f5f5",
+                color: copied ? "#e63946" : "#f5f5f5",
+              }}
+              aria-label="Copy payout wallet address"
+            >
+              {copied ? "copied ✓" : "copy"}
+            </button>
+            <a
+              href={solscanUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="border-b pb-1 transition focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#e63946]"
+              style={{ borderColor: "#888", color: "#888" }}
+            >
+              solscan ↗
+            </a>
+          </div>
         </div>
       </div>
     </section>

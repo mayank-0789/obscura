@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Fraunces } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import { auth } from "@/lib/auth-config";
 import { Providers } from "@/lib/providers";
 import "./globals.css";
@@ -14,16 +14,10 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
-  subsets: ["latin"],
-  axes: ["SOFT", "opsz"],
-});
-
 export const metadata: Metadata = {
-  title: "Obscura — The payment rail for AI agents",
+  title: "Obscura — Confidential pay-per-call for AI agents",
   description:
-    "Fund your AI agent with UPI or card. It pays for APIs, tools, and compute autonomously — stablecoin settlement on Solana, no crypto wallet needed.",
+    "x402 with the public spend graph removed. Agents pay merchants per API call from encrypted balances; the on-chain link between sender and receiver is broken via the Umbra mixer commitment tree.",
 };
 
 export default async function RootLayout({
@@ -34,9 +28,7 @@ export default async function RootLayout({
   const session = await auth();
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable}`}
-      >
+      <body className={`${geistSans.variable} ${geistMono.variable}`}>
         <Providers session={session}>{children}</Providers>
       </body>
     </html>
