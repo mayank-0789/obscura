@@ -469,7 +469,7 @@ function Quickstart() {
             <span className="text-[#888]">$</span> npm i @obscura-app/merchant-sdk
             <br />
             <br />
-            <span className="text-[#888]">// server.ts</span>
+            <span className="text-[#888]">{"// server.ts"}</span>
             <br />
             <span style={{ color: "#e63946" }}>import</span> express{" "}
             <span style={{ color: "#e63946" }}>from</span>{" "}
@@ -786,7 +786,7 @@ function CTA() {
             app.use(paywall(&#123; price:{" "}
             <span style={{ color: "#e63946" }}>&quot;$0.01&quot;</span> &#125;));
             <br />
-            <span className="text-[#888]">// you&apos;re live.</span>
+            <span className="text-[#888]">{"// you're live."}</span>
           </div>
           <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.22em] text-[#888]">
             Fig. 6.1 · the entire integration
