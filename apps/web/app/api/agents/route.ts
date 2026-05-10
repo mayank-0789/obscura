@@ -144,10 +144,8 @@ async function insertAgentRows(input: {
   capUsdg: bigint;
   apiKeyHash: string;
 }): Promise<Agent> {
-  // db.batch (NOT db.transaction) — neon-http does not implement transaction()
-  // and throws at runtime; batch() hits Neon's atomic /sql/transaction endpoint.
-  const [inserted] = await db.batch([
-    db
+  const inserted = await db.transaction(async (tx) => {
+    const agentRows = await tx
       .insert(agents)
       .values({
         id: input.agentId,
@@ -157,18 +155,19 @@ async function insertAgentRows(input: {
         umbraStatus: "active",
         umbraRegisteredAt: input.umbraRegisteredAt,
       })
-      .returning(),
-    db.insert(budgets).values({
+      .returning();
+    await tx.insert(budgets).values({
       agentId: input.agentId,
       capInr: input.capInrPaise,
       capUsdg: input.capUsdg,
-    }),
-    db.insert(agentApiKeys).values({
+    });
+    await tx.insert(agentApiKeys).values({
       agentId: input.agentId,
       keyHash: input.apiKeyHash,
       label: "Initial key",
-    }),
-  ]);
+    });
+    return agentRows;
+  });
 
   const agent = inserted[0];
   if (!agent) throw new Error("agents insert returned no rows");

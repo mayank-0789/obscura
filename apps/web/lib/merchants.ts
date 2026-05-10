@@ -86,30 +86,39 @@ export async function provisionMerchant(
 
   let insertedRow: Merchant | undefined;
   try {
-    const insertMerchant = db
-      .insert(merchants)
-      .values({
-        id: wallet.merchantId,
-        ownerUserId: user.id,
-        etaAddress: wallet.etaAddress,
-        umbraStatus: "active",
-        umbraRegisteredAt: wallet.umbraRegisteredAt,
-      })
-      .onConflictDoNothing({ target: merchants.ownerUserId })
-      .returning();
-
     if (needsRoleBump) {
       // Atomic with merchant insert; race-loser's role update no-ops against winner's 'both'.
-      const [insertResult] = await db.batch([
-        insertMerchant,
-        db
+      const insertResult = await db.transaction(async (tx) => {
+        const rows = await tx
+          .insert(merchants)
+          .values({
+            id: wallet.merchantId,
+            ownerUserId: user.id,
+            etaAddress: wallet.etaAddress,
+            umbraStatus: "active",
+            umbraRegisteredAt: wallet.umbraRegisteredAt,
+          })
+          .onConflictDoNothing({ target: merchants.ownerUserId })
+          .returning();
+        await tx
           .update(users)
           .set({ role: "both", updatedAt: new Date() })
-          .where(eq(users.id, user.id)),
-      ]);
+          .where(eq(users.id, user.id));
+        return rows;
+      });
       insertedRow = insertResult[0];
     } else {
-      const result = await insertMerchant;
+      const result = await db
+        .insert(merchants)
+        .values({
+          id: wallet.merchantId,
+          ownerUserId: user.id,
+          etaAddress: wallet.etaAddress,
+          umbraStatus: "active",
+          umbraRegisteredAt: wallet.umbraRegisteredAt,
+        })
+        .onConflictDoNothing({ target: merchants.ownerUserId })
+        .returning();
       insertedRow = result[0];
     }
   } catch (err) {
