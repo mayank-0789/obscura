@@ -10,7 +10,7 @@ export function Logo({
     <img
       src="/logo.svg"
       alt="Obscura"
-      className={`${sizeClass} invert`}
+      className={`${sizeClass} rounded-md`}
       aria-hidden="true"
     />
   );
